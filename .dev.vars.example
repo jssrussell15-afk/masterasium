@@ -1,0 +1,3 @@
+# Copy to .dev.vars for `npm run preview`. Do not put the Supabase keys here
+# if they are already in .env.local. Next reads .env.local during local dev.
+NEXTJS_ENV=development

@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #e7f4fb;
+  --ink: #17344c;
+  --muted: #4e6d84;
+  --line: #c5dfed;
+  --blue: #1f6f9a;
+  --blue-deep: #164e6e;
+  --good: #14613c;
+  --bad: #8d2e28;
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-blue: var(--blue);
+  --font-sans: var(--font-source);
+  --font-serif: var(--font-fraunces);
+}
+
+body {
+  background:
+    radial-gradient(900px 420px at 0% -10%, #f8fcff 0%, transparent 60%),
+    linear-gradient(180deg, #f5fbfe 0%, var(--paper) 42%, #d5eef8 100%);
+  color: var(--ink);
+  font-family: var(--font-source), "Source Sans 3", sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.wordmark {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+  text-decoration: none;
+}
+
+.display {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-weight: 520;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+
+.eyebrow {
+  color: var(--blue);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+
+.card {
+  background: rgb(255 255 255 / 92%);
+  border: 1px solid rgb(255 255 255 / 80%);
+  border-radius: 1.4rem;
+  box-shadow: 0 18px 50px rgb(33 84 117 / 8%);
+  padding: 1.35rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 0.72rem 1.15rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.65;
+}
+
+.btn-primary {
+  background: var(--blue);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--blue-deep);
+}
+
+.btn-secondary {
+  background: white;
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.btn-quiet {
+  background: transparent;
+  color: var(--blue);
+  padding-inline: 0.4rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.95rem;
+}
+
+.field input,
+.field select {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: white;
+  color: var(--ink);
+  padding: 0.72rem 0.85rem;
+}
+
+.grade-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.grade-pill {
+  min-width: 4.6rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 62%);
+  padding: 0.45rem 0.65rem 0.5rem;
+  text-align: center;
+}
+
+.grade-pill strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.grade-pill span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.grade-pill.open {
+  background: white;
+  border-color: #8ec3de;
+}
+
+.grade-pill.open span {
+  color: var(--blue);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.stat-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.stat-grid strong {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 1.15rem;
+}
+
+.prompt {
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.answer-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  background: white;
+  font-size: 1.7rem;
+  padding: 0.8rem 1rem;
+}
+
+.feedback {
+  border-radius: 0.95rem;
+  padding: 0.85rem 1rem;
+}
+
+.feedback.good {
+  background: #e5f6ec;
+  color: var(--good);
+}
+
+.feedback.bad {
+  background: #fdeceb;
+  color: var(--bad);
+}
+
+.hint,
+.status {
+  color: var(--muted);
+}
+
+.nav-link {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.nav-link:hover {
+  color: var(--ink);
+}
+
+@media (max-width: 640px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
