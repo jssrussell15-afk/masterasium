@@ -9,6 +9,8 @@ import {
 } from "@/lib/worksheets/actions";
 import { makeAccessCode } from "@/lib/worksheets/code";
 import { readLocalTemplates, writeLocalSet, writeLocalTemplate } from "@/lib/worksheets/local";
+import { readPrintedPage } from "@/lib/worksheets/ocr";
+import { UNREADABLE_PAGE_MESSAGE, type PageTextResult } from "@/lib/worksheets/page-text";
 import { classifyPageFile, type StoredPageScan } from "@/lib/worksheets/page-scan";
 import { buildAnswerSheetPdf, buildWorksheetPdf } from "@/lib/worksheets/pdf";
 import { WORKSHEET_SETUP_SQL } from "@/lib/worksheets/setup-sql";
@@ -96,6 +98,8 @@ export function WorksheetBuilder({
   const [pageScan, setPageScan] = useState<StoredPageScan | null>(null);
   const [pagePreviewUrl, setPagePreviewUrl] = useState<string | null>(null);
   const [pageNote, setPageNote] = useState<string | null>(null);
+  const [pageReading, setPageReading] = useState(false);
+  const [pageRead, setPageRead] = useState<PageTextResult | null>(null);
   const [delivery, setDelivery] = useState<"pdf" | "link">("pdf");
   const [answerSheet, setAnswerSheet] = useState(false);
   const [pending, setPending] = useState(false);
@@ -114,6 +118,30 @@ export function WorksheetBuilder({
     const previewUrl = URL.createObjectURL(pageScan.file);
     setPagePreviewUrl(previewUrl);
     return () => URL.revokeObjectURL(previewUrl);
+  }, [pageScan]);
+
+  useEffect(() => {
+    if (!pageScan) {
+      setPageReading(false);
+      setPageRead(null);
+      return;
+    }
+    let cancelled = false;
+    setPageReading(true);
+    setPageRead(null);
+    void readPrintedPage(pageScan.file, pageScan.kind)
+      .then((result) => {
+        if (!cancelled) setPageRead(result);
+      })
+      .catch(() => {
+        if (!cancelled) setPageRead({ ok: false, message: UNREADABLE_PAGE_MESSAGE });
+      })
+      .finally(() => {
+        if (!cancelled) setPageReading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [pageScan]);
 
   useEffect(() => {
@@ -362,7 +390,9 @@ export function WorksheetBuilder({
               }}
             />
           </label>
-          <p className="hint text-sm">JPG, PNG, or PDF from a phone or computer. The file stays on this page.</p>
+          <p className="hint text-sm">
+            JPG, PNG, or PDF from a phone or computer. The file stays on this page, and printed text is read here.
+          </p>
           {pageNote ? (
             <p className="feedback bad" role="alert">
               {pageNote}
@@ -370,9 +400,7 @@ export function WorksheetBuilder({
           ) : null}
           {pageScan && pagePreviewUrl ? (
             <div className="page-preview-wrap">
-              <p className="text-sm">
-                {pageScan.file.name || "Page"} is saved for the next step. The text is not read yet.
-              </p>
+              <p className="text-sm">{pageScan.file.name || "Page"} is saved on this page.</p>
               {pageScan.kind === "pdf" ? (
                 <iframe
                   title={`Preview of ${pageScan.file.name || "page"}`}
@@ -386,6 +414,18 @@ export function WorksheetBuilder({
                   className="page-preview"
                 />
               )}
+              {pageReading ? <p className="hint text-sm">Reading the printed text…</p> : null}
+              {pageRead?.ok ? (
+                <div className="page-text-wrap">
+                  <p className="text-sm">Text read from the page</p>
+                  <pre className="page-text">{pageRead.text}</pre>
+                </div>
+              ) : null}
+              {pageRead && !pageRead.ok ? (
+                <p className="text-sm" role="status">
+                  {pageRead.message}
+                </p>
+              ) : null}
               <button type="button" className="btn btn-quiet w-fit" onClick={() => setPageScan(null)}>
                 Remove
               </button>

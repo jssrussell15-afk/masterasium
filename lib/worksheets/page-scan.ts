@@ -27,7 +27,7 @@ function kindFromName(name: string): PageScanKind | null {
   return null;
 }
 
-/** Accept a JPG, PNG, or PDF. The file itself is kept for a later reading step. */
+/** Accept a JPG, PNG, or PDF. The file is kept so the printed text can be read. */
 export function classifyPageFile(file: PageFileInfo): { kind: PageScanKind } | { error: string } {
   if (file.size <= 0) return { error: "That file is empty." };
   if (file.size > MAX_PAGE_BYTES) {
