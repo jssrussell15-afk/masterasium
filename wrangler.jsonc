@@ -25,9 +25,10 @@
       "enabled": false,
       "head_sampling_rate": 1,
       "persist": true
-    },
-    "issue_detection": {
-      "enabled": false
     }
+  },
+  "build": {
+    "command": "node scripts/patch-opennext-preview-props.mjs && npx opennextjs-cloudflare build",
+    "watch_dir": ["app", "components", "lib", "public"]
   }
 }

@@ -21,8 +21,10 @@ if (source.includes(patched)) {
   process.exit(0);
 }
 if (!source.includes(missing)) {
-  console.log("OpenNext preview-props patch skipped: load-manifest.js did not match.");
-  process.exit(0);
+  console.error(
+    "OpenNext preview-props patch failed: load-manifest.js did not match. The Worker would throw on preview-props.json.",
+  );
+  process.exit(1);
 }
 
 await writeFile(target, source.replace(missing, patched));
