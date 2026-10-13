@@ -3,7 +3,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { isSupabaseConfigured, requireSupabaseEnv } from "@/lib/supabase/env";
 
 function isProtected(pathname: string): boolean {
-  return pathname.startsWith("/dashboard") || pathname.startsWith("/practice");
+  return (
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/practice") ||
+    pathname.startsWith("/worksheets")
+  );
 }
 
 export async function updateSession(request: NextRequest) {
