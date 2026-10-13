@@ -8,7 +8,7 @@ import { friendlyDbError } from "@/lib/db-error";
 import { renderDigestText, type DigestSummary } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { requireUser } from "@/lib/auth/session";
+import { ensureProfile, requireUser } from "@/lib/auth/session";
 import { formatAccuracy } from "@/lib/practice/format";
 import { accuracyScheduler } from "@/lib/practice/scheduler";
 import { loadCards, totals } from "@/lib/practice/session";
@@ -31,9 +31,7 @@ type ChildRow = {
 
 async function Desk() {
   const { supabase, user } = await requireUser();
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .upsert({ id: user.id }, { onConflict: "id" });
+  const profileError = await ensureProfile(supabase, user.id);
 
   const { data, error } = await supabase
     .from("children")

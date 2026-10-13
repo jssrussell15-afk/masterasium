@@ -120,6 +120,12 @@ create policy "parents insert their profile"
   to authenticated
   with check (id = auth.uid());
 
+create policy "parents update their profile"
+  on public.profiles for update
+  to authenticated
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
 create policy "parents own their children"
   on public.children for all
   to authenticated
@@ -191,7 +197,7 @@ create policy "anyone can join the notify list"
   to anon, authenticated
   with check (email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$');
 
-grant select, insert on public.profiles to authenticated;
+grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.children to authenticated;
 grant select, insert, update, delete on public.skill_states to authenticated;
 grant select, insert, update, delete on public.attempts to authenticated;

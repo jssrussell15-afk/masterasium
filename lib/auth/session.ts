@@ -13,3 +13,14 @@ export async function requireUser(): Promise<{ supabase: SupabaseClient; user: U
   if (error || !data.user) redirect("/login");
   return { supabase, user: data.user };
 }
+
+// The signup trigger inserts this row. A plain insert avoids the upsert path,
+// which Postgres treats as an update and rejects when no update policy exists.
+export async function ensureProfile(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<{ message: string; code?: string } | null> {
+  const { error } = await supabase.from("profiles").insert({ id: userId });
+  if (!error || error.code === "23505") return null;
+  return error;
+}

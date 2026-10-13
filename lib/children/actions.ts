@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { friendlyDbError } from "@/lib/db-error";
 import { isSupportedGrade } from "@/lib/grades";
-import { requireUser } from "@/lib/auth/session";
+import { ensureProfile, requireUser } from "@/lib/auth/session";
 import { isValidFirstName, normalizeFirstName } from "@/lib/validation";
 
 export type ChildState = {
@@ -22,9 +22,7 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
     return { error: "Grade 1 and Grade 5 are open. The other grades are not ready yet." };
   }
 
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .upsert({ id: user.id }, { onConflict: "id" });
+  const profileError = await ensureProfile(supabase, user.id);
   if (profileError) return { error: friendlyDbError(profileError) };
 
   const { count, error: countError } = await supabase
