@@ -27,7 +27,7 @@ export function NotifyForm() {
           {state.error}
         </p>
       ) : null}
-      <p className="hint text-sm">No account needed. We only use this to say when a grade opens.</p>
+      <p className="hint text-sm">No account needed. We only use this to say when new skills are added.</p>
     </form>
   );
 }

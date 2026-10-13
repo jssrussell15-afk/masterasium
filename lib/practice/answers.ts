@@ -1,5 +1,11 @@
 export function normalizeAnswer(value: string): string {
-  return value.trim().toLowerCase().replace(/,/g, "").replace(/\s+/g, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/,/g, "")
+    .replace(/\s+/g, "")
+    .replaceAll("−", "-")
+    .replace(/^\$/, "");
 }
 
 export function answersMatch(expected: string, given: string): boolean {

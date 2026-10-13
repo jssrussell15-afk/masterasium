@@ -7,7 +7,7 @@ import { Shell } from "@/components/site-header";
 import { friendlyDbError } from "@/lib/db-error";
 import { isSupportedGrade } from "@/lib/grades";
 import { requireUser } from "@/lib/auth/session";
-import { accuracyScheduler } from "@/lib/practice/scheduler";
+import { accuracyScheduler, describeSkills } from "@/lib/practice/scheduler";
 import { loadCards, loadOrIssueQuestion, totals } from "@/lib/practice/session";
 
 export default function PracticePage(props: PageProps<"/practice/[childId]">) {
@@ -74,6 +74,7 @@ async function PracticeLoader({
           attempted: score.attempted,
           correct: score.correct,
           focusTitle: focus.title,
+          skills: describeSkills(data.grade, cards),
         }}
       />
     </div>

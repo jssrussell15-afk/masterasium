@@ -13,13 +13,13 @@ export type PracticeMode = "generated" | "uploaded";
 
 export interface ItemSource {
   readonly id: PracticeMode;
-  next(skill: Skill, rng?: () => number): Question;
+  next(skill: Skill, rng?: () => number, options?: { small?: boolean }): Question;
 }
 
 export const generatedItemSource: ItemSource = {
   id: "generated",
-  next(skill, rng = Math.random) {
-    return generateQuestion(skill.id, rng);
+  next(skill, rng = Math.random, options) {
+    return generateQuestion(skill.id, rng, options);
   },
 };
 

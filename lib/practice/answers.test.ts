@@ -7,6 +7,9 @@ describe("answersMatch", () => {
     expect(answersMatch("70 000", "70000")).toBe(true);
     expect(answersMatch("1.50", "1.5")).toBe(true);
     expect(answersMatch("3/8", "3 / 8")).toBe(true);
+    expect(answersMatch("-4", "−4")).toBe(true);
+    expect(answersMatch("20", "$20")).toBe(true);
+    expect(answersMatch("3 R 2", "3r2")).toBe(true);
   });
 
   it("rejects a blank answer and a different fraction", () => {

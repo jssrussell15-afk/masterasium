@@ -11,7 +11,7 @@ create table public.children (
   id uuid primary key default gen_random_uuid(),
   parent_id uuid not null references public.profiles (id) on delete cascade,
   first_name text not null check (char_length(btrim(first_name)) between 1 and 40),
-  grade smallint not null check (grade in (1, 5)),
+  grade smallint not null check (grade between 1 and 8),
   created_at timestamptz not null default now()
 );
 

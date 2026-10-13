@@ -8,6 +8,9 @@ export function friendlyDbError(error: DbError): string {
   if (error.message.includes("at most 2")) {
     return "This account already has 2 children.";
   }
+  if (message.includes("children_grade_check")) {
+    return "Grades 2 through 8 are not allowed in the database yet. In the Supabase SQL editor, paste: alter table public.children drop constraint if exists children_grade_check; alter table public.children add constraint children_grade_check check (grade between 1 and 8);";
+  }
   if (
     error.code === "42P01" ||
     error.code === "PGRST205" ||

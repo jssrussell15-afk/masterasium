@@ -19,7 +19,7 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
     return { error: "Use a first name, up to 40 letters." };
   }
   if (!isSupportedGrade(grade)) {
-    return { error: "Grade 1 and Grade 5 are open. The other grades are not ready yet." };
+    return { error: "Choose a grade from 1 to 8." };
   }
 
   const profileError = await ensureProfile(supabase, user.id);

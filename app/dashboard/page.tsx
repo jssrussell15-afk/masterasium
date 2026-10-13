@@ -9,8 +9,8 @@ import { renderDigestText, type DigestSummary } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
-import { formatAccuracy } from "@/lib/practice/format";
-import { accuracyScheduler } from "@/lib/practice/scheduler";
+import { formatAccuracy, skillStatusLabel } from "@/lib/practice/format";
+import { accuracyScheduler, describeSkills } from "@/lib/practice/scheduler";
 import { loadCards, totals } from "@/lib/practice/session";
 
 export default function DashboardPage() {
@@ -94,6 +94,7 @@ async function ChildCard({
     cards,
     sessionCount: 0,
   });
+  const skills = describeSkills(child.grade, cards);
 
   const { data: stub } = await supabase
     .from("digest_stubs")
@@ -121,9 +122,27 @@ async function ChildCard({
           <strong>{formatAccuracy(score.attempted, score.correct)}</strong>
         </div>
         <div>
-          <p>Current focus</p>
+          <p>Current skill</p>
           <strong>{focus.title}</strong>
         </div>
+      </div>
+      <div>
+        <h3 className="font-semibold">Skills</h3>
+        <p className="hint mt-1 text-sm">
+          A skill is mastered after 10 questions at 80% accuracy. That opens the next skill. Any
+          skill can still be chosen during practice.
+        </p>
+        <ul className="skill-list mt-2">
+          {skills.map((skill) => (
+            <li key={skill.id} className={skill.current ? "skill-current" : undefined}>
+              <span>{skill.title}</span>
+              <span className="hint">
+                {skill.current ? "Current · " : ""}
+                {skillStatusLabel(skill.status)}
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
       <Link href={`/practice/${child.id}`} className="btn btn-primary w-fit">
         Practice

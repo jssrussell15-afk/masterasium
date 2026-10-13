@@ -33,15 +33,15 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="hint mt-4 max-w-xl text-sm">
-            Grade 1 and Grade 5 are open now, free, while we test. Registration does not ask for
-            payment.
+            Grades 1 through 8 are open, free, while we test. Registration does not ask for payment.
           </p>
         </section>
 
         <aside className="card">
-          <h2 className="text-xl font-semibold">Tell me when a grade is ready</h2>
+          <h2 className="text-xl font-semibold">A note when practice grows</h2>
           <p className="hint mt-2 text-sm">
-            Grades 2, 3, 4, 6, 7, and 8 are still being prepared.
+            Grades 1 through 8 are open. Leave an email if you want a short note when new skills
+            are added.
           </p>
           <NotifyForm />
         </aside>
@@ -58,8 +58,8 @@ export default function HomePage() {
         <article className="card">
           <h2 className="font-semibold">One skill at a time</h2>
           <p className="hint mt-2 text-sm">
-            Practice stays on a skill until it is steady, then opens the next one. A short review
-            comes back to earlier skills.
+            Practice stays on a skill until it is steady, then opens the next one. Any skill in the
+            grade can be chosen. A short review comes back to earlier skills.
           </p>
         </article>
         <article className="card">

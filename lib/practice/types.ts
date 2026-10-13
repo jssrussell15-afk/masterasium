@@ -8,6 +8,7 @@ export type Question = {
   skillId: string;
   prompt: string;
   answer: string;
+  steps: string[];
   responseHint: string | null;
 };
 
@@ -20,6 +21,19 @@ export type QuestionView = {
   kind: "focus" | "review";
 };
 
+export type SkillStatus = "mastered" | "practicing" | "not-started";
+
+export type SkillProgress = {
+  id: string;
+  title: string;
+  summary: string;
+  examplePrompt: string;
+  exampleSteps: string[];
+  exampleAnswer: string;
+  status: SkillStatus;
+  current: boolean;
+};
+
 export type PracticeView = {
   childId: string;
   childName: string;
@@ -28,14 +42,18 @@ export type PracticeView = {
   attempted: number;
   correct: number;
   focusTitle: string;
+  skills: SkillProgress[];
 };
 
 export type PracticeState = {
   error?: string;
   correct?: boolean;
   expected?: string;
+  steps?: string[];
+  note?: string;
   next?: QuestionView;
   attempted?: number;
   correctCount?: number;
   focusTitle?: string;
+  skills?: SkillProgress[];
 };

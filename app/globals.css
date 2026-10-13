@@ -196,6 +196,53 @@ a {
   line-height: 1.15;
 }
 
+.prompt-long {
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  line-height: 1.28;
+}
+
+.lesson {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgb(255 255 255 / 88%);
+  padding: 0.95rem 1rem;
+  line-height: 1.45;
+}
+
+.steps {
+  margin: 0.45rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.steps li + li {
+  margin-top: 0.2rem;
+}
+
+.skill-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.35rem 0.75rem;
+  border-top: 1px solid var(--line);
+  padding: 0.45rem 0;
+  font-size: 0.95rem;
+}
+
+.skill-list li:first-child {
+  border-top: 0;
+}
+
+.skill-current {
+  font-weight: 650;
+}
+
 .answer-input {
   width: 100%;
   border: 1px solid var(--line);
@@ -218,6 +265,10 @@ a {
 .feedback.bad {
   background: #fdeceb;
   color: var(--bad);
+}
+
+.feedback p {
+  margin: 0;
 }
 
 .hint,

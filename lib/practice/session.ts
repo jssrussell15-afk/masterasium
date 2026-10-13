@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { friendlyDbError } from "@/lib/db-error";
 import type { SupportedGrade } from "@/lib/grades";
 import { getItemSource } from "@/lib/practice/source";
+import { packStoredAnswer } from "@/lib/practice/stored-answer";
 import {
   accuracyScheduler,
   emptyCard,
@@ -24,6 +25,13 @@ type PendingRow = {
   id: string;
   skill_id: string;
   prompt: string;
+};
+
+export type IssueOptions = {
+  /** Skip the scheduler and ask this skill. Any skill in the grade is allowed. */
+  skillId?: string;
+  /** A shorter question after the same kind of mistake. */
+  small?: boolean;
 };
 
 export async function loadCards(
@@ -71,10 +79,29 @@ export async function issueQuestion(
   childId: string,
   grade: SupportedGrade,
   cards: SkillCard[],
+  options?: IssueOptions,
 ): Promise<{ question: QuestionView | null; error: string | null }> {
-  const sessionCount = cards.reduce((total, card) => total + card.attempted, 0);
-  const skill = accuracyScheduler.chooseSkill({ grade, cards, sessionCount });
-  const generated = getItemSource("generated").next(skill);
+  let skill: Skill;
+  let kind: QuestionView["kind"];
+  if (options?.skillId) {
+    const chosen = skillById(options.skillId);
+    if (!chosen || chosen.grade !== grade) {
+      return { question: null, error: "That skill is not in this grade." };
+    }
+    skill = chosen;
+    kind = "focus";
+  } else {
+    const sessionCount = cards.reduce((total, card) => total + card.attempted, 0);
+    skill = accuracyScheduler.chooseSkill({ grade, cards, sessionCount });
+    kind = kindFor(skill, grade, cards);
+  }
+
+  const removed = await supabase.from("pending_questions").delete().eq("child_id", childId);
+  if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
+
+  const generated = getItemSource("generated").next(skill, Math.random, {
+    small: options?.small ?? false,
+  });
 
   const { data, error } = await supabase
     .from("pending_questions")
@@ -82,7 +109,7 @@ export async function issueQuestion(
       child_id: childId,
       skill_id: skill.id,
       prompt: generated.prompt,
-      answer: generated.answer,
+      answer: packStoredAnswer(generated.answer, generated.steps),
     })
     .select("id, skill_id, prompt")
     .single();
@@ -95,7 +122,7 @@ export async function issueQuestion(
   }
 
   return {
-    question: toView(data as PendingRow, skill, kindFor(skill, grade, cards)),
+    question: toView(data as PendingRow, skill, kind),
     error: null,
   };
 }

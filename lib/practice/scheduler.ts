@@ -1,7 +1,8 @@
 import type { SupportedGrade } from "@/lib/grades";
 import { skillsForGrade, type Skill } from "@/lib/practice/skills";
+import type { SkillProgress } from "@/lib/practice/types";
 
-export const MASTERY_MIN_ATTEMPTS = 5;
+export const MASTERY_MIN_ATTEMPTS = 10;
 export const MASTERY_MIN_ACCURACY = 0.8;
 
 /**
@@ -23,7 +24,7 @@ export type SchedulerInput = {
   cards: SkillCard[];
   /**
    * Questions already answered in the running count.
-   * 0 asks for the focus skill. Every 4th question can review an earlier skill.
+   * 0 asks for the focus skill. Counts 3 and 7 of every 8 can review a mastered skill.
    */
   sessionCount: number;
 };
@@ -70,7 +71,9 @@ export class AccuracyScheduler implements PracticeScheduler {
     const cards = new Map(input.cards.map((card) => [card.skillId, card]));
     const mastered = skills.filter((skill) => isMastered(cards.get(skill.id)));
 
-    if (input.sessionCount > 0 && input.sessionCount % 4 === 0 && mastered.length > 0) {
+    const reviewTurn =
+      input.sessionCount > 0 && (input.sessionCount % 8 === 3 || input.sessionCount % 8 === 7);
+    if (reviewTurn && mastered.length > 0) {
       return lowestAccuracy(mastered, cards);
     }
 
@@ -84,3 +87,23 @@ export class AccuracyScheduler implements PracticeScheduler {
 }
 
 export const accuracyScheduler = new AccuracyScheduler();
+
+export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): SkillProgress[] {
+  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0 });
+  const byId = new Map(cards.map((card) => [card.skillId, card]));
+  return skillsForGrade(grade).map((skill) => {
+    const card = byId.get(skill.id);
+    const status =
+      !card || card.attempted === 0 ? "not-started" : isMastered(card) ? "mastered" : "practicing";
+    return {
+      id: skill.id,
+      title: skill.title,
+      summary: skill.summary,
+      examplePrompt: skill.examplePrompt,
+      exampleSteps: skill.exampleSteps,
+      exampleAnswer: skill.exampleAnswer,
+      status,
+      current: skill.id === focus.id,
+    };
+  });
+}
