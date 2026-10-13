@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import { formatAccuracy, skillStatusLabel } from "@/lib/practice/format";
 import { practiceAction } from "@/lib/practice/actions";
@@ -15,6 +15,32 @@ export function PracticeSession({ view }: { view: PracticeView }) {
   const correctCount = state.correctCount ?? view.correct;
   const skills = state.skills ?? view.skills;
   const lesson = skills.find((skill) => skill.id === question.skillId);
+  const [topicsOpen, setTopicsOpen] = useState(false);
+  const [hasChosenTopic, setHasChosenTopic] = useState(false);
+  const topicDialog = useRef<HTMLDialogElement>(null);
+  const topicForm = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    const dialog = topicDialog.current;
+    if (!dialog) return;
+    if (topicsOpen) {
+      if (!dialog.open) dialog.showModal();
+      document.getElementById(`topic-${question.skillId}`)?.focus();
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }, [topicsOpen, question.skillId]);
+
+  function selectTopic(skillId: string) {
+    setHasChosenTopic(true);
+    setTopicsOpen(false);
+    if (skillId === question.skillId || pending) return;
+    const form = topicForm.current;
+    const input = form?.elements.namedItem("skillId");
+    if (!form || !(input instanceof HTMLInputElement)) return;
+    input.value = skillId;
+    form.requestSubmit();
+  }
 
   return (
     <div className="grid gap-6">
@@ -33,28 +59,65 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         </div>
       </div>
 
-      <form action={action}>
+      <form ref={topicForm} action={action} hidden>
         <input type="hidden" name="intent" value="choose" />
         <input type="hidden" name="childId" value={view.childId} />
-        <label className="field">
-          Skill
-          <select
-            name="skillId"
-            key={`${question.questionId}-${question.skillId}`}
-            defaultValue={question.skillId}
-            disabled={pending}
-            onChange={(event) => {
-              if (event.target.value !== question.skillId) event.currentTarget.form?.requestSubmit();
-            }}
-          >
-            {skills.map((skill) => (
-              <option key={skill.id} value={skill.id}>
-                {skill.title} — {skillStatusLabel(skill.status)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <input type="hidden" name="skillId" defaultValue={question.skillId} />
       </form>
+      <button
+        type="button"
+        className="btn btn-secondary w-fit"
+        aria-haspopup="dialog"
+        disabled={pending}
+        onClick={() => setTopicsOpen(true)}
+      >
+        {hasChosenTopic ? "Change topic" : "Select topic"}
+      </button>
+      <dialog
+        ref={topicDialog}
+        className="topic-dialog"
+        aria-labelledby="topic-heading"
+        onClose={() => setTopicsOpen(false)}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return;
+          const rect = event.currentTarget.getBoundingClientRect();
+          const inside =
+            event.clientX >= rect.left &&
+            event.clientX <= rect.right &&
+            event.clientY >= rect.top &&
+            event.clientY <= rect.bottom;
+          if (!inside) setTopicsOpen(false);
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="topic-heading" className="text-xl font-semibold">
+            Choose a topic
+          </h2>
+          <button type="button" className="btn btn-quiet" onClick={() => setTopicsOpen(false)}>
+            Close
+          </button>
+        </div>
+        <ul className="topic-choices">
+          {skills.map((skill) => {
+            const current = skill.id === question.skillId;
+            return (
+              <li key={skill.id}>
+                <button
+                  id={`topic-${skill.id}`}
+                  type="button"
+                  className={current ? "topic-choice current" : "topic-choice"}
+                  aria-current={current ? "true" : undefined}
+                  disabled={pending}
+                  onClick={() => selectTopic(skill.id)}
+                >
+                  {skill.title}
+                  <span>{current ? `Selected · ${skillStatusLabel(skill.status)}` : skillStatusLabel(skill.status)}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </dialog>
 
       {state.correct != null ? (
         <div className={state.correct ? "feedback good" : "feedback bad"} role="status">

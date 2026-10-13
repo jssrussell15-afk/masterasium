@@ -25,13 +25,16 @@ export function Shell({
   children,
   action,
   narrow = false,
+  banner = false,
 }: {
   children: ReactNode;
   action?: ReactNode;
   narrow?: boolean;
+  banner?: boolean;
 }) {
   return (
     <>
+      {banner ? <img src="/banner.png" alt="" className="page-banner" /> : null}
       <SiteHeader action={action} />
       <main
         className={`mx-auto flex w-full flex-1 flex-col px-6 pb-16 ${narrow ? "max-w-xl" : "max-w-5xl"}`}

@@ -12,7 +12,7 @@ import { loadCards, loadOrIssueQuestion, totals } from "@/lib/practice/session";
 
 export default function PracticePage(props: PageProps<"/practice/[childId]">) {
   return (
-    <Shell narrow action={<SignOutButton />}>
+    <Shell narrow banner action={<SignOutButton />}>
       <Suspense fallback={<p className="status mt-10">Getting a question ready…</p>}>
         <PracticeLoader params={props.params} />
       </Suspense>

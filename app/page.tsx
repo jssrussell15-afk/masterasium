@@ -5,7 +5,7 @@ import { GRADES } from "@/lib/grades";
 
 export default function HomePage() {
   return (
-    <Shell>
+    <Shell banner>
       <div className="mt-8 grid items-start gap-10 md:mt-16 md:grid-cols-[1.15fr_0.85fr]">
         <section>
           <p className="eyebrow">Ontario · Grades 1–8</p>
