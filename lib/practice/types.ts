@@ -1,5 +1,5 @@
 import type { SupportedGrade } from "@/lib/grades";
-import type { BadgePiece } from "@/lib/practice/badges";
+import type { GradeAccess } from "@/lib/practice/grade-access";
 import type { AnswerShape } from "@/lib/practice/parts";
 import type { StreakMilestone } from "@/lib/practice/streak";
 
@@ -37,6 +37,7 @@ export type SkillStatus = "mastered" | "practicing" | "not-started" | "check";
 
 export type SkillProgress = {
   id: string;
+  grade: SupportedGrade;
   title: string;
   summary: string;
   examplePrompt: string;
@@ -52,6 +53,7 @@ export type PracticeView = {
   childId: string;
   childName: string;
   grade: SupportedGrade;
+  access: GradeAccess;
   question: QuestionView;
   attempted: number;
   correct: number;
@@ -60,7 +62,7 @@ export type PracticeView = {
   streakDays: number;
   streakMilestone: StreakMilestone | null;
   recap: string | null;
-  badges: BadgePiece[];
+  requestedGrade: SupportedGrade | null;
   today: string;
 };
 
@@ -78,5 +80,7 @@ export type PracticeState = {
   streakDays?: number;
   streakMilestone?: StreakMilestone | null;
   recap?: string | null;
-  badges?: BadgePiece[];
+  requestNote?: string;
+  requestedGrade?: SupportedGrade | null;
+  workingGrade?: SupportedGrade;
 };

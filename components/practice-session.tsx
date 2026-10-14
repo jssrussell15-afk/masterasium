@@ -4,14 +4,17 @@ import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import { AnswerFields } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
-import { BadgeTree } from "@/components/badge-tree";
 import { LessonCheckNote } from "@/components/lesson-check-note";
+import { MasteryMark } from "@/components/mastery-mark";
 import { SessionRecap } from "@/components/session-recap";
 import { StreakMark } from "@/components/streak-mark";
 import { SupportNote } from "@/components/support-note";
-import { formatAccuracy, skillStatusLabel } from "@/lib/practice/format";
+import { formatAccuracy } from "@/lib/practice/format";
 import { practiceAction } from "@/lib/practice/actions";
+import { gradeIsOpen, nextEnrolledGrade, selectorGrades } from "@/lib/practice/grade-access";
+import { masteryLabel, masteryMark } from "@/lib/practice/mastery";
 import type { PracticeState, PracticeView, QuestionKind, SkillProgress } from "@/lib/practice/types";
+import type { SupportedGrade } from "@/lib/grades";
 
 function kindLabel(kind: QuestionKind): string {
   if (kind === "review") return "Review";
@@ -32,8 +35,15 @@ export function PracticeSession({ view }: { view: PracticeView }) {
   const streakDays = fromAction ? (state.streakDays ?? 0) : view.streakDays;
   const streakMilestone = fromAction ? (state.streakMilestone ?? null) : view.streakMilestone;
   const recap = fromAction ? (state.recap ?? null) : view.recap;
-  const badges = fromAction ? (state.badges ?? []) : view.badges;
+  const requestedGrade =
+    state.requestedGrade !== undefined ? state.requestedGrade : view.requestedGrade;
+  const requestNote = state.requestNote;
   const lesson = skills.find((skill) => skill.id === question.skillId);
+  const access = {
+    ...view.access,
+    working: state.workingGrade ?? view.access.working,
+    requested: requestedGrade,
+  };
   const [topicsOpen, setTopicsOpen] = useState(false);
   const [hasChosenTopic, setHasChosenTopic] = useState(false);
   const topicDialog = useRef<HTMLDialogElement>(null);
@@ -84,7 +94,11 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         </div>
       </div>
 
-      <BadgeTree badges={badges} />
+      {requestNote ? (
+        <p className="hint" role="status">
+          {requestNote}
+        </p>
+      ) : null}
 
       <form ref={topicForm} action={action} hidden>
         <input type="hidden" name="intent" value="choose" />
@@ -124,26 +138,41 @@ export function PracticeSession({ view }: { view: PracticeView }) {
             Close
           </button>
         </div>
-        <ul className="topic-choices">
-          {skills.map((skill) => {
-            const current = skill.id === question.skillId;
+        <div className="topic-grades">
+          {selectorGrades().map((grade) => {
+            const group = skills.filter((skill) => skill.grade === grade);
             return (
-              <li key={skill.id}>
-                <button
-                  id={`topic-${skill.id}`}
-                  type="button"
-                  className={current ? "topic-choice current" : "topic-choice"}
-                  aria-current={current ? "true" : undefined}
-                  disabled={pending}
-                  onClick={() => selectTopic(skill.id)}
-                >
-                  {skill.title}
-                  <span>{current ? `Selected · ${skillStatusLabel(skill.status)}` : skillStatusLabel(skill.status)}</span>
-                </button>
-              </li>
+              <section key={grade} className="topic-grade" aria-label={`Grade ${grade}`}>
+                <h3>Grade {grade}</h3>
+                <p className="hint">{gradeNote(grade, access, requestedGrade)}</p>
+                <ul className="topic-choices">
+                  {group.map((skill) => {
+                    const current = skill.id === question.skillId;
+                    const label = masteryLabel(masteryMark(skill.status));
+                    return (
+                      <li key={skill.id}>
+                        <button
+                          id={`topic-${skill.id}`}
+                          type="button"
+                          className={current ? "topic-choice current" : "topic-choice"}
+                          aria-current={current ? "true" : undefined}
+                          disabled={pending}
+                          onClick={() => selectTopic(skill.id)}
+                        >
+                          <span className="topic-name">
+                            <MasteryMark status={skill.status} />
+                            {skill.title}
+                          </span>
+                          <span>{current ? `Selected · ${label}` : label}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             );
           })}
-        </ul>
+        </div>
       </dialog>
 
       {state.correct != null ? (
@@ -198,6 +227,22 @@ export function PracticeSession({ view }: { view: PracticeView }) {
       <SessionRecap recap={recap} />
     </div>
   );
+}
+
+function gradeNote(
+  grade: SupportedGrade,
+  access: PracticeView["access"],
+  requestedGrade: SupportedGrade | null,
+): string {
+  if (grade === access.working) return "Working in this grade. Questions and review stay here.";
+  if (requestedGrade === grade) return "Waiting for a parent to approve this grade.";
+  if (grade === access.enrolled) return "Enrolled grade. Choosing a topic moves practice back here.";
+  const next = nextEnrolledGrade(access.enrolled);
+  if (access.nextUnlocked && next === grade) {
+    return "Unlocked early. Choosing a topic moves practice here.";
+  }
+  if (gradeIsOpen(access, grade)) return "Choosing a topic moves practice here.";
+  return "Visible without finishing the earlier grade. Choosing a topic asks a parent to approve it.";
 }
 
 function LessonPanel({ childId, skill }: { childId: string; skill: SkillProgress }) {

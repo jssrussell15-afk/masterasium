@@ -51,8 +51,8 @@ export default function HomePage() {
         <article className="card">
           <h2 className="font-semibold">One or two children</h2>
           <p className="hint mt-2 text-sm">
-            A parent account holds the profiles. Each child is a first name and a grade. No child
-            email.
+            A parent account holds the profiles. Each child gets a first name, a grade, a username,
+            and a PIN. No child email.
           </p>
         </article>
         <article className="card">

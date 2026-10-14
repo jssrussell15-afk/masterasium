@@ -1,10 +1,18 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { STUDENT_COOKIE, studentCookieOptions } from "@/lib/auth/student-cookie";
+import {
+  createAnonClient,
+  endStudentSession,
+  readStudentToken,
+  revokeStudentToken,
+} from "@/lib/auth/student";
+import { friendlyDbError, STUDENT_LOGIN_SETUP_MESSAGE } from "@/lib/db-error";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
-import { isValidEmail, normalizeEmail } from "@/lib/validation";
+import { isValidEmail, isValidPin, isValidUsername, normalizeEmail, normalizeUsername } from "@/lib/validation";
 
 export type AuthState = {
   error?: string;
@@ -69,13 +77,64 @@ export async function signIn(_previous: AuthState, formData: FormData): Promise<
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: error.message };
+  await endStudentSession();
   redirect("/dashboard");
 }
 
+export async function signInStudent(
+  _previous: AuthState,
+  formData: FormData,
+): Promise<AuthState> {
+  if (!isSupabaseConfigured()) {
+    return { error: "Add your Supabase keys in .env.local, then restart the dev server." };
+  }
+
+  const username = normalizeUsername(String(formData.get("username") ?? ""));
+  const pin = String(formData.get("pin") ?? "").trim();
+  if (!isValidUsername(username)) {
+    return { error: "Use 3 to 20 letters or numbers, with no spaces." };
+  }
+  if (!isValidPin(pin)) return { error: "Use a PIN of 4 to 6 digits." };
+
+  const anon = createAnonClient();
+  const { data, error } = await anon.rpc("start_student_session", {
+    p_username: username,
+    p_pin: pin,
+  });
+
+  if (error) {
+    const message = friendlyDbError(error);
+    if (message === STUDENT_LOGIN_SETUP_MESSAGE) {
+      return {
+        error: "Student sign-in is not ready yet. Ask a parent to finish setup in account settings.",
+      };
+    }
+    return { error: "That username or PIN is not right." };
+  }
+
+  if (data === "locked") {
+    return { error: "Too many tries. Wait a few minutes and try again." };
+  }
+  if (typeof data !== "string" || !/^[0-9a-f]{64}$/.test(data)) {
+    return { error: "That username or PIN is not right." };
+  }
+
+  const previous = await readStudentToken();
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  await revokeStudentToken(previous);
+
+  const store = await cookies();
+  store.set(STUDENT_COOKIE, data, studentCookieOptions());
+  redirect("/practice");
+}
+
 export async function signOut() {
+  const hadStudent = Boolean(await readStudentToken());
+  await endStudentSession();
   if (isSupabaseConfigured()) {
     const supabase = await createClient();
     await supabase.auth.signOut();
   }
-  redirect("/");
+  redirect(hadStudent ? "/login?as=student" : "/");
 }

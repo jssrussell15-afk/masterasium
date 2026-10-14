@@ -7,8 +7,6 @@ import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
 import { applyLearning } from "@/lib/practice/learning";
 import { givenAnswer } from "@/lib/practice/parts";
 import { buildPortrait } from "@/lib/practice/portrait";
-import { accuracyScheduler, describeSkills, type SkillCard } from "@/lib/practice/scheduler";
-import { skillById } from "@/lib/practice/skills";
 import {
   cardFor,
   issueQuestion,
@@ -16,12 +14,15 @@ import {
   loadCards,
   totals,
 } from "@/lib/practice/session";
+import { skillById } from "@/lib/practice/skills";
+import { accuracyScheduler, describeCatalog, type SkillCard } from "@/lib/practice/scheduler";
 import { readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
 import type { PracticeState } from "@/lib/practice/types";
 import { torontoDate } from "@/lib/digest/build";
-import { isSupportedGrade, type SupportedGrade } from "@/lib/grades";
+import { isSupportedGrade } from "@/lib/grades";
 import { friendlyDbError } from "@/lib/db-error";
-import { requireUser } from "@/lib/auth/session";
+import { requireStudent } from "@/lib/auth/student";
+import { gradeAccessFrom, gradeIsOpen, type GradeAccess } from "@/lib/practice/grade-access";
 
 type PendingAnswer = {
   id: string;
@@ -31,11 +32,6 @@ type PendingAnswer = {
   answer: string;
 };
 
-type ChildRow = {
-  id: string;
-  grade: number;
-};
-
 function replaceCard(cards: SkillCard[], card: SkillCard): SkillCard[] {
   return cards.filter((item) => item.skillId !== card.skillId).concat(card);
 }
@@ -43,30 +39,36 @@ function replaceCard(cards: SkillCard[], card: SkillCard): SkillCard[] {
 async function snapshot(
   supabase: SupabaseClient,
   childId: string,
-  grade: SupportedGrade,
+  access: GradeAccess,
   cards: SkillCard[],
   extra: PracticeState,
 ): Promise<PracticeState> {
   const score = totals(cards);
   const today = torontoDate();
-  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0, today });
+  const focus = accuracyScheduler.chooseSkill({
+    grade: access.working,
+    cards,
+    sessionCount: 0,
+    today,
+  });
   const log = await loadAttemptLog(supabase, childId);
   const portrait = buildPortrait({
-    grade,
+    grade: access.working,
     cards,
     attempts: log.attempts,
     today,
   });
   return {
-    ...extra,
     attempted: score.attempted,
     correctCount: score.correct,
     focusTitle: focus.title,
-    skills: describeSkills(grade, cards),
+    skills: describeCatalog(access, cards),
     streakDays: portrait.streakDays,
     streakMilestone: portrait.streakMilestone,
     recap: portrait.recap,
-    badges: portrait.badges,
+    requestedGrade: access.requested,
+    workingGrade: access.working,
+    ...extra,
     ...(log.error ? { error: extra.error ?? log.error } : {}),
   };
 }
@@ -92,23 +94,22 @@ async function saveCard(
 }
 
 async function ownedChild(childId: string): Promise<
-  | { supabase: SupabaseClient; grade: SupportedGrade }
+  | { supabase: SupabaseClient; access: GradeAccess }
   | { error: string }
 > {
-  const { supabase, user } = await requireUser();
-  const { data: child, error: childError } = await supabase
-    .from("children")
-    .select("id, grade")
-    .eq("id", childId)
-    .eq("parent_id", user.id)
-    .maybeSingle();
-
-  if (childError) return { error: friendlyDbError(childError) };
-  const profile = child as ChildRow | null;
-  if (!profile || !isSupportedGrade(profile.grade)) {
-    return { error: "That child profile is not available for practice." };
+  const session = await requireStudent();
+  if ("error" in session) return { error: session.error };
+  if (session.child.id !== childId) {
+    return { error: "That practice session is not available." };
   }
-  return { supabase, grade: profile.grade };
+  const access = gradeAccessFrom({
+    enrolled: session.child.grade,
+    working: session.child.working_grade,
+    nextUnlocked: session.child.next_grade_unlocked,
+    requested: session.child.requested_grade,
+  });
+  if (!access) return { error: "That child profile is not available for practice." };
+  return { supabase: session.supabase, access };
 }
 
 export async function submitAnswer(
@@ -121,7 +122,7 @@ export async function submitAnswer(
 
   const owned = await ownedChild(childId);
   if ("error" in owned) return { error: owned.error };
-  const { supabase, grade } = owned;
+  const { supabase, access } = owned;
 
   const { data: pending, error: pendingError } = await supabase
     .from("pending_questions")
@@ -186,16 +187,21 @@ export async function submitAnswer(
   if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
     updatedCards = replaceCard(updatedCards, applied.extra);
   }
+  const questionSkill = skillById(question.skill_id);
+  const scheduleGrade =
+    coach && questionSkill && isSupportedGrade(questionSkill.grade)
+      ? questionSkill.grade
+      : access.working;
   const issued = await issueQuestion(
     supabase,
     childId,
-    grade,
+    scheduleGrade,
     updatedCards,
     coach ? { skillId: question.skill_id, small: true } : undefined,
   );
   if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
 
-  return snapshot(supabase, childId, grade, updatedCards, {
+  return snapshot(supabase, childId, access, updatedCards, {
     correct,
     expected: correct ? undefined : unpacked.answer,
     steps: correct ? undefined : unpacked.steps,
@@ -214,38 +220,81 @@ export async function chooseSkill(
 
   const owned = await ownedChild(childId);
   if ("error" in owned) return { error: owned.error };
-  const { supabase, grade } = owned;
+  const { supabase, access } = owned;
 
   const skill = skillById(skillId);
-  if (!skill || skill.grade !== grade) return { error: "That skill is not in this grade." };
+  if (!skill || !isSupportedGrade(skill.grade)) return { error: "That skill is not available." };
 
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
 
-  const issued = await issueQuestion(supabase, childId, grade, cards, { skillId, explicit: true });
+  let nextAccess = access;
+  if (!gradeIsOpen(access, skill.grade) || skill.grade !== access.working) {
+    const { error } = await supabase.rpc("request_working_grade", { p_grade: skill.grade });
+    if (error) return { error: friendlyDbError(error) };
+    const refreshed = await supabase
+      .from("children")
+      .select("grade, working_grade, next_grade_unlocked, requested_grade")
+      .maybeSingle();
+    if (refreshed.error) return { error: friendlyDbError(refreshed.error) };
+    const read = gradeAccessFrom({
+      enrolled: refreshed.data?.grade ?? access.enrolled,
+      working: refreshed.data?.working_grade,
+      nextUnlocked: refreshed.data?.next_grade_unlocked,
+      requested: refreshed.data?.requested_grade,
+    });
+    if (!read) return { error: "That grade is not available." };
+    nextAccess = read;
+  }
+
+  if (nextAccess.working !== skill.grade) {
+    return snapshot(supabase, childId, nextAccess, cards, {
+      requestNote: `Grade ${skill.grade} is visible. A parent needs to approve it before practice moves there.`,
+      requestedGrade: skill.grade,
+    });
+  }
+
+  const issued = await issueQuestion(supabase, childId, skill.grade, cards, {
+    skillId,
+    explicit: true,
+  });
   if (!issued.question) return { error: issued.error ?? "Could not load that skill." };
 
-  return snapshot(supabase, childId, grade, cards, { next: issued.question });
+  return snapshot(supabase, childId, nextAccess, cards, {
+    next: issued.question,
+    requestNote: undefined,
+    requestedGrade: nextAccess.requested,
+  });
 }
 
-/** Parent dashboard jump into a skill that needs review. */
+/** Student practice jump into a skill that needs review. */
 export async function openSkill(formData: FormData): Promise<void> {
   const childId = String(formData.get("childId") ?? "");
   const skillId = String(formData.get("skillId") ?? "");
-  if (!childId || !skillId) redirect("/dashboard");
+  if (!childId || !skillId) redirect("/practice");
 
   const owned = await ownedChild(childId);
-  if ("error" in owned) redirect("/dashboard");
-  const { supabase, grade } = owned;
+  if ("error" in owned) redirect("/practice");
+  const { supabase, access } = owned;
 
   const skill = skillById(skillId);
-  if (!skill || skill.grade !== grade) redirect("/dashboard");
+  if (!skill || !isSupportedGrade(skill.grade) || !gradeIsOpen(access, skill.grade)) {
+    redirect("/practice");
+  }
 
   const { cards, error: cardError } = await loadCards(supabase, childId);
-  if (cardError) redirect("/dashboard");
+  if (cardError) redirect("/practice");
 
-  const issued = await issueQuestion(supabase, childId, grade, cards, { skillId, explicit: true });
-  if (!issued.question) redirect("/dashboard");
+  if (skill.grade !== access.working) {
+    const { error } = await supabase.rpc("adopt_working_grade", { p_grade: skill.grade });
+    if (error) redirect("/practice");
+  }
+
+  const issued = await issueQuestion(supabase, childId, skill.grade, cards, {
+    skillId,
+    explicit: true,
+  });
+  if (!issued.question) redirect("/practice");
   redirect(`/practice/${childId}`);
 }
 

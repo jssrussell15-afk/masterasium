@@ -13,7 +13,7 @@ export default async function WorksheetsPage() {
   }));
 
   return (
-    <Shell action={<SignOutButton />}>
+    <Shell role="parent" action={<SignOutButton />}>
       <WorksheetBuilder skills={skills} initialTemplates={templates} storageError={error} />
     </Shell>
   );

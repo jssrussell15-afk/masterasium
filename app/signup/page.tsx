@@ -10,7 +10,7 @@ export default function SignUpPage() {
           <h1 className="display text-4xl">Create a parent account</h1>
           <p className="hint mt-2">
             Email and a password. Free for testing. After this you can add one or two children,
-            first name only.
+            each with a first name, grade, username, and PIN.
           </p>
         </div>
         <AuthForm mode="sign-up" />

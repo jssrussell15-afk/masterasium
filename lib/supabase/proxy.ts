@@ -1,20 +1,27 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { STUDENT_COOKIE } from "@/lib/auth/student-cookie";
 import { isSupabaseConfigured, requireSupabaseEnv } from "@/lib/supabase/env";
 
-function isProtected(pathname: string): boolean {
+function isParentPath(pathname: string): boolean {
   return (
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/practice") ||
-    pathname.startsWith("/worksheets")
+    pathname.startsWith("/worksheets") ||
+    pathname.startsWith("/settings")
   );
+}
+
+function isStudentPath(pathname: string): boolean {
+  return pathname.startsWith("/practice");
 }
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const hasStudent = Boolean(request.cookies.get(STUDENT_COOKIE)?.value);
+  const asRole = request.nextUrl.searchParams.get("as");
 
   if (!isSupabaseConfigured()) {
-    if (isProtected(pathname)) {
+    if (isParentPath(pathname) || isStudentPath(pathname)) {
       return NextResponse.redirect(new URL("/setup", request.url));
     }
     return NextResponse.next();
@@ -47,12 +54,36 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const signedIn = Boolean(data?.claims);
 
-  if (!signedIn && isProtected(pathname)) {
+  // A student cookie wins over a leftover parent session, so a kid cannot open the desk.
+  if (hasStudent && signedIn && isParentPath(pathname)) {
+    return redirectWithCookies(request, "/practice", supabaseResponse);
+  }
+
+  if (!signedIn && isParentPath(pathname)) {
     return redirectWithCookies(request, "/login", supabaseResponse);
   }
 
-  if (signedIn && (pathname === "/login" || pathname === "/signup")) {
-    return redirectWithCookies(request, "/dashboard", supabaseResponse);
+  if (!hasStudent && isStudentPath(pathname)) {
+    if (signedIn) return redirectWithCookies(request, "/dashboard", supabaseResponse);
+    return redirectWithCookies(request, "/login", supabaseResponse, "?as=student");
+  }
+
+  if (hasStudent && !signedIn && isParentPath(pathname)) {
+    return redirectWithCookies(request, "/practice", supabaseResponse);
+  }
+
+  if (pathname === "/signup") {
+    if (hasStudent) return redirectWithCookies(request, "/practice", supabaseResponse);
+    if (signedIn) return redirectWithCookies(request, "/dashboard", supabaseResponse);
+  }
+
+  if (pathname === "/login") {
+    if (hasStudent && asRole !== "parent") {
+      return redirectWithCookies(request, "/practice", supabaseResponse);
+    }
+    if (signedIn && !hasStudent && asRole !== "student") {
+      return redirectWithCookies(request, "/dashboard", supabaseResponse);
+    }
   }
 
   return supabaseResponse;
@@ -62,9 +93,11 @@ function redirectWithCookies(
   request: NextRequest,
   pathname: string,
   supabaseResponse: NextResponse,
+  search = "",
 ) {
   const url = request.nextUrl.clone();
   url.pathname = pathname;
+  url.search = search;
   const redirectResponse = NextResponse.redirect(url);
   supabaseResponse.cookies.getAll().forEach((cookie) => {
     redirectResponse.cookies.set(cookie);

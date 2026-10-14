@@ -1,3 +1,4 @@
+import { selectorGrades, type GradeAccess } from "@/lib/practice/grade-access";
 import type { SupportedGrade } from "@/lib/grades";
 import { readLearn } from "@/lib/practice/memory";
 import { isReviewDue } from "@/lib/practice/review";
@@ -127,6 +128,7 @@ export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): Skill
             : "practicing";
     return {
       id: skill.id,
+      grade,
       title: skill.title,
       summary: skill.summary,
       examplePrompt: skill.examplePrompt,
@@ -137,4 +139,19 @@ export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): Skill
       current: skill.id === focus.id,
     };
   });
+}
+
+/** Every grade is listed. The current skill belongs to the grade they are working in. */
+export function describeCatalog(access: Pick<GradeAccess, "working">, cards: SkillCard[]): SkillProgress[] {
+  const focusId = accuracyScheduler.chooseSkill({
+    grade: access.working,
+    cards,
+    sessionCount: 0,
+  }).id;
+  return selectorGrades().flatMap((grade) =>
+    describeSkills(grade, cards).map((skill) => ({
+      ...skill,
+      current: skill.id === focusId,
+    })),
+  );
 }

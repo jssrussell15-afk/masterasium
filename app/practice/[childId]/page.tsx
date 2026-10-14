@@ -1,20 +1,19 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { NeedsReview } from "@/components/needs-review";
 import { PracticeSession } from "@/components/practice-session";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
-import { friendlyDbError } from "@/lib/db-error";
+import { requireStudent } from "@/lib/auth/student";
 import { torontoDate } from "@/lib/digest/build";
-import { isSupportedGrade } from "@/lib/grades";
-import { requireUser } from "@/lib/auth/session";
+import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { buildPortrait } from "@/lib/practice/portrait";
-import { accuracyScheduler, describeSkills } from "@/lib/practice/scheduler";
+import { accuracyScheduler, describeCatalog } from "@/lib/practice/scheduler";
 import { loadAttemptLog, loadCards, loadOrIssueQuestion, totals } from "@/lib/practice/session";
 
 export default function PracticePage(props: PageProps<"/practice/[childId]">) {
   return (
-    <Shell narrow banner action={<SignOutButton />}>
+    <Shell narrow banner role="student" action={<SignOutButton />}>
       <Suspense fallback={<p className="status mt-10">Getting a question ready…</p>}>
         <PracticeLoader params={props.params} />
       </Suspense>
@@ -28,24 +27,27 @@ async function PracticeLoader({
   params: PageProps<"/practice/[childId]">["params"];
 }) {
   const { childId } = await params;
-  const { supabase, user } = await requireUser();
-  const { data, error } = await supabase
-    .from("children")
-    .select("id, first_name, grade")
-    .eq("id", childId)
-    .eq("parent_id", user.id)
-    .maybeSingle();
+  const session = await requireStudent();
+  if ("error" in session) {
+    return <p className="feedback bad mt-8">{session.error}</p>;
+  }
+  if (session.child.id !== childId) notFound();
 
-  if (error) return <p className="feedback bad mt-8">{friendlyDbError(error)}</p>;
-  if (!data) notFound();
-  if (!isSupportedGrade(data.grade)) {
+  const { supabase, child: data } = session;
+  const access = gradeAccessFrom({
+    enrolled: data.grade,
+    working: data.working_grade,
+    nextUnlocked: data.next_grade_unlocked,
+    requested: data.requested_grade,
+  });
+  if (!access) {
     return <p className="feedback bad mt-8">That grade is not open yet.</p>;
   }
 
   const { cards, error: cardError } = await loadCards(supabase, data.id);
   if (cardError) return <p className="feedback bad mt-8">{cardError}</p>;
 
-  const issued = await loadOrIssueQuestion(supabase, data.id, data.grade, cards);
+  const issued = await loadOrIssueQuestion(supabase, data.id, access.working, cards);
   if (!issued.question) {
     return <p className="feedback bad mt-8">{issued.error}</p>;
   }
@@ -56,37 +58,44 @@ async function PracticeLoader({
   const today = torontoDate();
   const score = totals(cards);
   const focus = accuracyScheduler.chooseSkill({
-    grade: data.grade,
+    grade: access.working,
     cards,
     sessionCount: 0,
     today,
   });
-  const portrait = buildPortrait({ grade: data.grade, cards, attempts: log.attempts, today });
+  const portrait = buildPortrait({
+    grade: access.working,
+    cards,
+    attempts: log.attempts,
+    today,
+  });
 
   return (
     <div className="mt-4 grid gap-6">
       <div>
-        <Link href="/dashboard" className="nav-link text-sm">
-          Back to the parent desk
-        </Link>
-        <p className="mt-3 text-lg">
-          {data.first_name} · Grade {data.grade}
+        <p className="text-lg">
+          {data.first_name} · Working in Grade {access.working}
         </p>
+        {access.working !== access.enrolled ? (
+          <p className="hint text-sm">Enrolled in Grade {access.enrolled}.</p>
+        ) : null}
       </div>
+      <NeedsReview childId={data.id} items={portrait.needsReview} allowReview />
       <PracticeSession
         view={{
           childId: data.id,
           childName: data.first_name,
-          grade: data.grade,
+          grade: access.working,
+          access,
           question: issued.question,
           attempted: score.attempted,
           correct: score.correct,
           focusTitle: focus.title,
-          skills: describeSkills(data.grade, cards),
+          skills: describeCatalog(access, cards),
           streakDays: portrait.streakDays,
           streakMilestone: portrait.streakMilestone,
           recap: portrait.recap,
-          badges: portrait.badges,
+          requestedGrade: access.requested,
           today,
         }}
       />
