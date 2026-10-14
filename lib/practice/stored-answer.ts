@@ -1,5 +1,22 @@
-export function packStoredAnswer(answer: string, steps: string[]): string {
-  return JSON.stringify({ v: 1, answer, steps });
+import type { QuestionKind } from "@/lib/practice/types";
+
+export type StoredPlan = {
+  kind: QuestionKind | null;
+  rollbackSkillId: string | null;
+};
+
+export function packStoredAnswer(
+  answer: string,
+  steps: string[],
+  meta?: { kind?: QuestionKind; rollbackSkillId?: string },
+): string {
+  return JSON.stringify({
+    v: 1,
+    answer,
+    steps,
+    ...(meta?.kind ? { kind: meta.kind } : {}),
+    ...(meta?.rollbackSkillId ? { rollbackSkillId: meta.rollbackSkillId } : {}),
+  });
 }
 
 export function unpackStoredAnswer(stored: string): { answer: string; steps: string[] } {
@@ -15,4 +32,21 @@ export function unpackStoredAnswer(stored: string): { answer: string; steps: str
     // Older rows stored the answer as plain text.
   }
   return { answer: stored, steps: [] };
+}
+
+export function readStoredPlan(stored: string): StoredPlan {
+  try {
+    const parsed = JSON.parse(stored) as { v?: number; kind?: unknown; rollbackSkillId?: unknown };
+    if (parsed?.v === 1) {
+      const kind = parsed.kind;
+      return {
+        kind:
+          kind === "focus" || kind === "review" || kind === "check" || kind === "support" ? kind : null,
+        rollbackSkillId: typeof parsed.rollbackSkillId === "string" ? parsed.rollbackSkillId : null,
+      };
+    }
+  } catch {
+    // Plain answers have no plan.
+  }
+  return { kind: null, rollbackSkillId: null };
 }

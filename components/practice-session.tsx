@@ -2,9 +2,23 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
+import { AnswerFields } from "@/components/answer-fields";
+import { AssistedPrompt } from "@/components/assisted-prompt";
+import { BadgeTree } from "@/components/badge-tree";
+import { LessonCheckNote } from "@/components/lesson-check-note";
+import { SessionRecap } from "@/components/session-recap";
+import { StreakMark } from "@/components/streak-mark";
+import { SupportNote } from "@/components/support-note";
 import { formatAccuracy, skillStatusLabel } from "@/lib/practice/format";
 import { practiceAction } from "@/lib/practice/actions";
-import type { PracticeState, PracticeView, SkillProgress } from "@/lib/practice/types";
+import type { PracticeState, PracticeView, QuestionKind, SkillProgress } from "@/lib/practice/types";
+
+function kindLabel(kind: QuestionKind): string {
+  if (kind === "review") return "Review";
+  if (kind === "check") return "Show what you know";
+  if (kind === "support") return "Practice";
+  return "Focus";
+}
 
 const initial: PracticeState = {};
 
@@ -14,6 +28,11 @@ export function PracticeSession({ view }: { view: PracticeView }) {
   const attempted = state.attempted ?? view.attempted;
   const correctCount = state.correctCount ?? view.correct;
   const skills = state.skills ?? view.skills;
+  const fromAction = state.attempted != null;
+  const streakDays = fromAction ? (state.streakDays ?? 0) : view.streakDays;
+  const streakMilestone = fromAction ? (state.streakMilestone ?? null) : view.streakMilestone;
+  const recap = fromAction ? (state.recap ?? null) : view.recap;
+  const badges = fromAction ? (state.badges ?? []) : view.badges;
   const lesson = skills.find((skill) => skill.id === question.skillId);
   const [topicsOpen, setTopicsOpen] = useState(false);
   const [hasChosenTopic, setHasChosenTopic] = useState(false);
@@ -44,6 +63,12 @@ export function PracticeSession({ view }: { view: PracticeView }) {
 
   return (
     <div className="grid gap-6">
+      <StreakMark
+        days={streakDays}
+        milestone={streakMilestone}
+        childId={view.childId}
+        today={view.today}
+      />
       <div className="stat-grid">
         <div>
           <p>Questions attempted</p>
@@ -58,6 +83,8 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           <strong>{state.focusTitle ?? view.focusTitle}</strong>
         </div>
       </div>
+
+      <BadgeTree badges={badges} />
 
       <form ref={topicForm} action={action} hidden>
         <input type="hidden" name="intent" value="choose" />
@@ -148,33 +175,27 @@ export function PracticeSession({ view }: { view: PracticeView }) {
 
       <div>
         <p className="eyebrow">
-          {question.kind === "review" ? "Review" : "Focus"} · {question.skillTitle}
+          {kindLabel(question.kind)} · {question.skillTitle}
         </p>
+        <LessonCheckNote kind={question.kind} />
+        <SupportNote kind={question.kind} />
         <h1 className={question.prompt.length > 60 ? "prompt prompt-long mt-3" : "prompt mt-3"}>
           {question.prompt}
         </h1>
         {question.responseHint ? <p className="hint mt-3">{question.responseHint}</p> : null}
+        <AssistedPrompt assist={question.assist} />
       </div>
 
       <form key={question.questionId} action={action} className="grid gap-3">
         <input type="hidden" name="intent" value="answer" />
         <input type="hidden" name="childId" value={view.childId} />
         <input type="hidden" name="questionId" value={question.questionId} />
-        <label className="field">
-          Answer
-          <input
-            className="answer-input"
-            name="answer"
-            inputMode="decimal"
-            autoComplete="off"
-            required
-            autoFocus
-          />
-        </label>
+        <AnswerFields shape={question.shape} />
         <button className="btn btn-primary w-fit" type="submit" disabled={pending}>
           {pending ? "Checking…" : "Check"}
         </button>
       </form>
+      <SessionRecap recap={recap} />
     </div>
   );
 }

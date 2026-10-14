@@ -13,8 +13,8 @@ export function DigestPanel({ childId, savedText }: { childId: string; savedText
     <form action={action} className="grid gap-3">
       <input type="hidden" name="childId" value={childId} />
       <p className="hint text-sm">
-        Nothing is emailed. Saving a draft stores today&apos;s attempts, accuracy, and focus skill
-        so a daily email can be switched on later.
+        Nothing is emailed. Saving a draft stores today&apos;s attempts, accuracy, focus skill,
+        streak, and session summary so a daily email can be switched on later.
       </p>
       <button className="btn btn-secondary w-fit" type="submit" disabled={pending}>
         {pending ? "Saving…" : "Save today's draft"}

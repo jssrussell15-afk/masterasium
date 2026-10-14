@@ -1,18 +1,24 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { redirect } from "next/navigation";
 import { answersMatch } from "@/lib/practice/answers";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
-import { accuracyScheduler, describeSkills, recordAttempt, type SkillCard } from "@/lib/practice/scheduler";
+import { applyLearning } from "@/lib/practice/learning";
+import { givenAnswer } from "@/lib/practice/parts";
+import { buildPortrait } from "@/lib/practice/portrait";
+import { accuracyScheduler, describeSkills, type SkillCard } from "@/lib/practice/scheduler";
 import { skillById } from "@/lib/practice/skills";
 import {
   cardFor,
   issueQuestion,
+  loadAttemptLog,
   loadCards,
   totals,
 } from "@/lib/practice/session";
-import { unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import { readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
 import type { PracticeState } from "@/lib/practice/types";
+import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade, type SupportedGrade } from "@/lib/grades";
 import { friendlyDbError } from "@/lib/db-error";
 import { requireUser } from "@/lib/auth/session";
@@ -30,16 +36,59 @@ type ChildRow = {
   grade: number;
 };
 
-function snapshot(grade: SupportedGrade, cards: SkillCard[], extra: PracticeState): PracticeState {
+function replaceCard(cards: SkillCard[], card: SkillCard): SkillCard[] {
+  return cards.filter((item) => item.skillId !== card.skillId).concat(card);
+}
+
+async function snapshot(
+  supabase: SupabaseClient,
+  childId: string,
+  grade: SupportedGrade,
+  cards: SkillCard[],
+  extra: PracticeState,
+): Promise<PracticeState> {
   const score = totals(cards);
-  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0 });
+  const today = torontoDate();
+  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0, today });
+  const log = await loadAttemptLog(supabase, childId);
+  const portrait = buildPortrait({
+    grade,
+    cards,
+    attempts: log.attempts,
+    today,
+  });
   return {
     ...extra,
     attempted: score.attempted,
     correctCount: score.correct,
     focusTitle: focus.title,
     skills: describeSkills(grade, cards),
+    streakDays: portrait.streakDays,
+    streakMilestone: portrait.streakMilestone,
+    recap: portrait.recap,
+    badges: portrait.badges,
+    ...(log.error ? { error: extra.error ?? log.error } : {}),
   };
+}
+
+async function saveCard(
+  supabase: SupabaseClient,
+  childId: string,
+  card: SkillCard,
+): Promise<string | null> {
+  const { error } = await supabase.from("skill_states").upsert(
+    {
+      child_id: childId,
+      skill_id: card.skillId,
+      attempted: card.attempted,
+      correct: card.correct,
+      streak: card.streak,
+      fsrs: card.fsrs,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "child_id,skill_id" },
+  );
+  return error ? friendlyDbError(error) : null;
 }
 
 async function ownedChild(childId: string): Promise<
@@ -68,7 +117,6 @@ export async function submitAnswer(
 ): Promise<PracticeState> {
   const childId = String(formData.get("childId") ?? "");
   const questionId = String(formData.get("questionId") ?? "");
-  const given = String(formData.get("answer") ?? "");
   if (!childId || !questionId) return { error: "That question could not be checked." };
 
   const owned = await ownedChild(childId);
@@ -87,11 +135,24 @@ export async function submitAnswer(
   if (!question) return { error: "That question expired. Refresh the page and try again." };
 
   const unpacked = unpackStoredAnswer(question.answer);
+  const storedPlan = readStoredPlan(question.answer);
+  const given = givenAnswer(unpacked.answer, {
+    answer: String(formData.get("answer") ?? ""),
+    remainder: String(formData.get("remainder") ?? ""),
+  });
   const correct = answersMatch(unpacked.answer, given);
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
 
-  let nextCard = recordAttempt(cardFor(cards, question.skill_id), correct);
+  const current = cardFor(cards, question.skill_id);
+  const applied = applyLearning({
+    card: current,
+    correct,
+    kind: storedPlan.kind,
+    today: torontoDate(),
+    rollbackCard: storedPlan.rollbackSkillId ? cardFor(cards, storedPlan.rollbackSkillId) : null,
+  });
+  let nextCard = applied.card;
   let note: string | undefined;
   let coach = false;
   if (!correct) {
@@ -104,19 +165,12 @@ export async function submitAnswer(
     }
   }
 
-  const { error: stateError } = await supabase.from("skill_states").upsert(
-    {
-      child_id: childId,
-      skill_id: nextCard.skillId,
-      attempted: nextCard.attempted,
-      correct: nextCard.correct,
-      streak: nextCard.streak,
-      fsrs: nextCard.fsrs,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "child_id,skill_id" },
-  );
-  if (stateError) return { error: friendlyDbError(stateError) };
+  const stateError = await saveCard(supabase, childId, nextCard);
+  if (stateError) return { error: stateError };
+  if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
+    const extraError = await saveCard(supabase, childId, applied.extra);
+    if (extraError) return { error: extraError };
+  }
 
   const { error: attemptError } = await supabase.from("attempts").insert({
     child_id: childId,
@@ -128,9 +182,10 @@ export async function submitAnswer(
   });
   if (attemptError) return { error: friendlyDbError(attemptError) };
 
-  const updatedCards = cards
-    .filter((card) => card.skillId !== nextCard.skillId)
-    .concat(nextCard);
+  let updatedCards = replaceCard(cards, nextCard);
+  if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
+    updatedCards = replaceCard(updatedCards, applied.extra);
+  }
   const issued = await issueQuestion(
     supabase,
     childId,
@@ -140,7 +195,7 @@ export async function submitAnswer(
   );
   if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
 
-  return snapshot(grade, updatedCards, {
+  return snapshot(supabase, childId, grade, updatedCards, {
     correct,
     expected: correct ? undefined : unpacked.answer,
     steps: correct ? undefined : unpacked.steps,
@@ -167,10 +222,31 @@ export async function chooseSkill(
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
 
-  const issued = await issueQuestion(supabase, childId, grade, cards, { skillId });
+  const issued = await issueQuestion(supabase, childId, grade, cards, { skillId, explicit: true });
   if (!issued.question) return { error: issued.error ?? "Could not load that skill." };
 
-  return snapshot(grade, cards, { next: issued.question });
+  return snapshot(supabase, childId, grade, cards, { next: issued.question });
+}
+
+/** Parent dashboard jump into a skill that needs review. */
+export async function openSkill(formData: FormData): Promise<void> {
+  const childId = String(formData.get("childId") ?? "");
+  const skillId = String(formData.get("skillId") ?? "");
+  if (!childId || !skillId) redirect("/dashboard");
+
+  const owned = await ownedChild(childId);
+  if ("error" in owned) redirect("/dashboard");
+  const { supabase, grade } = owned;
+
+  const skill = skillById(skillId);
+  if (!skill || skill.grade !== grade) redirect("/dashboard");
+
+  const { cards, error: cardError } = await loadCards(supabase, childId);
+  if (cardError) redirect("/dashboard");
+
+  const issued = await issueQuestion(supabase, childId, grade, cards, { skillId, explicit: true });
+  if (!issued.question) redirect("/dashboard");
+  redirect(`/practice/${childId}`);
 }
 
 export async function practiceAction(

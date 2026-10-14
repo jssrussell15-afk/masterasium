@@ -1,4 +1,7 @@
 import type { SupportedGrade } from "@/lib/grades";
+import type { BadgePiece } from "@/lib/practice/badges";
+import type { AnswerShape } from "@/lib/practice/parts";
+import type { StreakMilestone } from "@/lib/practice/streak";
 
 /**
  * A question is the same shape whether it was generated or, later,
@@ -12,16 +15,25 @@ export type Question = {
   responseHint: string | null;
 };
 
+export type QuestionKind = "focus" | "review" | "check" | "support";
+
+export type AssistView = {
+  setup: string;
+  firstStep: string | null;
+};
+
 export type QuestionView = {
   questionId: string;
   prompt: string;
   skillId: string;
   skillTitle: string;
   responseHint: string | null;
-  kind: "focus" | "review";
+  kind: QuestionKind;
+  shape: AnswerShape;
+  assist: AssistView | null;
 };
 
-export type SkillStatus = "mastered" | "practicing" | "not-started";
+export type SkillStatus = "mastered" | "practicing" | "not-started" | "check";
 
 export type SkillProgress = {
   id: string;
@@ -31,6 +43,8 @@ export type SkillProgress = {
   exampleSteps: string[];
   exampleAnswer: string;
   status: SkillStatus;
+  /** True after the short "show what you know" check. Legacy mastered skills stay false. */
+  checked: boolean;
   current: boolean;
 };
 
@@ -43,6 +57,11 @@ export type PracticeView = {
   correct: number;
   focusTitle: string;
   skills: SkillProgress[];
+  streakDays: number;
+  streakMilestone: StreakMilestone | null;
+  recap: string | null;
+  badges: BadgePiece[];
+  today: string;
 };
 
 export type PracticeState = {
@@ -56,4 +75,8 @@ export type PracticeState = {
   correctCount?: number;
   focusTitle?: string;
   skills?: SkillProgress[];
+  streakDays?: number;
+  streakMilestone?: StreakMilestone | null;
+  recap?: string | null;
+  badges?: BadgePiece[];
 };

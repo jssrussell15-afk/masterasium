@@ -2,16 +2,21 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { friendlyDbError } from "@/lib/db-error";
+import { torontoDate } from "@/lib/digest/build";
 import type { SupportedGrade } from "@/lib/grades";
+import { assistFor } from "@/lib/practice/assist";
+import { planNextQuestion } from "@/lib/practice/learning";
+import { answerShape } from "@/lib/practice/parts";
+import type { AttemptPoint } from "@/lib/practice/portrait";
 import { getItemSource } from "@/lib/practice/source";
-import { packStoredAnswer } from "@/lib/practice/stored-answer";
+import { packStoredAnswer, readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
 import {
   accuracyScheduler,
   emptyCard,
   type SkillCard,
 } from "@/lib/practice/scheduler";
 import { skillById, type Skill } from "@/lib/practice/skills";
-import type { QuestionView } from "@/lib/practice/types";
+import type { QuestionKind, QuestionView } from "@/lib/practice/types";
 
 type SkillStateRow = {
   skill_id: string;
@@ -25,13 +30,16 @@ type PendingRow = {
   id: string;
   skill_id: string;
   prompt: string;
+  answer: string;
 };
 
 export type IssueOptions = {
   /** Skip the scheduler and ask this skill. Any skill in the grade is allowed. */
   skillId?: string;
-  /** A shorter question after the same kind of mistake. */
+  /** A shorter question after the same kind of mistake. Ignored when the learner chose the topic. */
   small?: boolean;
+  /** The learner or parent picked this skill. Do not replace it with a check or a rollback. */
+  explicit?: boolean;
 };
 
 export async function loadCards(
@@ -58,19 +66,37 @@ export async function loadCards(
   };
 }
 
-function toView(row: PendingRow, skill: Skill, kind: QuestionView["kind"]): QuestionView {
+function presentQuestion(
+  questionId: string,
+  skill: Skill,
+  prompt: string,
+  expected: string,
+  firstStep: string | null,
+  kind: QuestionKind,
+  cards: SkillCard[],
+): QuestionView {
+  const shape = answerShape(prompt, expected);
   return {
-    questionId: row.id,
-    prompt: row.prompt,
+    questionId,
+    prompt,
     skillId: skill.id,
     skillTitle: skill.title,
-    responseHint: skill.responseHint,
+    responseHint: shape.kind === "single" ? skill.responseHint : null,
     kind,
+    shape,
+    assist: assistFor({
+      attempted: cardFor(cards, skill.id).attempted,
+      summary: skill.summary,
+      firstStep,
+      expected,
+      kind,
+    }),
   };
 }
 
-function kindFor(skill: Skill, grade: SupportedGrade, cards: SkillCard[]): QuestionView["kind"] {
-  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0 });
+function kindFor(skill: Skill, grade: SupportedGrade, cards: SkillCard[]): QuestionKind {
+  const today = torontoDate();
+  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0, today });
   return skill.id === focus.id ? "focus" : "review";
 }
 
@@ -81,27 +107,26 @@ export async function issueQuestion(
   cards: SkillCard[],
   options?: IssueOptions,
 ): Promise<{ question: QuestionView | null; error: string | null }> {
-  let skill: Skill;
-  let kind: QuestionView["kind"];
-  if (options?.skillId) {
-    const chosen = skillById(options.skillId);
-    if (!chosen || chosen.grade !== grade) {
-      return { question: null, error: "That skill is not in this grade." };
-    }
-    skill = chosen;
-    kind = "focus";
-  } else {
-    const sessionCount = cards.reduce((total, card) => total + card.attempted, 0);
-    skill = accuracyScheduler.chooseSkill({ grade, cards, sessionCount });
-    kind = kindFor(skill, grade, cards);
+  const sessionCount = cards.reduce((total, card) => total + card.attempted, 0);
+  const today = torontoDate();
+  const plan = planNextQuestion({
+    grade,
+    cards,
+    sessionCount,
+    today,
+    requestedSkillId: options?.skillId,
+    explicit: options?.explicit,
+    coachSmall: Boolean(options?.small) && !options?.explicit,
+  });
+  const skill = skillById(plan.skillId);
+  if (!skill || skill.grade !== grade) {
+    return { question: null, error: "That skill is not in this grade." };
   }
 
   const removed = await supabase.from("pending_questions").delete().eq("child_id", childId);
   if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
 
-  const generated = getItemSource("generated").next(skill, Math.random, {
-    small: options?.small ?? false,
-  });
+  const generated = getItemSource("generated").next(skill, Math.random, { small: plan.small });
 
   const { data, error } = await supabase
     .from("pending_questions")
@@ -109,9 +134,12 @@ export async function issueQuestion(
       child_id: childId,
       skill_id: skill.id,
       prompt: generated.prompt,
-      answer: packStoredAnswer(generated.answer, generated.steps),
+      answer: packStoredAnswer(generated.answer, generated.steps, {
+        kind: plan.kind,
+        rollbackSkillId: plan.rollbackSkillId,
+      }),
     })
-    .select("id, skill_id, prompt")
+    .select("id, skill_id, prompt, answer")
     .single();
 
   if (error || !data) {
@@ -121,8 +149,17 @@ export async function issueQuestion(
     };
   }
 
+  const row = data as PendingRow;
   return {
-    question: toView(data as PendingRow, skill, kind),
+    question: presentQuestion(
+      row.id,
+      skill,
+      generated.prompt,
+      generated.answer,
+      generated.steps[0] ?? null,
+      plan.kind,
+      cards,
+    ),
     error: null,
   };
 }
@@ -135,7 +172,7 @@ export async function loadOrIssueQuestion(
 ): Promise<{ question: QuestionView | null; error: string | null }> {
   const { data, error } = await supabase
     .from("pending_questions")
-    .select("id, skill_id, prompt")
+    .select("id, skill_id, prompt, answer")
     .eq("child_id", childId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -146,13 +183,51 @@ export async function loadOrIssueQuestion(
   const existing = data as PendingRow | null;
   const skill = existing ? skillById(existing.skill_id) : undefined;
   if (existing && skill && skill.grade === grade) {
+    const unpacked = unpackStoredAnswer(existing.answer);
+    const plan = readStoredPlan(existing.answer);
     return {
-      question: toView(existing, skill, kindFor(skill, grade, cards)),
+      question: presentQuestion(
+        existing.id,
+        skill,
+        existing.prompt,
+        unpacked.answer,
+        unpacked.steps[0] ?? null,
+        plan.kind ?? kindFor(skill, grade, cards),
+        cards,
+      ),
       error: null,
     };
   }
 
   return issueQuestion(supabase, childId, grade, cards);
+}
+
+type AttemptLogRow = {
+  skill_id: string;
+  correct: boolean;
+  created_at: string;
+};
+
+export async function loadAttemptLog(
+  supabase: SupabaseClient,
+  childId: string,
+): Promise<{ attempts: AttemptPoint[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from("attempts")
+    .select("skill_id, correct, created_at")
+    .eq("child_id", childId);
+
+  if (error) return { attempts: [], error: friendlyDbError(error) };
+
+  const rows = (data ?? []) as AttemptLogRow[];
+  return {
+    attempts: rows.map((row) => ({
+      skillId: row.skill_id,
+      correct: Boolean(row.correct),
+      date: torontoDate(new Date(row.created_at)),
+    })),
+    error: null,
+  };
 }
 
 export function cardFor(cards: SkillCard[], skillId: string): SkillCard {

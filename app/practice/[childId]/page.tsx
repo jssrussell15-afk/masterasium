@@ -5,10 +5,12 @@ import { PracticeSession } from "@/components/practice-session";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { friendlyDbError } from "@/lib/db-error";
+import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import { requireUser } from "@/lib/auth/session";
+import { buildPortrait } from "@/lib/practice/portrait";
 import { accuracyScheduler, describeSkills } from "@/lib/practice/scheduler";
-import { loadCards, loadOrIssueQuestion, totals } from "@/lib/practice/session";
+import { loadAttemptLog, loadCards, loadOrIssueQuestion, totals } from "@/lib/practice/session";
 
 export default function PracticePage(props: PageProps<"/practice/[childId]">) {
   return (
@@ -48,12 +50,18 @@ async function PracticeLoader({
     return <p className="feedback bad mt-8">{issued.error}</p>;
   }
 
+  const log = await loadAttemptLog(supabase, data.id);
+  if (log.error) return <p className="feedback bad mt-8">{log.error}</p>;
+
+  const today = torontoDate();
   const score = totals(cards);
   const focus = accuracyScheduler.chooseSkill({
     grade: data.grade,
     cards,
     sessionCount: 0,
+    today,
   });
+  const portrait = buildPortrait({ grade: data.grade, cards, attempts: log.attempts, today });
 
   return (
     <div className="mt-4 grid gap-6">
@@ -75,6 +83,11 @@ async function PracticeLoader({
           correct: score.correct,
           focusTitle: focus.title,
           skills: describeSkills(data.grade, cards),
+          streakDays: portrait.streakDays,
+          streakMilestone: portrait.streakMilestone,
+          recap: portrait.recap,
+          badges: portrait.badges,
+          today,
         }}
       />
     </div>

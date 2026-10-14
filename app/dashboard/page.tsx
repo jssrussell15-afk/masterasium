@@ -1,17 +1,21 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AddChildForm } from "@/components/add-child-form";
+import { BadgeTree } from "@/components/badge-tree";
 import { DigestPanel } from "@/components/digest-panel";
+import { NeedsReview } from "@/components/needs-review";
 import { SignOutButton } from "@/components/sign-out-button";
+import { StreakMark } from "@/components/streak-mark";
 import { Shell } from "@/components/site-header";
 import { friendlyDbError } from "@/lib/db-error";
-import { renderDigestText, type DigestSummary } from "@/lib/digest/build";
+import { renderDigestText, torontoDate, type DigestSummary } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
 import { formatAccuracy, skillStatusLabel } from "@/lib/practice/format";
+import { buildPortrait } from "@/lib/practice/portrait";
 import { accuracyScheduler, describeSkills } from "@/lib/practice/scheduler";
-import { loadCards, totals } from "@/lib/practice/session";
+import { loadAttemptLog, loadCards, totals } from "@/lib/practice/session";
 
 export default function DashboardPage() {
   return (
@@ -87,14 +91,19 @@ async function ChildCard({
 
   const { cards, error } = await loadCards(supabase, child.id);
   if (error) return <p className="feedback bad">{error}</p>;
+  const log = await loadAttemptLog(supabase, child.id);
+  if (log.error) return <p className="feedback bad">{log.error}</p>;
 
+  const today = torontoDate();
   const score = totals(cards);
   const focus = accuracyScheduler.chooseSkill({
     grade: child.grade,
     cards,
     sessionCount: 0,
+    today,
   });
   const skills = describeSkills(child.grade, cards);
+  const portrait = buildPortrait({ grade: child.grade, cards, attempts: log.attempts, today });
 
   const { data: stub } = await supabase
     .from("digest_stubs")
@@ -112,6 +121,7 @@ async function ChildCard({
         <h2 className="text-2xl font-semibold">{child.first_name}</h2>
         <p className="hint">Grade {child.grade}</p>
       </div>
+      <StreakMark days={portrait.streakDays} />
       <div className="stat-grid">
         <div>
           <p>Questions attempted</p>
@@ -126,11 +136,13 @@ async function ChildCard({
           <strong>{focus.title}</strong>
         </div>
       </div>
+      <NeedsReview childId={child.id} items={portrait.needsReview} />
+      <BadgeTree badges={portrait.badges} />
       <div>
         <h3 className="font-semibold">Skills</h3>
         <p className="hint mt-1 text-sm">
-          A skill is mastered after 10 questions at 80% accuracy. That opens the next skill. Any
-          skill can still be chosen during practice.
+          A skill is mastered after 10 questions at 80% accuracy. A short check then opens the next
+          skill. Any skill can still be chosen during practice.
         </p>
         <ul className="skill-list mt-2">
           {skills.map((skill) => (
@@ -138,7 +150,7 @@ async function ChildCard({
               <span>{skill.title}</span>
               <span className="hint">
                 {skill.current ? "Current · " : ""}
-                {skillStatusLabel(skill.status)}
+                {skill.checked ? "Showed what they know" : skillStatusLabel(skill.status)}
               </span>
             </li>
           ))}

@@ -1,4 +1,5 @@
 import { normalizeAnswer } from "@/lib/practice/answers";
+import { readMemory, writeMemory } from "@/lib/practice/memory";
 import type { SkillCard } from "@/lib/practice/scheduler";
 
 export type MistakeNote = {
@@ -103,32 +104,11 @@ export function classifyMistake(prompt: string, expected: string, given: string)
   };
 }
 
-type MistakeMemory = {
-  mistakes: Record<string, number>;
-  fsrs: unknown;
-};
-
-function isMemory(value: unknown): value is MistakeMemory {
-  if (typeof value !== "object" || value === null) return false;
-  if (!("mistakes" in value) || !("fsrs" in value)) return false;
-  const mistakes = (value as { mistakes?: unknown }).mistakes;
-  return typeof mistakes === "object" && mistakes !== null && !Array.isArray(mistakes);
-}
-
 /**
- * `skill_states.fsrs` keeps the future FSRS payload.
- * Mistake counts live beside it as `{ mistakes, fsrs }`.
- * A plain object from before that wrap is treated as the FSRS payload.
+ * Mistake counts live beside the scheduler payload as `{ mistakes, fsrs, learn? }`.
+ * A plain object from before that wrap is treated as the payload.
+ * `learn` and any other wrapper keys already stored are kept.
  */
-export function readMemory(fsrs: unknown): MistakeMemory {
-  if (!isMemory(fsrs)) return { mistakes: {}, fsrs: fsrs ?? null };
-  const mistakes: Record<string, number> = {};
-  for (const [key, count] of Object.entries(fsrs.mistakes)) {
-    if (typeof count === "number" && Number.isFinite(count)) mistakes[key] = count;
-  }
-  return { mistakes, fsrs: fsrs.fsrs ?? null };
-}
-
 export function noteMistake(card: SkillCard, type: string): { card: SkillCard; count: number } {
   const memory = readMemory(card.fsrs);
   const mistakes = { ...memory.mistakes };
@@ -138,7 +118,7 @@ export function noteMistake(card: SkillCard, type: string): { card: SkillCard; c
     count,
     card: {
       ...card,
-      fsrs: { mistakes, fsrs: memory.fsrs ?? null },
+      fsrs: writeMemory(card.fsrs, { mistakes }),
     },
   };
 }

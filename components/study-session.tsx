@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { AnswerFields } from "@/components/answer-fields";
 import { answersMatch } from "@/lib/practice/answers";
 import { classifyMistake } from "@/lib/practice/mistakes";
+import { answerShape, givenAnswer } from "@/lib/practice/parts";
 import { openPracticeSet } from "@/lib/worksheets/actions";
 import { normalizeAccessCode } from "@/lib/worksheets/code";
 import { readLocalSet } from "@/lib/worksheets/local";
@@ -88,7 +90,10 @@ function StudyPractice({ practice }: { practice: PracticeSet }) {
 
   function check(formData: FormData) {
     if (!item) return;
-    const given = String(formData.get("answer") ?? "");
+    const given = givenAnswer(item.answer, {
+      answer: String(formData.get("answer") ?? ""),
+      remainder: String(formData.get("remainder") ?? ""),
+    });
     const correct = answersMatch(item.answer, given);
     if (correct) {
       setFeedback({ correct: true });
@@ -185,11 +190,8 @@ function StudyPractice({ practice }: { practice: PracticeSet }) {
           {index + 1 === practice.items.length ? "Finish" : "Next question"}
         </button>
       ) : (
-        <form action={check} className="grid gap-3">
-          <label className="field">
-            Answer
-            <input className="answer-input" name="answer" autoComplete="off" required autoFocus />
-          </label>
+        <form key={`${index}-${item.prompt}`} action={check} className="grid gap-3">
+          <AnswerFields shape={answerShape(item.prompt, item.answer)} />
           <button className="btn btn-primary w-fit" type="submit">
             Check
           </button>

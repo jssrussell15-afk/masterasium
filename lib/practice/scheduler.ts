@@ -1,4 +1,6 @@
 import type { SupportedGrade } from "@/lib/grades";
+import { readLearn } from "@/lib/practice/memory";
+import { isReviewDue } from "@/lib/practice/review";
 import { skillsForGrade, type Skill } from "@/lib/practice/skills";
 import type { SkillProgress } from "@/lib/practice/types";
 
@@ -7,9 +9,9 @@ export const MASTERY_MIN_ACCURACY = 0.8;
 
 /**
  * Per-skill memory shared by the starter scheduler and a future FSRS scheduler.
- * `fsrs` is stored and round-tripped. AccuracyScheduler does not read it.
- * An FSRS scheduler can store stability, difficulty, due, and state there
- * and replace AccuracyScheduler without changing the practice page.
+ * `fsrs` is stored and round-tripped. The nested payload (stability, due, …)
+ * is not read here. Lesson-check and review flags live beside that payload
+ * and decide when the next skill opens.
  */
 export type SkillCard = {
   skillId: string;
@@ -27,6 +29,8 @@ export type SchedulerInput = {
    * 0 asks for the focus skill. Counts 3 and 7 of every 8 can review a mastered skill.
    */
   sessionCount: number;
+  /** Toronto calendar day (YYYY-MM-DD). Omitted, date-due reviews stay quiet. */
+  today?: string;
 };
 
 export interface PracticeScheduler {
@@ -41,6 +45,20 @@ export function accuracyOf(card: SkillCard | undefined): number {
 export function isMastered(card: SkillCard | undefined): boolean {
   if (!card || card.attempted < MASTERY_MIN_ATTEMPTS) return false;
   return accuracyOf(card) >= MASTERY_MIN_ACCURACY;
+}
+
+/**
+ * Mastery opens the next skill only after the short check.
+ * Cards saved before that check have no lessonCheck and stay confirmed
+ * while they still meet the 10-question, 80% bar.
+ * A passed check stays open so the check itself can sit near that bar.
+ */
+export function isConfirmed(card: SkillCard | undefined): boolean {
+  if (!card) return false;
+  const check = readLearn(card.fsrs).lessonCheck;
+  if (check === "passed") return true;
+  if (check) return false;
+  return isMastered(card);
 }
 
 export function recordAttempt(card: SkillCard, correct: boolean): SkillCard {
@@ -69,17 +87,20 @@ export class AccuracyScheduler implements PracticeScheduler {
   chooseSkill(input: SchedulerInput): Skill {
     const skills = skillsForGrade(input.grade);
     const cards = new Map(input.cards.map((card) => [card.skillId, card]));
-    const mastered = skills.filter((skill) => isMastered(cards.get(skill.id)));
+    const mastered = skills.filter((skill) => isConfirmed(cards.get(skill.id)));
 
     const reviewTurn =
       input.sessionCount > 0 && (input.sessionCount % 8 === 3 || input.sessionCount % 8 === 7);
     if (reviewTurn && mastered.length > 0) {
-      return lowestAccuracy(mastered, cards);
+      const due = mastered.filter((skill) =>
+        isReviewDue(readLearn(cards.get(skill.id)?.fsrs), input.today),
+      );
+      return lowestAccuracy(due.length > 0 ? due : mastered, cards);
     }
 
     for (const skill of skills) {
-      const ready = skill.prerequisites.every((id) => isMastered(cards.get(id)));
-      if (ready && !isMastered(cards.get(skill.id))) return skill;
+      const ready = skill.prerequisites.every((id) => isConfirmed(cards.get(id)));
+      if (ready && !isConfirmed(cards.get(skill.id))) return skill;
     }
 
     return lowestAccuracy(skills, cards);
@@ -93,8 +114,17 @@ export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): Skill
   const byId = new Map(cards.map((card) => [card.skillId, card]));
   return skillsForGrade(grade).map((skill) => {
     const card = byId.get(skill.id);
+    const learn = readLearn(card?.fsrs);
+    const checkOpen =
+      learn.lessonCheck === "due" || learn.lessonCheck === "active" || learn.lessonCheck === "retry";
     const status =
-      !card || card.attempted === 0 ? "not-started" : isMastered(card) ? "mastered" : "practicing";
+      !card || card.attempted === 0
+        ? "not-started"
+        : checkOpen
+          ? "check"
+          : isConfirmed(card)
+            ? "mastered"
+            : "practicing";
     return {
       id: skill.id,
       title: skill.title,
@@ -103,6 +133,7 @@ export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): Skill
       exampleSteps: skill.exampleSteps,
       exampleAnswer: skill.exampleAnswer,
       status,
+      checked: learn.lessonCheck === "passed",
       current: skill.id === focus.id,
     };
   });

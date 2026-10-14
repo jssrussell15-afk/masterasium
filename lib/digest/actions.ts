@@ -9,16 +9,15 @@ import {
 } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import { requireUser } from "@/lib/auth/session";
+import { buildPortrait } from "@/lib/practice/portrait";
 import { accuracyScheduler } from "@/lib/practice/scheduler";
-import { loadCards } from "@/lib/practice/session";
+import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
 export type DigestState = {
   error?: string;
   message?: string;
   text?: string;
 };
-
-type AttemptRow = { correct: boolean };
 
 export async function saveDigestDraft(
   _previous: DigestState,
@@ -41,33 +40,35 @@ export async function saveDigestDraft(
   }
 
   const range = torontoDayRange();
-  const { data: attempts, error: attemptError } = await supabase
-    .from("attempts")
-    .select("correct")
-    .eq("child_id", childId)
-    .gte("created_at", range.start.toISOString())
-    .lt("created_at", range.end.toISOString());
-
-  if (attemptError) return { error: friendlyDbError(attemptError) };
-
-  const rows = (attempts ?? []) as AttemptRow[];
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
+  const log = await loadAttemptLog(supabase, childId);
+  if (log.error) return { error: log.error };
 
+  const todayRows = log.attempts.filter((attempt) => attempt.date === range.date);
   const focus = accuracyScheduler.chooseSkill({
     grade: child.grade,
     cards,
     sessionCount: 0,
+    today: range.date,
   });
-  const correct = rows.filter((row) => row.correct).length;
+  const portrait = buildPortrait({
+    grade: child.grade,
+    cards,
+    attempts: log.attempts,
+    today: range.date,
+  });
+  const correct = todayRows.filter((row) => row.correct).length;
   const summary: DigestSummary = buildDigestSummary({
     childFirstName: child.first_name,
     grade: child.grade,
     date: range.date,
-    attempted: rows.length,
+    attempted: todayRows.length,
     correct,
     focusSkillId: focus.id,
     focusSkillTitle: focus.title,
+    recap: portrait.recap,
+    streakDays: portrait.streakDays,
   });
 
   const { error } = await supabase.from("digest_stubs").upsert(

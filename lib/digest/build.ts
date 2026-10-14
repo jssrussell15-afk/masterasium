@@ -11,6 +11,8 @@ export type DigestSummary = {
   accuracy: number | null;
   focusSkillId: string;
   focusSkillTitle: string;
+  recap?: string | null;
+  streakDays?: number;
 };
 
 export function torontoDate(now = new Date()): string {
@@ -69,6 +71,8 @@ export function buildDigestSummary(input: {
   correct: number;
   focusSkillId: string;
   focusSkillTitle: string;
+  recap?: string | null;
+  streakDays?: number;
 }): DigestSummary {
   return {
     ...input,
@@ -79,13 +83,18 @@ export function buildDigestSummary(input: {
 export function renderDigestText(summary: DigestSummary): string {
   const accuracy =
     summary.accuracy == null ? "n/a" : `${Math.round(summary.accuracy * 100)}%`;
-  return [
+  const lines = [
     "Masterasium daily practice",
     `${summary.childFirstName} · Grade ${summary.grade} · ${summary.date}`,
     `Questions attempted: ${summary.attempted}`,
     `Accuracy: ${accuracy}`,
     `Current focus: ${summary.focusSkillTitle}`,
-    "",
-    "This draft was saved. No email was sent.",
-  ].join("\n");
+  ];
+  if (summary.streakDays && summary.streakDays > 0) {
+    const label = summary.streakDays === 1 ? "day" : "days";
+    lines.push(`Streak: ${summary.streakDays} ${label} in a row`);
+  }
+  if (summary.recap) lines.push(summary.recap);
+  lines.push("", "This draft was saved. No email was sent.");
+  return lines.join("\n");
 }
