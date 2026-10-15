@@ -1,74 +1,106 @@
 import Link from "next/link";
-import { NotifyForm } from "@/components/notify-form";
+import type { Metadata } from "next";
+import { DashboardMock } from "@/components/dashboard-mock";
+import { PracticeShot } from "@/components/practice-shot";
 import { Shell } from "@/components/site-header";
-import { GRADES } from "@/lib/grades";
+import { PRICING } from "@/lib/pricing";
+
+export const metadata: Metadata = {
+  title: "Masterasium",
+  description:
+    "Adaptive math practice for Grades 1–8, aligned to your province's curriculum. Every province except Quebec.",
+};
 
 export default function HomePage() {
   return (
-    <Shell banner>
-      <div className="mt-8 grid items-start gap-10 md:mt-16 md:grid-cols-[1.15fr_0.85fr]">
-        <section>
-          <p className="eyebrow">Ontario · Grades 1–8</p>
-          <h1 className="display mt-3 max-w-xl text-5xl md:text-6xl">
-            Math practice that follows the school year.
+    <Shell
+      action={
+        <Link href="/login" className="btn btn-secondary">
+          Sign in
+        </Link>
+      }
+    >
+      <section className="mt-8 grid items-center gap-10 md:mt-14 md:grid-cols-[1.05fr_0.95fr]">
+        <div>
+          <h1 className="display text-4xl md:text-5xl">
+            Adaptive math practice for Grades 1–8, aligned to your province&apos;s curriculum.
           </h1>
           <p className="lede mt-5 max-w-xl">
-            A quiet place for children to practice the skills they are learning in class, and for
-            parents to see what to work on next.
+            Practice covers every province except Quebec.
           </p>
-          <ol className="grade-row mt-8" aria-label="Grades">
-            {GRADES.map((grade) => (
-              <li key={grade.grade} className={grade.available ? "grade-pill open" : "grade-pill"}>
-                <strong>{grade.grade}</strong>
-                <span>{grade.available ? "Open" : "Soon"}</span>
-              </li>
-            ))}
+          <Link href="/signup" className="btn btn-primary mt-8">
+            Start free trial
+          </Link>
+        </div>
+        <DashboardMock />
+      </section>
+
+      <p className="trust-line">Built with teachers and parents in Ontario.</p>
+
+      <section className="mt-14 grid items-start gap-8 md:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <h2 className="display text-3xl">How it works</h2>
+          <ol className="step-list mt-4">
+            <li>
+              <strong>Pick a skill.</strong> Choose what the class is working on, or stay with the
+              next skill in the grade.
+            </li>
+            <li>
+              <strong>Practice with hints.</strong> The first questions show a starting step. Later
+              questions stand on their own.
+            </li>
+            <li>
+              <strong>See progress.</strong> The parent desk follows the grade: a short note for
+              Grades 1–3, and a skill breakdown from Grade 4 up.
+            </li>
           </ol>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Link href="/signup" className="btn btn-primary">
-              Create a free parent account
-            </Link>
-            <Link href="/login" className="btn btn-secondary">
-              Sign in
-            </Link>
-          </div>
-          <p className="hint mt-4 max-w-xl text-sm">
-            Grades 1 through 8 are open, free, while we test. Registration does not ask for payment.
-          </p>
-        </section>
+        </div>
+        <PracticeShot />
+      </section>
 
-        <aside className="card">
-          <h2 className="text-xl font-semibold">A note when practice grows</h2>
-          <p className="hint mt-2 text-sm">
-            Grades 1 through 8 are open. Leave an email if you want a short note when new skills
-            are added.
+      <section className="mt-14 grid gap-4 md:grid-cols-2">
+        <article className="card">
+          <h2 className="text-xl font-semibold">For parents</h2>
+          <p className="hint mt-2">
+            The desk shows what your child is working on and how that skill is moving. Grades 1–3
+            stay to a streak, whether they practiced today, and one line on the current skill.
+            Grade 4 and up adds the skill list, four weeks of accuracy, and what is due for a later
+            review.
           </p>
-          <NotifyForm />
-        </aside>
-      </div>
+        </article>
+        <article className="card">
+          <h2 className="text-xl font-semibold">For teachers</h2>
+          <p className="hint mt-2">
+            Teachers get a free tool: upload a worksheet page, generate a new sheet, and share a
+            class link.
+          </p>
+          <Link href="/worksheets" className="nav-link mt-3 inline-block">
+            Open the teacher tool
+          </Link>
+        </article>
+      </section>
 
-      <section className="mt-16 grid gap-4 md:grid-cols-3">
-        <article className="card">
-          <h2 className="font-semibold">One or two children</h2>
-          <p className="hint mt-2 text-sm">
-            A parent account holds the profiles. Each child gets a first name, a grade, a username,
-            and a PIN. No child email.
-          </p>
-        </article>
-        <article className="card">
-          <h2 className="font-semibold">One skill at a time</h2>
-          <p className="hint mt-2 text-sm">
-            Practice stays on a skill until it is steady, then opens the next one. Any skill in the
-            grade can be chosen. A short review comes back to earlier skills.
-          </p>
-        </article>
-        <article className="card">
-          <h2 className="font-semibold">A parent desk</h2>
-          <p className="hint mt-2 text-sm">
-            See questions attempted, accuracy, and the skill in focus. A daily email can be saved
-            as a draft. It is not sent yet.
-          </p>
-        </article>
+      <section className="mt-14">
+        <h2 className="display text-3xl">Pricing</h2>
+        <p className="lede mt-3">Every plan starts with a free trial. Signup does not ask for a card.</p>
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <article className="card">
+            <h3 className="font-semibold">Monthly</h3>
+            <p className="display mt-2 text-4xl">${PRICING.monthlyCad}</p>
+            <p className="hint mt-1">per month after the trial</p>
+          </article>
+          <article className="card">
+            <h3 className="font-semibold">Annual</h3>
+            <p className="display mt-2 text-4xl">${PRICING.annualCad}</p>
+            <p className="hint mt-1">per year after the trial</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="mt-14">
+        <Link href="/signup" className="btn btn-primary">
+          Start free trial
+        </Link>
       </section>
     </Shell>
   );

@@ -14,7 +14,8 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "Masterasium",
-  description: "Ontario math practice for Grades 1–8. Every grade is open for free testing.",
+  description:
+    "Adaptive math practice for Grades 1–8, aligned to your province's curriculum. Every province except Quebec.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

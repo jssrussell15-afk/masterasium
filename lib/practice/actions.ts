@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { answersMatch } from "@/lib/practice/answers";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
 import { applyLearning } from "@/lib/practice/learning";
+import { readLearn, writeLearn, type IntroCycle } from "@/lib/practice/memory";
 import { givenAnswer } from "@/lib/practice/parts";
 import { buildPortrait } from "@/lib/practice/portrait";
 import {
@@ -15,7 +16,7 @@ import {
   totals,
 } from "@/lib/practice/session";
 import { skillById } from "@/lib/practice/skills";
-import { accuracyScheduler, describeCatalog, type SkillCard } from "@/lib/practice/scheduler";
+import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
 import { readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
 import type { PracticeState } from "@/lib/practice/types";
 import { torontoDate } from "@/lib/digest/build";
@@ -145,12 +146,13 @@ export async function submitAnswer(
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
 
+  const today = torontoDate();
   const current = cardFor(cards, question.skill_id);
   const applied = applyLearning({
     card: current,
     correct,
     kind: storedPlan.kind,
-    today: torontoDate(),
+    today,
     rollbackCard: storedPlan.rollbackSkillId ? cardFor(cards, storedPlan.rollbackSkillId) : null,
   });
   let nextCard = applied.card;
@@ -164,6 +166,17 @@ export async function submitAnswer(
       note = mistake.note;
       coach = true;
     }
+  }
+  const seenCycle = introCycleFrom(formData, question.skill_id);
+  if (seenCycle) {
+    nextCard = {
+      ...nextCard,
+      fsrs: writeLearn(nextCard.fsrs, {
+        ...readLearn(nextCard.fsrs),
+        introSeenAt: today,
+        introCycle: seenCycle,
+      }),
+    };
   }
 
   const stateError = await saveCard(supabase, childId, nextCard);
@@ -296,6 +309,94 @@ export async function openSkill(formData: FormData): Promise<void> {
   });
   if (!issued.question) redirect("/practice");
   redirect(`/practice/${childId}`);
+}
+
+function introCycleFrom(formData: FormData, skillId: string): IntroCycle | null {
+  if (String(formData.get("introSkillId") ?? "") !== skillId) return null;
+  const cycle = String(formData.get("introCycle") ?? "");
+  if (cycle === "new" || cycle === "relearn" || cycle === "rollback") return cycle;
+  return null;
+}
+
+type IntroStateRow = {
+  attempted: number;
+  correct: number;
+  streak: number;
+  fsrs: unknown;
+  updated_at: string;
+};
+
+/**
+ * Records that the intro timer finished. A failed save must not trap the student on the intro.
+ * The write retries when another save changes the row, so an answer is not overwritten.
+ */
+export async function markIntroSeen(childId: string, skillId: string, cycle: string): Promise<void> {
+  if (cycle !== "new" && cycle !== "relearn" && cycle !== "rollback") return;
+  if (!childId || !skillId) return;
+  const owned = await ownedChild(childId);
+  if ("error" in owned) return;
+  if (!skillById(skillId)) return;
+  await stampIntro(owned.supabase, childId, skillId, cycle, torontoDate());
+}
+
+async function stampIntro(
+  supabase: SupabaseClient,
+  childId: string,
+  skillId: string,
+  cycle: IntroCycle,
+  today: string,
+): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { data, error } = await supabase
+      .from("skill_states")
+      .select("attempted, correct, streak, fsrs, updated_at")
+      .eq("child_id", childId)
+      .eq("skill_id", skillId)
+      .maybeSingle();
+    if (error) return;
+
+    const row = data as IntroStateRow | null;
+    const card = row
+      ? {
+          skillId,
+          attempted: row.attempted,
+          correct: row.correct,
+          streak: row.streak,
+          fsrs: row.fsrs,
+        }
+      : emptyCard(skillId);
+    const fsrs = writeLearn(card.fsrs, {
+      ...readLearn(card.fsrs),
+      introSeenAt: today,
+      introCycle: cycle,
+    });
+
+    if (!row) {
+      const inserted = await supabase
+        .from("skill_states")
+        .insert({
+          child_id: childId,
+          skill_id: skillId,
+          attempted: 0,
+          correct: 0,
+          streak: 0,
+          fsrs,
+          updated_at: new Date().toISOString(),
+        })
+        .select("skill_id");
+      if (!inserted.error) return;
+      continue;
+    }
+
+    const updated = await supabase
+      .from("skill_states")
+      .update({ fsrs, updated_at: new Date().toISOString() })
+      .eq("child_id", childId)
+      .eq("skill_id", skillId)
+      .eq("updated_at", row.updated_at)
+      .select("skill_id");
+    if (!updated.error && updated.data && updated.data.length > 0) return;
+  }
 }
 
 export async function practiceAction(

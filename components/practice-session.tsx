@@ -10,8 +10,9 @@ import { SessionRecap } from "@/components/session-recap";
 import { StreakMark } from "@/components/streak-mark";
 import { SupportNote } from "@/components/support-note";
 import { formatAccuracy } from "@/lib/practice/format";
-import { practiceAction } from "@/lib/practice/actions";
+import { markIntroSeen, practiceAction } from "@/lib/practice/actions";
 import { gradeIsOpen, nextEnrolledGrade, selectorGrades } from "@/lib/practice/grade-access";
+import { introProgress, type SkillIntro } from "@/lib/practice/intro-view";
 import { masteryLabel, masteryMark } from "@/lib/practice/mastery";
 import type { PracticeState, PracticeView, QuestionKind, SkillProgress } from "@/lib/practice/types";
 import type { SupportedGrade } from "@/lib/grades";
@@ -46,8 +47,16 @@ export function PracticeSession({ view }: { view: PracticeView }) {
   };
   const [topicsOpen, setTopicsOpen] = useState(false);
   const [hasChosenTopic, setHasChosenTopic] = useState(false);
+  const intro = question.intro ?? null;
+  const introToken = intro ? `${question.questionId}:${intro.skillId}:${intro.cycle}` : "";
+  const [finishedIntro, setFinishedIntro] = useState("");
+  const showingIntro = intro != null && finishedIntro !== introToken;
   const topicDialog = useRef<HTMLDialogElement>(null);
   const topicForm = useRef<HTMLFormElement>(null);
+
+  useEffect(() => {
+    if (showingIntro) setTopicsOpen(false);
+  }, [showingIntro]);
 
   useEffect(() => {
     const dialog = topicDialog.current;
@@ -109,7 +118,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         type="button"
         className="btn btn-secondary w-fit"
         aria-haspopup="dialog"
-        disabled={pending}
+        disabled={pending || showingIntro}
         onClick={() => setTopicsOpen(true)}
       >
         {hasChosenTopic ? "Change topic" : "Select topic"}
@@ -200,32 +209,111 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         </p>
       ) : null}
 
-      {lesson ? <LessonPanel childId={view.childId} skill={lesson} /> : null}
+      {showingIntro && intro ? (
+        <TopicIntro
+          key={introToken}
+          intro={intro}
+          childId={view.childId}
+          onFinished={() => {
+            window.localStorage.setItem(`masterasium-lesson:${view.childId}:${intro.skillId}`, "1");
+            setFinishedIntro(introToken);
+          }}
+        />
+      ) : (
+        <>
+          {lesson ? <LessonPanel childId={view.childId} skill={lesson} /> : null}
 
-      <div>
-        <p className="eyebrow">
-          {kindLabel(question.kind)} · {question.skillTitle}
-        </p>
-        <LessonCheckNote kind={question.kind} />
-        <SupportNote kind={question.kind} />
-        <h1 className={question.prompt.length > 60 ? "prompt prompt-long mt-3" : "prompt mt-3"}>
-          {question.prompt}
-        </h1>
-        {question.responseHint ? <p className="hint mt-3">{question.responseHint}</p> : null}
-        <AssistedPrompt assist={question.assist} />
-      </div>
+          <div>
+            <p className="eyebrow">
+              {kindLabel(question.kind)} · {question.skillTitle}
+            </p>
+            <LessonCheckNote kind={question.kind} />
+            <SupportNote kind={question.kind} />
+            <h1 className={question.prompt.length > 60 ? "prompt prompt-long mt-3" : "prompt mt-3"}>
+              {question.prompt}
+            </h1>
+            {question.responseHint ? <p className="hint mt-3">{question.responseHint}</p> : null}
+            <AssistedPrompt assist={question.assist} />
+          </div>
 
-      <form key={question.questionId} action={action} className="grid gap-3">
-        <input type="hidden" name="intent" value="answer" />
-        <input type="hidden" name="childId" value={view.childId} />
-        <input type="hidden" name="questionId" value={question.questionId} />
-        <AnswerFields shape={question.shape} />
-        <button className="btn btn-primary w-fit" type="submit" disabled={pending}>
-          {pending ? "Checking…" : "Check"}
-        </button>
-      </form>
+          <form key={question.questionId} action={action} className="grid gap-3">
+            <input type="hidden" name="intent" value="answer" />
+            <input type="hidden" name="childId" value={view.childId} />
+            <input type="hidden" name="questionId" value={question.questionId} />
+            {intro ? (
+              <>
+                <input type="hidden" name="introSkillId" value={intro.skillId} />
+                <input type="hidden" name="introCycle" value={intro.cycle} />
+              </>
+            ) : null}
+            <AnswerFields shape={question.shape} />
+            <button className="btn btn-primary w-fit" type="submit" disabled={pending}>
+              {pending ? "Checking…" : "Check"}
+            </button>
+          </form>
+        </>
+      )}
       <SessionRecap recap={recap} />
     </div>
+  );
+}
+
+function TopicIntro({
+  intro,
+  childId,
+  onFinished,
+}: {
+  intro: SkillIntro;
+  childId: string;
+  onFinished: () => void;
+}) {
+  const [elapsed, setElapsed] = useState(0);
+  const finished = useRef(false);
+  const onFinishedRef = useRef(onFinished);
+  onFinishedRef.current = onFinished;
+
+  useEffect(() => {
+    finished.current = false;
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      const nextElapsed = Date.now() - started;
+      setElapsed(nextElapsed);
+      if (nextElapsed < intro.seconds * 1000 || finished.current) return;
+      finished.current = true;
+      window.clearInterval(timer);
+      onFinishedRef.current();
+      void markIntroSeen(childId, intro.skillId, intro.cycle);
+    }, 200);
+    return () => window.clearInterval(timer);
+  }, [childId, intro.cycle, intro.seconds, intro.skillId]);
+
+  const progress = introProgress(elapsed, intro.seconds, intro.beats.length);
+  const beat = intro.beats[progress.beat];
+  const remaining = progress.remaining;
+
+  return (
+    <section className={`intro-card intro-${intro.style}`} aria-label="Topic introduction">
+      <p className="eyebrow">Topic introduction</p>
+      {intro.asset ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={intro.asset} alt="" className="intro-asset" />
+      ) : (
+        <p className="intro-placeholder">{intro.placeholder}</p>
+      )}
+      {beat?.prompt ? <p className="intro-example">{beat.prompt}</p> : null}
+      {beat?.caption && beat.caption !== beat.prompt ? <p className="mt-3">{beat.caption}</p> : null}
+      {beat?.steps && beat.steps.length > 0 ? (
+        <ol className="steps">
+          {beat.steps.map((step, index) => (
+            <li key={`${intro.skillId}-intro-${progress.beat}-${index}`}>{step}</li>
+          ))}
+        </ol>
+      ) : null}
+      {beat?.answer ? <p className="mt-2">Answer: {beat.answer}</p> : null}
+      <p className="intro-timer" role="timer">
+        Practice starts in {remaining} {remaining === 1 ? "second" : "seconds"}.
+      </p>
+    </section>
   );
 }
 

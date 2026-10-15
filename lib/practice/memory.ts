@@ -2,13 +2,16 @@
  * `skill_states.fsrs` holds three things without a schema change:
  * - `mistakes`: repeated-mistake counts
  * - `fsrs`: the untouched scheduler payload (`{ due }`, `{ stability }`, …)
- * - `learn`: lesson check, review, and rollback memory
+ * - `learn`: lesson check, review, rollback, and topic-intro memory
  *
  * A plain payload from before this wrap is left as the payload.
  * Unknown payload keys are copied through.
  */
 
 export type LessonCheck = "due" | "active" | "retry" | "passed";
+
+/** Why the topic intro last played. A later answer must keep these fields. */
+export type IntroCycle = "new" | "relearn" | "rollback";
 
 export type LearnState = {
   lessonCheck?: LessonCheck;
@@ -19,6 +22,8 @@ export type LearnState = {
   reviewHits?: number;
   missStreak?: number;
   supportLeft?: number;
+  introSeenAt?: string;
+  introCycle?: IntroCycle;
 };
 
 export type SkillMemory = {
@@ -39,6 +44,10 @@ function dateString(value: unknown): string | undefined {
   return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : undefined;
 }
 
+function introCycle(value: unknown): IntroCycle | undefined {
+  return value === "new" || value === "relearn" || value === "rollback" ? value : undefined;
+}
+
 export function readLearnFields(raw: Record<string, unknown>): LearnState {
   const lesson = raw.lessonCheck;
   const lessonCheck =
@@ -54,6 +63,8 @@ export function readLearnFields(raw: Record<string, unknown>): LearnState {
     reviewHits: positive(raw.reviewHits),
     missStreak: positive(raw.missStreak),
     supportLeft: positive(raw.supportLeft),
+    introSeenAt: dateString(raw.introSeenAt),
+    introCycle: introCycle(raw.introCycle),
   };
 }
 
@@ -75,6 +86,8 @@ export function cleanLearn(learn: LearnState): LearnState {
   if (learn.reviewHits) next.reviewHits = learn.reviewHits;
   if (learn.missStreak) next.missStreak = learn.missStreak;
   if (learn.supportLeft) next.supportLeft = learn.supportLeft;
+  if (learn.introSeenAt) next.introSeenAt = learn.introSeenAt;
+  if (learn.introCycle) next.introCycle = learn.introCycle;
   return next;
 }
 

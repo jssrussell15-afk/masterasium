@@ -1,5 +1,6 @@
 import type { SupportedGrade } from "@/lib/grades";
 import type { GradeAccess } from "@/lib/practice/grade-access";
+import type { SkillIntro } from "@/lib/practice/intro-view";
 import type { AnswerShape } from "@/lib/practice/parts";
 import type { StreakMilestone } from "@/lib/practice/streak";
 
@@ -31,6 +32,8 @@ export type QuestionView = {
   kind: QuestionKind;
   shape: AnswerShape;
   assist: AssistView | null;
+  /** Set only for the first question after a topic intro. The client hides the prompt until the timer ends. */
+  intro?: SkillIntro;
 };
 
 export type SkillStatus = "mastered" | "practicing" | "not-started" | "check";

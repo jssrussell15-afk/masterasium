@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AddChildForm } from "@/components/add-child-form";
-import { BadgeTree } from "@/components/badge-tree";
 import { DigestPanel } from "@/components/digest-panel";
-import { NeedsReview } from "@/components/needs-review";
 import { SignOutButton } from "@/components/sign-out-button";
 import { StreakMark } from "@/components/streak-mark";
 import { Shell } from "@/components/site-header";
@@ -15,12 +13,16 @@ import { friendlyDbError } from "@/lib/db-error";
 import { renderDigestText, torontoDate, type DigestSummary } from "@/lib/digest/build";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
+import { isSimpleDesk } from "@/lib/dashboard/desk";
 import { formatAccuracy } from "@/lib/practice/format";
+import { weeklyAccuracy } from "@/lib/practice/trend";
 import { isSupportedGrade } from "@/lib/grades";
 import { masteryLabel, masteryMark } from "@/lib/practice/mastery";
 import { buildPortrait } from "@/lib/practice/portrait";
-import { accuracyScheduler, describeSkills } from "@/lib/practice/scheduler";
-import { loadAttemptLog, loadCards, totals } from "@/lib/practice/session";
+import { accuracyScheduler, describeSkills, type SkillCard } from "@/lib/practice/scheduler";
+import type { SkillProgress } from "@/lib/practice/types";
+import type { TrendWeek } from "@/lib/practice/trend";
+import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
 export default function DashboardPage() {
   return (
@@ -114,7 +116,6 @@ async function ChildCard({
   if (log.error) return <p className="feedback bad">{log.error}</p>;
 
   const today = torontoDate();
-  const score = totals(cards);
   const focus = accuracyScheduler.chooseSkill({
     grade: working,
     cards,
@@ -161,49 +162,116 @@ async function ChildCard({
           so they can practice with a username and PIN.
         </p>
       )}
-      <StreakMark days={portrait.streakDays} />
-      <div className="stat-grid">
-        <div>
-          <p>Questions attempted</p>
-          <strong>{score.attempted}</strong>
-        </div>
-        <div>
-          <p>Accuracy</p>
-          <strong>{formatAccuracy(score.attempted, score.correct)}</strong>
-        </div>
-        <div>
-          <p>Current skill</p>
-          <strong>{focus.title}</strong>
-        </div>
-      </div>
-      <NeedsReview
-        childId={child.id}
-        items={portrait.needsReview}
-        note="Skill names only. The student opens the questions from their own login."
-      />
-      <BadgeTree badges={portrait.badges} />
-      <div>
-        <h3 className="font-semibold">Skills</h3>
-        <p className="hint mt-1 text-sm">
-          These are the skills in the grade they are working in. A skill is mastered after 10
-          questions at 80% accuracy. The next grade can be opened without finishing every skill.
-        </p>
-        <ul className="skill-list mt-2">
-          {skills.map((skill) => (
-            <li key={skill.id} className={skill.current ? "skill-current" : undefined}>
-              <span className="skill-title">
-                <MasteryMark status={skill.status} />
-                {skill.title}
-              </span>
-              <span className="hint">
-                {skill.current ? "Current · " : ""}
-                {masteryLabel(masteryMark(skill.status))}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {isSimpleDesk(working) ? (
+        <SimpleProgress
+          days={portrait.streakDays}
+          practicedToday={log.attempts.some((attempt) => attempt.date === today)}
+          focusTitle={focus.title}
+        />
+      ) : (
+        <FullProgress
+          skills={skills}
+          cards={cards}
+          weeks={weeklyAccuracy(log.attempts, today)}
+          review={portrait.needsReview}
+        />
+      )}
       <DigestPanel childId={child.id} savedText={saved} />
     </article>
+  );
+}
+
+function SimpleProgress({
+  days,
+  practicedToday,
+  focusTitle,
+}: {
+  days: number;
+  practicedToday: boolean;
+  focusTitle: string;
+}) {
+  return (
+    <div className="grid gap-2">
+      <StreakMark days={days} />
+      <p>{practicedToday ? "Practiced today." : "Not yet today."}</p>
+      <p>Working on {focusTitle}.</p>
+    </div>
+  );
+}
+
+function FullProgress({
+  skills,
+  cards,
+  weeks,
+  review,
+}: {
+  skills: SkillProgress[];
+  cards: SkillCard[];
+  weeks: TrendWeek[];
+  review: { skillId: string; title: string }[];
+}) {
+  const byId = new Map(cards.map((card) => [card.skillId, card]));
+  const quiet = weeks.every((week) => week.attempted === 0);
+  return (
+    <div className="grid gap-4">
+      <div>
+        <h3 className="font-semibold">Skills</h3>
+        <ul className="skill-list mt-2">
+          {skills.map((skill) => {
+            const card = byId.get(skill.id);
+            return (
+              <li key={skill.id} className={skill.current ? "skill-current" : undefined}>
+                <span className="skill-title">
+                  <MasteryMark status={skill.status} />
+                  {skill.title}
+                </span>
+                <span className="hint">
+                  {skill.current ? "Current · " : ""}
+                  {masteryLabel(masteryMark(skill.status))}
+                  {card && card.attempted > 0 ? ` · ${formatAccuracy(card.attempted, card.correct)}` : ""}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      <div>
+        <h3 className="font-semibold">Accuracy, last four weeks</h3>
+        {quiet ? (
+          <p className="hint mt-2 text-sm">No practice in the last four weeks.</p>
+        ) : (
+          <ul className="trend mt-2">
+            {weeks.map((week) => (
+              <li key={week.start}>
+                <span>{week.label}</span>
+                <span className="trend-track" aria-hidden="true">
+                  <span
+                    style={{
+                      width: week.attempted === 0 ? "0%" : `${Math.round((week.correct / week.attempted) * 100)}%`,
+                    }}
+                  />
+                </span>
+                <span className="hint">{formatAccuracy(week.attempted, week.correct)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <h3 className="font-semibold">Spaced review</h3>
+        {review.length === 0 ? (
+          <p className="hint mt-2 text-sm">Nothing is waiting for a later review.</p>
+        ) : (
+          <ul className="strand-list mt-2">
+            {review.map((item) => (
+              <li key={item.skillId}>{item.title}</li>
+            ))}
+          </ul>
+        )}
+        <p className="hint mt-2 text-sm">
+          Skill names only. The student opens the questions from their own login.
+        </p>
+      </div>
+    </div>
   );
 }

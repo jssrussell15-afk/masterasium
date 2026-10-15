@@ -18,6 +18,9 @@ export function SiteHeader({
       <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:justify-end">
         {role === "student" ? null : (
           <>
+            <Link href="/curriculum/ontario/grade-1" className="nav-link">
+              Curriculum
+            </Link>
             <Link href="/worksheets" className="nav-link">
               Worksheets
             </Link>
