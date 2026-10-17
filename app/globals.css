@@ -887,6 +887,236 @@ body:has(dialog[open]) {
   font-size: 0.92rem;
 }
 
+.dash-widget h2 {
+  margin: 0;
+  font-family: var(--font-fraunces), Georgia, serif;
+  font-size: 1.45rem;
+  font-weight: 520;
+}
+
+.dash-widget .hint {
+  margin: 0.45rem 0 0;
+}
+
+.skill-taps {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skill-tap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  color: var(--ink);
+  padding: 0.75rem 0.9rem;
+  text-align: left;
+  font-size: 1.05rem;
+  font-weight: 650;
+  line-height: 1.25;
+}
+
+.skill-tap .hint {
+  margin: 0;
+  font-size: 0.88rem;
+  font-weight: 550;
+}
+
+html:has(.question-screen) {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+html:has(.question-screen) body {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+html:has(.question-screen) header {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem 0.25rem;
+}
+
+html:has(.question-screen) .wordmark {
+  font-size: 1.15rem;
+}
+
+html:has(.question-screen) .btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.92rem;
+}
+
+html:has(.question-screen) main {
+  min-height: 0;
+  overflow: hidden;
+  padding: 0 1rem;
+}
+
+.question-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: calc(4.7rem + env(safe-area-inset-bottom, 0px));
+}
+
+.question-back {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.question-back a {
+  color: var(--blue);
+  text-decoration: none;
+}
+
+.question-layout {
+  min-height: 0;
+  min-width: 0;
+}
+
+.question-layout.with-pad {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9.5rem;
+  gap: 0.6rem;
+  align-items: start;
+}
+
+.question-card {
+  min-width: 0;
+}
+
+.question-screen .prompt {
+  margin: 0.15rem 0 0;
+  font-size: clamp(1.65rem, 6.4vw, 2.3rem);
+}
+
+.question-screen .prompt-long {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: clamp(1.12rem, 4vw, 1.45rem);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
+
+.question-screen .feedback {
+  margin: 0;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.95rem;
+}
+
+.question-form {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.45rem;
+}
+
+.question-card .answer-input {
+  font-size: 1.35rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.question-screen .answer-parts {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.scratchpad {
+  min-width: 0;
+}
+
+.scratchpad-toggle {
+  width: 100%;
+  min-height: 2.75rem;
+  white-space: normal;
+}
+
+.scratchpad-input {
+  width: 100%;
+  margin-top: 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 0.75rem;
+  background: white;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.88rem;
+  resize: none;
+}
+
+.hint-dock {
+  position: fixed;
+  z-index: 20;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line);
+  background: rgb(231 244 251 / 96%);
+}
+
+.hint-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+}
+
+.hint-actions > form {
+  display: flex;
+  min-width: 0;
+}
+
+.hint-target {
+  width: 100%;
+  min-height: 3rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: white;
+  color: var(--ink);
+  padding: 0.35rem 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1.15;
+}
+
+.hint-bubble {
+  max-height: 4.5rem;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: white;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.intro-dialog {
+  width: min(36rem, calc(100vw - 1.5rem));
+  max-height: min(100dvh - 1.5rem, 40rem);
+  overflow: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.intro-dialog::backdrop {
+  background: rgb(23 52 76 / 28%);
+}
+
 @media print {
   header,
   .no-print,

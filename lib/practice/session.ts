@@ -5,6 +5,7 @@ import { friendlyDbError } from "@/lib/db-error";
 import { torontoDate } from "@/lib/digest/build";
 import type { SupportedGrade } from "@/lib/grades";
 import { assistFor } from "@/lib/practice/assist";
+import { hintLadder } from "@/lib/practice/hints";
 import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/intro";
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import { planNextQuestion } from "@/lib/practice/learning";
@@ -80,6 +81,13 @@ function presentQuestion(
   intro: SkillIntro | null,
 ): QuestionView {
   const shape = answerShape(prompt, expected);
+  const assist = assistFor({
+    attempted: cardFor(cards, skill.id).attempted,
+    summary: skill.summary,
+    firstStep,
+    expected,
+    kind,
+  });
   return {
     questionId,
     prompt,
@@ -88,12 +96,14 @@ function presentQuestion(
     responseHint: shape.kind === "single" ? skill.responseHint : null,
     kind,
     shape,
-    assist: assistFor({
-      attempted: cardFor(cards, skill.id).attempted,
+    assist,
+    hints: hintLadder({
       summary: skill.summary,
-      firstStep,
+      firstStep: assist?.firstStep ?? firstStep,
+      examplePrompt: skill.examplePrompt,
+      exampleAnswer: skill.exampleAnswer,
       expected,
-      kind,
+      prompt,
     }),
     ...(intro ? { intro } : {}),
   };
@@ -312,6 +322,7 @@ export async function loadAttemptLog(
       skillId: row.skill_id,
       correct: Boolean(row.correct),
       date: torontoDate(new Date(row.created_at)),
+      at: row.created_at,
     })),
     error: null,
   };

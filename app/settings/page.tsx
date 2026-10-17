@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { EventSetupSql } from "@/components/event-setup-sql";
 import { GradeSettings } from "@/components/grade-settings";
 import { GradeSetupSql } from "@/components/grade-setup-sql";
 import { ResetPinForm, SetStudentLoginForm } from "@/components/student-access-forms";
@@ -131,6 +132,7 @@ async function Settings({
 
       {roster.studentSetup ? null : <StudentSetupSql />}
       {roster.gradeSetup ? null : <GradeSetupSql />}
+      <EventSetupSql />
     </div>
   );
 }

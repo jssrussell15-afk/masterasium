@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { homeFor, navFor, type Role } from "@/lib/auth/roles";
 
 export function SiteHeader({
   action,
@@ -7,33 +8,21 @@ export function SiteHeader({
   homeHref,
 }: {
   action?: ReactNode | null;
-  role?: "public" | "parent" | "student";
+  role?: Role | "public";
   homeHref?: string;
 }) {
+  const links = navFor(role);
   return (
     <header className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-      <Link href={homeHref ?? (role === "student" ? "/practice" : "/")} className="wordmark">
+      <Link href={homeHref ?? homeFor(role)} className="wordmark">
         Masterasium
       </Link>
       <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:justify-end">
-        {role === "student" ? null : (
-          <>
-            <Link href="/curriculum/ontario/grade-1" className="nav-link">
-              Curriculum
-            </Link>
-            <Link href="/worksheets" className="nav-link">
-              Worksheets
-            </Link>
-            <Link href="/dashboard" className="nav-link">
-              Parent desk
-            </Link>
-          </>
-        )}
-        {role === "parent" ? (
-          <Link href="/settings" className="nav-link">
-            Account settings
+        {links.map((link) => (
+          <Link key={link.href} href={link.href} className="nav-link">
+            {link.label}
           </Link>
-        ) : null}
+        ))}
         {action === undefined ? (
           <Link href="/login" className="btn btn-primary">
             Sign in
@@ -58,7 +47,7 @@ export function Shell({
   action?: ReactNode | null;
   narrow?: boolean;
   banner?: boolean;
-  role?: "public" | "parent" | "student";
+  role?: Role | "public";
   homeHref?: string;
 }) {
   return (

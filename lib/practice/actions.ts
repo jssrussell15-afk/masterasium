@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { answersMatch } from "@/lib/practice/answers";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
+import { buildPracticeEvent, type PracticeEvent } from "@/lib/practice/events";
 import { applyLearning } from "@/lib/practice/learning";
 import { readLearn, writeLearn, type IntroCycle } from "@/lib/practice/memory";
 import { givenAnswer } from "@/lib/practice/parts";
@@ -138,11 +139,14 @@ export async function submitAnswer(
 
   const unpacked = unpackStoredAnswer(question.answer);
   const storedPlan = readStoredPlan(question.answer);
-  const given = givenAnswer(unpacked.answer, {
-    answer: String(formData.get("answer") ?? ""),
-    remainder: String(formData.get("remainder") ?? ""),
-  });
-  const correct = answersMatch(unpacked.answer, given);
+  const giveUp = String(formData.get("intent") ?? "") === "give-up";
+  const given = giveUp
+    ? ""
+    : givenAnswer(unpacked.answer, {
+        answer: String(formData.get("answer") ?? ""),
+        remainder: String(formData.get("remainder") ?? ""),
+      });
+  const correct = giveUp ? false : answersMatch(unpacked.answer, given);
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
 
@@ -158,7 +162,7 @@ export async function submitAnswer(
   let nextCard = applied.card;
   let note: string | undefined;
   let coach = false;
-  if (!correct) {
+  if (!correct && !giveUp) {
     const mistake = classifyMistake(question.prompt, unpacked.answer, given);
     const noted = noteMistake(nextCard, mistake.type);
     nextCard = noted.card;
@@ -195,6 +199,26 @@ export async function submitAnswer(
     correct,
   });
   if (attemptError) return { error: friendlyDbError(attemptError) };
+  await insertPracticeEvent(supabase, childId, {
+    kind: "question_attempted",
+    skillId: question.skill_id,
+    detail: { correct: correct ? 1 : 0 },
+  });
+  if (giveUp) {
+    await insertPracticeEvent(supabase, childId, {
+      kind: "hint_rung",
+      skillId: question.skill_id,
+      detail: { rung: "give-up" },
+    });
+  }
+  const seconds = Number(formData.get("elapsedSeconds"));
+  if (Number.isInteger(seconds) && seconds >= 0 && seconds <= 7200) {
+    await insertPracticeEvent(supabase, childId, {
+      kind: "time_on_task",
+      skillId: question.skill_id,
+      detail: { seconds },
+    });
+  }
 
   let updatedCards = replaceCard(cards, nextCard);
   if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
@@ -309,6 +333,45 @@ export async function openSkill(formData: FormData): Promise<void> {
   });
   if (!issued.question) redirect("/practice");
   redirect(`/practice/${childId}`);
+}
+
+export type StartState = { error?: string; note?: string };
+
+/** Opens a skill from the student home, then leaves the lists for the question. */
+export async function startSkill(_previous: StartState, formData: FormData): Promise<StartState> {
+  const childId = String(formData.get("childId") ?? "");
+  const result = await chooseSkill({}, formData);
+  if (result.requestNote && !result.next) return { note: result.requestNote };
+  if (result.error && !result.next) return { error: result.error };
+  if (!childId) return { error: "Choose a skill to practice." };
+  redirect(`/practice/${childId}`);
+}
+
+export async function logPracticeEvent(
+  childId: string,
+  kind: string,
+  skillId: string,
+  detail: Record<string, string | number>,
+): Promise<void> {
+  const event = buildPracticeEvent({ kind, skillId, detail });
+  if (!event || !childId) return;
+  const owned = await ownedChild(childId);
+  if ("error" in owned) return;
+  await insertPracticeEvent(owned.supabase, childId, event);
+}
+
+async function insertPracticeEvent(
+  supabase: SupabaseClient,
+  childId: string,
+  event: PracticeEvent,
+): Promise<void> {
+  const { error } = await supabase.from("practice_events").insert({
+    child_id: childId,
+    kind: event.kind,
+    skill_id: event.skillId,
+    detail: event.detail,
+  });
+  if (error) return;
 }
 
 function introCycleFrom(formData: FormData, skillId: string): IntroCycle | null {

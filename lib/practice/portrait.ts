@@ -10,6 +10,8 @@ export type AttemptPoint = {
   skillId: string;
   correct: boolean;
   date: string;
+  /** ISO time, used to order recently practiced skills. */
+  at?: string;
 };
 
 export type PracticePortrait = {
