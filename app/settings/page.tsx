@@ -1,8 +1,9 @@
 import { Suspense } from "react";
+import { ChildNameSetupSql } from "@/components/child-name-setup-sql";
 import { EventSetupSql } from "@/components/event-setup-sql";
 import { GradeSettings } from "@/components/grade-settings";
 import { GradeSetupSql } from "@/components/grade-setup-sql";
-import { ResetPinForm, SetStudentLoginForm } from "@/components/student-access-forms";
+import { SetPinForm } from "@/components/student-access-forms";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { StudentSetupSql } from "@/components/student-setup-sql";
@@ -51,12 +52,12 @@ async function Settings({
 
       {notice === "pin" ? (
         <p className="feedback good" role="status">
-          PIN updated. The previous PIN no longer works.
+          PIN saved. They sign in with their first name and this PIN. An older PIN no longer works.
         </p>
       ) : null}
       {notice === "login" ? (
         <p className="feedback good" role="status">
-          Student login saved. They can sign in with that username and PIN.
+          Student login saved. They sign in with their first name and PIN.
         </p>
       ) : null}
       {notice === "grade" ? (
@@ -105,7 +106,6 @@ async function Settings({
             <p className="hint mt-1">
               Enrolled in Grade {child.grade}
               {child.workingGrade === child.grade ? "" : ` · Working in Grade ${child.workingGrade}`}
-              {child.username ? ` · ${child.username}` : ""}
             </p>
           </div>
           {roster.gradeSetup ? null : (
@@ -118,11 +118,12 @@ async function Settings({
               requestedGrade={child.requestedGrade}
             />
           )}
-          {child.username ? (
-            <ResetPinForm childId={child.id} />
-          ) : (
-            <SetStudentLoginForm childId={child.id} firstName={child.first_name} />
-          )}
+          <SetPinForm
+            childId={child.id}
+            firstName={child.first_name}
+            hasLogin={Boolean(child.username)}
+            returnTo="settings"
+          />
         </section>
       ))}
 
@@ -133,6 +134,7 @@ async function Settings({
       {roster.studentSetup ? null : <StudentSetupSql />}
       {roster.gradeSetup ? null : <GradeSetupSql />}
       <EventSetupSql />
+      <ChildNameSetupSql />
     </div>
   );
 }

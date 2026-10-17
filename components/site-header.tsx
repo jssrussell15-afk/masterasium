@@ -6,10 +6,12 @@ export function SiteHeader({
   action,
   role = "public",
   homeHref,
+  slimLink,
 }: {
   action?: ReactNode | null;
   role?: Role | "public";
   homeHref?: string;
+  slimLink?: { href: string; label: string };
 }) {
   const links = navFor(role);
   return (
@@ -30,6 +32,11 @@ export function SiteHeader({
         ) : (
           action
         )}
+        {slimLink ? (
+          <Link href={slimLink.href} className="auth-slim">
+            {slimLink.label}
+          </Link>
+        ) : null}
       </nav>
     </header>
   );
@@ -42,6 +49,7 @@ export function Shell({
   banner = false,
   role = "public",
   homeHref,
+  slimLink,
 }: {
   children: ReactNode;
   action?: ReactNode | null;
@@ -49,11 +57,12 @@ export function Shell({
   banner?: boolean;
   role?: Role | "public";
   homeHref?: string;
+  slimLink?: { href: string; label: string };
 }) {
-  return (
+  const screen = (
     <>
       {banner ? <img src="/banner.png" alt="" className="page-banner" /> : null}
-      <SiteHeader action={action} role={role} homeHref={homeHref} />
+      <SiteHeader action={action} role={role} homeHref={homeHref} slimLink={slimLink} />
       <main
         className={`mx-auto flex w-full flex-1 flex-col px-6 pb-16 ${narrow ? "max-w-xl" : "max-w-5xl"}`}
       >
@@ -61,4 +70,6 @@ export function Shell({
       </main>
     </>
   );
+  if (!slimLink) return screen;
+  return <div className="auth-screen contents">{screen}</div>;
 }

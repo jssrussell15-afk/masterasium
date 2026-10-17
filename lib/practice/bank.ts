@@ -512,6 +512,15 @@ export const CATALOG: SkillBlueprint[] = [
   ),
 
   skill(
+    "g3-add-sub",
+    3,
+    "Addition and subtraction within 1,000",
+    "Add and subtract up to 1,000 by working one place at a time. Regroup tens, hundreds, and ones when you need to.",
+    null,
+    worked("250 + 175 = ?", "425", ["0 + 5 = 5 ones.", "5 tens + 7 tens = 12 tens. Write 2 tens and carry 1 hundred.", "2 hundreds + 1 hundred + 1 hundred = 4 hundreds. The sum is 425."]),
+    (rng, small) => addSub(rng, 1_000, small),
+  ),
+  skill(
     "g3-mult",
     3,
     "Multiplication facts to 10×10",
@@ -573,15 +582,6 @@ export const CATALOG: SkillBlueprint[] = [
     "Write the value, such as 400, not the digit by itself.",
     worked("In 482, what is the value of the hundreds digit?", "400", ["The hundreds digit is 4.", "4 × 100 = 400."]),
     (rng) => placeValue(rng, 3),
-  ),
-  skill(
-    "g3-add-sub",
-    3,
-    "Addition and subtraction within 1,000",
-    "Add and subtract up to 1,000 by working one place at a time. Regroup tens, hundreds, and ones when you need to.",
-    null,
-    worked("250 + 175 = ?", "425", ["0 + 5 = 5 ones.", "5 tens + 7 tens = 12 tens. Write 2 tens and carry 1 hundred.", "2 hundreds + 1 hundred + 1 hundred = 4 hundreds. The sum is 425."]),
-    (rng, small) => addSub(rng, 1_000, small),
   ),
   skill(
     "g3-perimeter",

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AddChildForm } from "@/components/add-child-form";
+import { SetPinForm } from "@/components/student-access-forms";
 import { DigestPanel } from "@/components/digest-panel";
 import { SignOutButton } from "@/components/sign-out-button";
 import { StreakMark } from "@/components/streak-mark";
@@ -24,17 +25,23 @@ import type { SkillProgress } from "@/lib/practice/types";
 import type { TrendWeek } from "@/lib/practice/trend";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
-export default function DashboardPage() {
+export default function DashboardPage(props: PageProps<"/dashboard">) {
   return (
     <Shell role="parent" action={<SignOutButton />}>
       <Suspense fallback={<p className="status mt-10">Loading the parent desk…</p>}>
-        <Desk />
+        <Desk searchParams={props.searchParams} />
       </Suspense>
     </Shell>
   );
 }
 
-async function Desk() {
+async function Desk({
+  searchParams,
+}: {
+  searchParams: PageProps<"/dashboard">["searchParams"];
+}) {
+  const params = await searchParams;
+  const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
   const { supabase, user } = await requireUser();
   const profileError = await ensureProfile(supabase, user.id);
   const roster = await loadRoster(supabase, user.id);
@@ -51,6 +58,11 @@ async function Desk() {
         <p className="eyebrow">Parent desk</p>
         <h1 className="display mt-2 text-4xl">Your children</h1>
         <p className="hint mt-2">{user.email}</p>
+        {notice === "pin" ? (
+          <p className="feedback good mt-3" role="status">
+            PIN saved. They sign in with their first name and this PIN.
+          </p>
+        ) : null}
         <p className="hint mt-2">
           Progress here is scores and skill names. Question text stays on the student login.{" "}
           <Link href="/settings" className="nav-link">
@@ -78,7 +90,7 @@ async function Desk() {
 
       {children.length === 0 ? (
         <p className="hint">
-          Add a child to start practice. First name, grade, username, and a PIN. Up to two.
+          Add a child to start practice. First name, grade, and a PIN. Up to two.
         </p>
       ) : (
         <div className="grid gap-4">
@@ -103,9 +115,15 @@ async function ChildCard({
   const working = isSupportedGrade(child.workingGrade) ? child.workingGrade : null;
   if (!isSupportedGrade(child.grade) || !working) {
     return (
-      <article className="card">
+      <article className="card grid gap-3">
         <h2 className="text-2xl font-semibold">{child.first_name}</h2>
         <p className="hint mt-2">Grade {child.grade} is not open yet.</p>
+        <SetPinForm
+          childId={child.id}
+          firstName={child.first_name}
+          hasLogin={Boolean(child.username)}
+          returnTo="dashboard"
+        />
       </article>
     );
   }
@@ -142,7 +160,6 @@ async function ChildCard({
         <p className="hint">
           Enrolled in Grade {child.grade}
           {working === child.grade ? "" : ` · Working in Grade ${working}`}
-          {child.username ? ` · ${child.username}` : ""}
         </p>
       </div>
       {child.requestedGrade ? (
@@ -150,18 +167,12 @@ async function ChildCard({
           Asked to work in Grade {child.requestedGrade}. Approve it in account settings.
         </p>
       ) : null}
-      {child.username ? (
-        <p className="hint text-sm">
-          Signs in with this username and a PIN. Reset the PIN in account settings.
-        </p>
-      ) : (
-        <p className="hint text-sm">
-          <Link href="/settings" className="nav-link">
-            Create a student login
-          </Link>{" "}
-          so they can practice with a username and PIN.
-        </p>
-      )}
+      <SetPinForm
+        childId={child.id}
+        firstName={child.first_name}
+        hasLogin={Boolean(child.username)}
+        returnTo="dashboard"
+      />
       {isSimpleDesk(working) ? (
         <SimpleProgress
           days={portrait.streakDays}

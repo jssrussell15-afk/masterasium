@@ -45,6 +45,13 @@ export function skillsForGrade(grade: SupportedGrade): Skill[] {
   return SKILLS.filter((skill) => skill.grade === grade).sort((a, b) => a.order - b.order);
 }
 
+/** First skill on a new learner's path for this grade. */
+export function warmUpSkill(grade: SupportedGrade): Skill {
+  const skill = skillsForGrade(grade)[0];
+  if (!skill) throw new Error(`Grade ${grade} has no warm-up skill.`);
+  return skill;
+}
+
 export function skillById(id: string): Skill | undefined {
   return SKILLS.find((skill) => skill.id === id);
 }

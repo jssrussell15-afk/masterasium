@@ -1,101 +1,49 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  resetStudentPin,
-  setStudentLogin,
-  type ChildState,
-} from "@/lib/children/actions";
+import { setChildPin, type ChildState } from "@/lib/children/actions";
 
 const initial: ChildState = {};
 
-function PinFields() {
-  return (
-    <>
-      <label className="field">
-        PIN
-        <input
-          name="pin"
-          type="password"
-          inputMode="numeric"
-          autoComplete="new-password"
-          pattern="[0-9]*"
-          minLength={4}
-          maxLength={6}
-          required
-        />
-      </label>
-      <label className="field">
-        Confirm PIN
-        <input
-          name="confirmPin"
-          type="password"
-          inputMode="numeric"
-          autoComplete="new-password"
-          pattern="[0-9]*"
-          minLength={4}
-          maxLength={6}
-          required
-        />
-      </label>
-    </>
-  );
-}
-
-export function SetStudentLoginForm({
+export function SetPinForm({
   childId,
   firstName,
+  hasLogin,
+  returnTo,
 }: {
   childId: string;
   firstName: string;
+  hasLogin: boolean;
+  returnTo: "dashboard" | "settings";
 }) {
-  const [state, action, pending] = useActionState(setStudentLogin, initial);
+  const [state, action, pending] = useActionState(setChildPin, initial);
+  const pinId = `child-pin-${childId}`;
 
   return (
     <form action={action} className="grid gap-3">
       <input type="hidden" name="childId" value={childId} />
+      <input type="hidden" name="returnTo" value={returnTo} />
       <p className="hint text-sm">
-        {firstName} does not have a student login yet. Choose a username and a PIN. They use those
-        to practice. They cannot reset the PIN.
+        {hasLogin
+          ? `Set a new PIN for ${firstName}. The old PIN stops working. They sign in with their first name and this PIN.`
+          : `${firstName} signs in with their first name and a PIN. Choose 4 to 6 digits.`}
       </p>
-      <label className="field">
-        Username
+      <label className="field" htmlFor={pinId}>
+        PIN
         <input
-          name="username"
+          id={pinId}
+          name="pin"
+          type="password"
+          inputMode="numeric"
           autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
+          pattern="[0-9]{4,6}"
+          minLength={4}
+          maxLength={6}
           required
-          minLength={3}
-          maxLength={20}
         />
       </label>
-      <PinFields />
-      <button className="btn btn-primary w-fit" type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Create student login"}
-      </button>
-      {state.error ? (
-        <p className="feedback bad" role="alert">
-          {state.error}
-        </p>
-      ) : null}
-    </form>
-  );
-}
-
-export function ResetPinForm({ childId }: { childId: string }) {
-  const [state, action, pending] = useActionState(resetStudentPin, initial);
-
-  return (
-    <form action={action} className="grid gap-3">
-      <input type="hidden" name="childId" value={childId} />
-      <p className="hint text-sm">
-        Choose a new PIN of 4 to 6 digits. The old PIN stops working, including on a signed-in
-        device.
-      </p>
-      <PinFields />
       <button className="btn btn-secondary w-fit" type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Reset PIN"}
+        {pending ? "Saving…" : "Set PIN"}
       </button>
       {state.error ? (
         <p className="feedback bad" role="alert">

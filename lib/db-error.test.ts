@@ -45,6 +45,18 @@ describe("friendlyDbError", () => {
     );
   });
 
+  it("points a missing signup save at the child profile statements", () => {
+    expect(
+      friendlyDbError({
+        message:
+          "Could not find the function public.create_signup_child(p_first_name, p_grade) in the schema cache",
+        code: "PGRST202",
+      }),
+    ).toBe(
+      "A child cannot be saved yet. Open Account settings and paste the child profile statements into the Supabase SQL editor.",
+    );
+  });
+
   it("says when a username is taken", () => {
     expect(
       friendlyDbError({

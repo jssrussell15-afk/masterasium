@@ -26,6 +26,7 @@ export function isStudentLoginMissing(error: DbError): boolean {
   const message = error.message.toLowerCase();
   return (
     message.includes("start_student_session") ||
+    message.includes("student_name_key") ||
     message.includes("create_child_profile") ||
     message.includes("set_student_login") ||
     message.includes("reset_student_pin") ||
@@ -67,6 +68,13 @@ export function friendlyDbError(error: DbError): string {
   }
   if (message.includes("approve that grade")) {
     return "Ask a parent to approve that grade.";
+  }
+  if (
+    (message.includes("create_child_profile") || message.includes("create_signup_child")) &&
+    !message.includes("p_username") &&
+    !message.includes("p_pin")
+  ) {
+    return "A child cannot be saved yet. Open Account settings and paste the child profile statements into the Supabase SQL editor.";
   }
   if (isGradeProgressMissing(error)) {
     return GRADE_PROGRESS_SETUP_MESSAGE;

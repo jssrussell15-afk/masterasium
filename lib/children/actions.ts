@@ -1,9 +1,31 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  SIGNUP_PRACTICE_COOKIE,
+  STUDENT_COOKIE,
+  studentCookieOptions,
+} from "@/lib/auth/student-cookie";
+import { readStudentToken, revokeStudentToken } from "@/lib/auth/student";
+import {
+  readSignupHandoff,
+  readSignupPractice,
+  signupHandoffCookie,
+  signupPracticePath,
+  signupReadyPath,
+} from "@/lib/children/signup-practice";
 import { friendlyDbError } from "@/lib/db-error";
 import { isSupportedGrade } from "@/lib/grades";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
+import {
+  readRememberedChildren,
+  rememberChild,
+  TABLET_CHILDREN_COOKIE,
+  TABLET_CHILDREN_MAX_AGE,
+  writeRememberedChildren,
+} from "@/lib/children/tablet";
+import { storedUsername } from "@/lib/children/username";
 import {
   isValidFirstName,
   isValidPin,
@@ -15,6 +37,27 @@ import {
 export type ChildState = {
   error?: string;
 };
+
+function isUsernameTaken(error: { message: string; code?: string }): boolean {
+  const message = error.message.toLowerCase();
+  return error.code === "23505" || message.includes("children_username");
+}
+
+async function withFreeUsername(
+  firstName: string,
+  save: (
+    username: string,
+  ) => PromiseLike<{ error: { message: string; code?: string } | null }>,
+): Promise<ChildState | "saved"> {
+  for (let attempt = 1; attempt <= 30; attempt += 1) {
+    const username = storedUsername(firstName, attempt);
+    if (!username) return { error: "That name could not be saved. Try the first name again." };
+    const { error } = await save(username);
+    if (!error) return "saved";
+    if (!isUsernameTaken(error)) return { error: friendlyDbError(error) };
+  }
+  return { error: "That name could not be saved. Try the first name again." };
+}
 
 function pinFields(formData: FormData): { pin: string } | { error: string } {
   const pin = String(formData.get("pin") ?? "").trim();
@@ -28,7 +71,6 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
   const { supabase, user } = await requireUser();
   const firstName = normalizeFirstName(String(formData.get("firstName") ?? ""));
   const grade = Number(formData.get("grade"));
-  const username = normalizeUsername(String(formData.get("username") ?? ""));
   const pin = pinFields(formData);
 
   if (!isValidFirstName(firstName)) {
@@ -36,9 +78,6 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
   }
   if (!isSupportedGrade(grade)) {
     return { error: "Choose a grade from 1 to 8." };
-  }
-  if (!isValidUsername(username)) {
-    return { error: "Use 3 to 20 letters or numbers, with no spaces." };
   }
   if ("error" in pin) return { error: pin.error };
 
@@ -52,14 +91,166 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
   if (countError) return { error: friendlyDbError(countError) };
   if ((count ?? 0) >= 2) return { error: "This account already has 2 children." };
 
-  const { error } = await supabase.rpc("create_child_profile", {
+  const saved = await withFreeUsername(firstName, (username) =>
+    supabase.rpc("create_child_profile", {
+      p_first_name: firstName,
+      p_grade: grade,
+      p_username: username,
+      p_pin: pin.pin,
+    }),
+  );
+  if (saved !== "saved") return saved;
+  redirect("/dashboard");
+}
+
+/** Signup step 2. Saves the name and grade, then shows the confirmation card. */
+export async function addSignupChild(
+  _previous: ChildState,
+  formData: FormData,
+): Promise<ChildState> {
+  const { supabase, user } = await requireUser();
+  const firstName = normalizeFirstName(String(formData.get("firstName") ?? ""));
+  const grade = Number(formData.get("grade"));
+
+  if (!isValidFirstName(firstName) || firstName.length > 30) {
+    return { error: "Use a first name, up to 30 letters." };
+  }
+  if (!isSupportedGrade(grade)) {
+    return { error: "Choose a grade from 1 to 8." };
+  }
+
+  const profileError = await ensureProfile(supabase, user.id);
+  if (profileError) return { error: friendlyDbError(profileError) };
+
+  const { data, error } = await supabase.rpc("create_signup_child", {
     p_first_name: firstName,
     p_grade: grade,
-    p_username: username,
-    p_pin: pin.pin,
   });
   if (error) return { error: friendlyDbError(error) };
+
+  const practice = readSignupPractice(data);
+  if (!practice) {
+    return {
+      error:
+        "A child cannot be saved yet. Open Account settings and paste the child profile statements into the Supabase SQL editor.",
+    };
+  }
+
+  const store = await cookies();
+  store.set(SIGNUP_PRACTICE_COOKIE, signupHandoffCookie(practice), studentCookieOptions());
+  redirect(signupReadyPath(practice.childId));
+}
+
+/** The parent chose to practice on this device. The first skill is the grade warm-up. */
+export async function startSignupPractice(
+  _previous: ChildState,
+  formData: FormData,
+): Promise<ChildState> {
+  const childId = String(formData.get("childId") ?? "");
+  const store = await cookies();
+  const handoff = readSignupHandoff(store.get(SIGNUP_PRACTICE_COOKIE)?.value);
+  if (!handoff || handoff.childId !== childId) {
+    return { error: "Practice could not start from this page. Go to the parent desk." };
+  }
+
+  const { supabase } = await requireUser();
+  const { data, error } = await supabase.from("children").select("id").eq("id", childId).maybeSingle();
+  if (error) return { error: friendlyDbError(error) };
+  if (!data) return { error: "That child is not on this account." };
+
+  const previous = await readStudentToken();
+  await supabase.auth.signOut();
+  await revokeStudentToken(previous);
+  store.set(STUDENT_COOKIE, handoff.token, studentCookieOptions());
+  store.set(SIGNUP_PRACTICE_COOKIE, "", studentCookieOptions(0));
+  redirect(signupPracticePath(childId));
+}
+
+export type TabletState = {
+  error?: string;
+  remembered?: boolean;
+};
+
+/** Saves this child on the device so student sign-in can show their name. */
+export async function rememberTabletChild(
+  _previous: TabletState,
+  formData: FormData,
+): Promise<TabletState> {
+  const { supabase } = await requireUser();
+  const childId = String(formData.get("childId") ?? "");
+  if (!childId) return { error: "Choose a child first." };
+
+  const { data, error } = await supabase
+    .from("children")
+    .select("id, first_name")
+    .eq("id", childId)
+    .maybeSingle();
+  if (error) return { error: friendlyDbError(error) };
+
+  const firstName = normalizeFirstName(String(data?.first_name ?? ""));
+  if (!data || !isValidFirstName(firstName)) {
+    return { error: "That child is not on this account." };
+  }
+
+  const store = await cookies();
+  const next = rememberChild(readRememberedChildren(store.get(TABLET_CHILDREN_COOKIE)?.value), {
+    id: data.id,
+    firstName,
+  });
+  store.set(TABLET_CHILDREN_COOKIE, writeRememberedChildren(next), studentCookieOptions(TABLET_CHILDREN_MAX_AGE));
+  return { remembered: true };
+}
+
+/** The parent keeps this browser and leaves the confirmation. */
+export async function leaveSignupToDesk(
+  _previous: ChildState,
+  _formData: FormData,
+): Promise<ChildState> {
+  await requireUser();
+  const store = await cookies();
+  store.set(SIGNUP_PRACTICE_COOKIE, "", studentCookieOptions(0));
   redirect("/dashboard");
+}
+
+/** Saves a 4–6 digit PIN. The username is created from the first name when needed. */
+export async function setChildPin(
+  _previous: ChildState,
+  formData: FormData,
+): Promise<ChildState> {
+  const { supabase } = await requireUser();
+  const childId = String(formData.get("childId") ?? "");
+  const pin = String(formData.get("pin") ?? "").trim();
+  const returnTo = String(formData.get("returnTo") ?? "");
+
+  if (!childId) return { error: "Choose a child first." };
+  if (!isValidPin(pin)) return { error: "Use a PIN of 4 to 6 digits." };
+
+  const { data, error: readError } = await supabase
+    .from("children")
+    .select("id, first_name, username")
+    .eq("id", childId)
+    .maybeSingle();
+  if (readError) return { error: friendlyDbError(readError) };
+  if (!data) return { error: "That child is not on this account." };
+
+  if (data.username) {
+    const { error } = await supabase.rpc("reset_student_pin", {
+      p_child_id: childId,
+      p_pin: pin,
+    });
+    if (error) return { error: friendlyDbError(error) };
+  } else {
+    const saved = await withFreeUsername(String(data.first_name ?? ""), (username) =>
+      supabase.rpc("set_student_login", {
+        p_child_id: childId,
+        p_username: username,
+        p_pin: pin,
+      }),
+    );
+    if (saved !== "saved") return saved;
+  }
+
+  redirect(returnTo === "settings" ? "/settings?notice=pin" : "/dashboard?notice=pin");
 }
 
 export async function setStudentLogin(

@@ -14,8 +14,8 @@ export function AddChildForm() {
       <div>
         <h2 className="text-lg font-semibold">Add a child</h2>
         <p className="hint mt-1 text-sm">
-          First name, grade, username, and a PIN. You can add up to two. They sign in with the
-          username and PIN. You can reset the PIN in account settings.
+          First name, grade, and a PIN. You can add up to two. They sign in with their first name
+          and PIN. You can change the PIN on their profile.
         </p>
       </div>
       <label className="field">
@@ -32,18 +32,6 @@ export function AddChildForm() {
             </option>
           ))}
         </select>
-      </label>
-      <label className="field">
-        Username
-        <input
-          name="username"
-          autoComplete="off"
-          autoCapitalize="none"
-          spellCheck={false}
-          required
-          minLength={3}
-          maxLength={20}
-        />
       </label>
       <label className="field">
         PIN

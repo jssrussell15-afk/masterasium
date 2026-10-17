@@ -49,6 +49,9 @@ a {
 }
 
 .wordmark {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-family: var(--font-fraunces), Georgia, serif;
   font-size: 1.35rem;
   letter-spacing: -0.03em;
@@ -88,6 +91,7 @@ a {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: 44px;
   border: 1px solid transparent;
   border-radius: 999px;
   padding: 0.72rem 1.15rem;
@@ -132,12 +136,62 @@ a {
 .field select,
 .field textarea {
   width: 100%;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 0.85rem;
   background: white;
   color: var(--ink);
   padding: 0.72rem 0.85rem;
   font-size: 1rem;
+}
+
+/* Red border once the person has tried an invalid field. */
+.field input:user-invalid,
+.field select:user-invalid,
+.field textarea:user-invalid,
+.field input[aria-invalid="true"],
+.field select[aria-invalid="true"],
+.field textarea[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+
+.field-error {
+  margin: 0;
+  color: var(--bad);
+  font-size: 0.92rem;
+}
+
+/* Signup step label and the password reveal control. */
+.step-kicker {
+  margin: 0 0 0.35rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 650;
+}
+
+.password-field {
+  position: relative;
+}
+
+.password-field input {
+  min-height: 3.25rem;
+  padding-right: 3.4rem;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  width: 44px;
+  height: 44px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--blue);
+  padding: 0;
+  font-size: 0.85rem;
+  font-weight: 650;
 }
 
 .field textarea {
@@ -148,6 +202,7 @@ a {
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  min-height: 44px;
   font-size: 0.95rem;
 }
 
@@ -165,12 +220,15 @@ a {
 
 .segmented button,
 .segmented a {
-  display: inline-block;
-  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: 2px solid transparent;
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
-  padding: 0.5rem 0.9rem;
+  padding: 0.35rem 0.9rem;
   font-size: 1rem;
   font-weight: 650;
   text-decoration: none;
@@ -178,9 +236,9 @@ a {
 
 .segmented button[aria-pressed="true"],
 .segmented a[aria-pressed="true"] {
-  background: white;
+  border-color: var(--blue);
+  background: #d3ebf7;
   color: var(--ink);
-  box-shadow: 0 1px 4px rgb(23 52 76 / 8%);
 }
 
 .study-logo {
@@ -201,6 +259,13 @@ a {
   background: white;
   padding: 0.7rem 0.85rem;
   font-size: 0.9rem;
+}
+
+.setup-sql summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
 }
 
 .setup-sql pre {
@@ -493,6 +558,7 @@ a {
 
 .answer-input {
   width: 100%;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 0.95rem;
   background: white;
@@ -655,8 +721,64 @@ a {
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.35rem;
   color: var(--muted);
   text-decoration: none;
+}
+
+@media (max-width: 639px) {
+  .nav-link {
+    font-size: 16px;
+  }
+}
+
+/* Auth screens below 640px: slim header, text-3xl heading, tighter card. */
+.auth-slim {
+  display: none;
+}
+
+@media (max-width: 639px) {
+  html:has(.auth-screen) header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.15rem 1rem;
+  }
+
+  html:has(.auth-screen) header nav > a.nav-link,
+  html:has(.auth-screen) header .btn {
+    display: none;
+  }
+
+  html:has(.auth-screen) .auth-slim {
+    display: inline-flex;
+    align-items: center;
+    min-height: 2.75rem;
+    color: var(--blue);
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  html:has(.auth-screen) main {
+    padding: 0 1rem 0.5rem;
+  }
+
+  html:has(.auth-screen) .card {
+    margin-top: 0.75rem;
+    padding: 0.9rem;
+  }
+
+  html:has(.auth-screen) h1.display {
+    font-size: var(--text-3xl, 1.875rem);
+    letter-spacing: normal;
+  }
 }
 
 .nav-link:hover {
@@ -777,7 +899,8 @@ body:has(dialog[open]) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 2.4rem;
+  min-width: 44px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgb(255 255 255 / 70%);
@@ -788,6 +911,11 @@ body:has(dialog[open]) {
   text-decoration: none;
 }
 
+.pill-row[aria-label="Grade"] a {
+  min-width: 48px;
+  min-height: 48px;
+}
+
 .pill-row a[aria-pressed="true"] {
   background: white;
   color: var(--ink);
@@ -796,6 +924,155 @@ body:has(dialog[open]) {
 
 .pill-row span[aria-disabled="true"] {
   opacity: 0.45;
+}
+
+.pill-row button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 70%);
+  color: var(--muted);
+  font-weight: 650;
+}
+
+/* Eight grade choices, four across on a phone. */
+.grade-picks {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(60px, 1fr));
+  gap: 0.55rem;
+}
+
+.grade-picks button {
+  width: 100%;
+  min-width: 60px;
+  min-height: 60px;
+  padding: 0;
+  border-width: 2px;
+  font-size: 20px;
+  color: var(--ink);
+}
+
+.grade-picks button[aria-checked="true"] {
+  border-color: var(--blue);
+  background: #d3ebf7;
+  box-shadow: none;
+}
+
+/* Signup confirmation card. Stacked choices, full width, no motion. */
+.signup-ready {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.signup-ready .btn {
+  width: 100%;
+  white-space: normal;
+}
+
+/* Student sign-in: a name to tap, then a PIN pad. Keys stay at least 64px. */
+.profile-picks {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.profile-picks button {
+  width: 100%;
+  min-height: 64px;
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  color: var(--ink);
+  padding: 0.75rem 1rem;
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.profile-picks button[aria-pressed="true"] {
+  border-color: var(--blue);
+  background: #d3ebf7;
+}
+
+.profile-picks button[aria-invalid="true"] {
+  border-color: var(--bad);
+}
+
+.pin-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 44px;
+}
+
+.pin-dots span[data-filled] {
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+}
+
+.pin-dots[aria-invalid="true"] span[data-filled] {
+  border-color: var(--bad);
+}
+
+.pin-dots span[data-filled="true"] {
+  background: var(--ink);
+}
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(64px, 1fr));
+  gap: 0.55rem;
+}
+
+.pin-pad button {
+  min-width: 64px;
+  min-height: 64px;
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  color: var(--ink);
+  padding: 0;
+  font-size: 1.75rem;
+  font-weight: 650;
+}
+
+.pin-pad button[data-key="delete"] {
+  font-size: 1rem;
+}
+
+.pin-who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+}
+
+.pin-who .btn-quiet {
+  flex: none;
+}
+
+.pin-who-name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.pin-who-name[aria-invalid="true"] {
+  color: var(--bad);
+}
+
+.student-sign-in .btn-primary {
+  width: 100%;
 }
 
 .strand-list {
@@ -980,6 +1257,9 @@ html:has(.question-screen) main {
 }
 
 .question-back a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--blue);
   text-decoration: none;
 }
