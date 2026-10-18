@@ -1,18 +1,26 @@
 import type { Skill } from "@/lib/practice/skills";
 
+const NBSP = "\u00A0";
+
 /**
- * First-person lines for Grade 3, written for a Grade 3 reader.
- * Other grades use {@link iCanFromTitle}.
+ * First-person lines for skills that match an Ontario 2020 Grade 3
+ * specific expectation. Fact recall through 10×10 and division with
+ * remainders are Grade 4 (B2.2 and B2.6), so those catalog skills
+ * fall back to the title instead of a Grade 3 line.
  */
 export const GRADE_3_I_CAN: Record<string, string> = {
-  "g3-place": "I can show what each digit is worth in a number to 1,000.",
-  "g3-add-sub": "I can add and subtract numbers up to 1,000, one place at a time.",
-  "g3-mult": "I can multiply with facts through 10 × 10.",
-  "g3-div-rem": "I can divide into groups and write what is left over.",
-  "g3-fractions": "I can use the bottom number for the equal parts and the top number for how many.",
+  // B1.1, B1.5
+  "g3-place": "I can show what each digit is worth to 1,000.",
+  // B2.4, B2.5
+  "g3-add-sub": "I can add and subtract numbers up to 1,000.",
+  // B1.6, B1.7
+  "g3-fractions": "I can name a fraction by counting the equal parts.",
+  // E2.1
   "g3-perimeter": "I can find the distance around a rectangle.",
-  "g3-time": "I can tell time to the minute and count forward by minutes.",
-  "g3-data": "I can read a bar graph and add or compare the counts.",
+  // E2.6
+  "g3-time": "I can tell time to the minute.",
+  // D1.3
+  "g3-data": "I can read the counts on a bar graph.",
 };
 
 export function iCanFromTitle(title: string): string {
@@ -21,10 +29,15 @@ export function iCanFromTitle(title: string): string {
   return `I can do ${body.charAt(0).toLowerCase()}${body.slice(1)}.`;
 }
 
+/** Keep products such as 10 × 10 and 2 × 5 on one line. */
+export function keepExpressionsTogether(line: string): string {
+  return line.replace(/(\d+)\s*×\s*(\d+)/gu, `$1${NBSP}×${NBSP}$2`);
+}
+
 export function iCanStatement(skill: Pick<Skill, "id" | "grade" | "title">): string {
   if (skill.grade === 3) {
     const written = GRADE_3_I_CAN[skill.id];
-    if (written) return written;
+    if (written) return keepExpressionsTogether(written);
   }
-  return iCanFromTitle(skill.title);
+  return keepExpressionsTogether(iCanFromTitle(skill.title));
 }

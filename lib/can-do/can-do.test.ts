@@ -28,26 +28,43 @@ import { skillById, skillsForGrade } from "@/lib/practice/skills";
 const today = "2026-10-18";
 
 describe("i can statements", () => {
-  it("writes a Grade 3 line for every Grade 3 skill and falls back for other grades", () => {
-    const grade3 = skillsForGrade(3);
-    expect(grade3.map((skill) => skill.id).sort()).toEqual(Object.keys(GRADE_3_I_CAN).sort());
-    for (const skill of grade3) {
+  it("maps a short line only to genuine Ontario Grade 3 skills", () => {
+    const genuine = ["g3-place", "g3-add-sub", "g3-fractions", "g3-perimeter", "g3-time", "g3-data"];
+    expect(Object.keys(GRADE_3_I_CAN).sort()).toEqual([...genuine].sort());
+    for (const id of genuine) {
+      const skill = skillById(id);
+      expect(skill?.grade).toBe(3);
+      if (!skill) continue;
       const line = iCanStatement(skill);
-      expect(line).toBe(GRADE_3_I_CAN[skill.id]);
+      expect(line).toBe(GRADE_3_I_CAN[id]);
       expect(line.startsWith("I can ")).toBe(true);
       expect(line.endsWith(".")).toBe(true);
-      expect(line.split(/[.!?]/).filter(Boolean)).toHaveLength(1);
-      expect(line.split(/\s+/).length).toBeLessThanOrEqual(18);
+      expect(line.split(/[.!?]/u).filter(Boolean)).toHaveLength(1);
+      expect(line.split(/\s+/u).length).toBeLessThanOrEqual(12);
       expect(line.toLowerCase()).not.toContain("denominator");
       expect(line.toLowerCase()).not.toContain("numerator");
     }
-    expect(GRADE_3_I_CAN["g3-place"]).toBe("I can show what each digit is worth in a number to 1,000.");
+    expect(GRADE_3_I_CAN["g3-place"]).toBe("I can show what each digit is worth to 1,000.");
+    expect(GRADE_3_I_CAN["g3-fractions"]).toBe("I can name a fraction by counting the equal parts.");
+    expect(GRADE_3_I_CAN["g3-mult"]).toBeUndefined();
+    expect(GRADE_3_I_CAN["g3-div-rem"]).toBeUndefined();
+
+    const mult = skillById("g3-mult");
+    const remainders = skillById("g3-div-rem");
+    expect(mult && remainders).toBeTruthy();
+    if (!mult || !remainders) return;
+    expect(iCanStatement(mult)).toBe("I can do multiplication facts to 10\u00A0×\u00A010.");
+    expect(iCanStatement(remainders)).toBe("I can do division with remainders.");
+    expect(iCanStatement({ id: "sample-product", grade: 4, title: "Facts of 2 × 5" })).toBe(
+      "I can do facts of 2\u00A0×\u00A05.",
+    );
 
     const area = skillById("g4-area");
     expect(area).toBeDefined();
     if (!area) return;
     expect(iCanStatement(area)).toBe("I can do area of rectangles.");
     expect(GRADE_3_I_CAN[area.id]).toBeUndefined();
+    expect(skillsForGrade(3).some((skill) => skill.id === "g3-mult")).toBe(true);
   });
 });
 
@@ -116,19 +133,25 @@ describe("can-do query", () => {
     expect(view.recent.filter((skill) => skill.review)).toHaveLength(2);
   });
 
-  it("builds the preview list with place value still in progress", () => {
+  it("builds the preview list from genuine Grade 3 skills only", () => {
     const filled = sampleCanDo("filled", true);
-    expect(filled.workingTitle).toBe("Place value to 1,000");
+    expect(filled.workingTitle).toBe("Addition and subtraction within 1,000");
     expect(filled.recent.map((skill) => skill.skillId)).toEqual([
       "g3-time",
+      "g3-data",
       "g3-perimeter",
       "g3-fractions",
-      "g3-mult",
-      "g3-div-rem",
-      "g3-add-sub",
+      "g3-place",
     ]);
+    for (const skill of filled.recent) {
+      expect(GRADE_3_I_CAN[skill.skillId]).toBe(skill.statement);
+      expect(skill.statement).not.toMatch(/10\s*×\s*10/u);
+      expect(skill.statement.toLowerCase()).not.toContain("remainder");
+    }
     expect(filled.recent[0]?.review).toMatchObject({ kind: "lesson" });
-    expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-place");
+    expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-mult");
+    expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-div-rem");
+    expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-add-sub");
     expect(sampleCanDo("empty", true).recent).toEqual([]);
     expect(sampleCanDo("empty", true).workingTitle).toBe("Addition and subtraction within 1,000");
   });
@@ -266,10 +289,11 @@ describe("can-do rendering", () => {
     expect(html).toContain(GRADE_3_I_CAN["g3-place"]);
     expect(html).toContain("October");
     expect(html.indexOf(GRADE_3_I_CAN["g3-place"])).toBeLessThan(html.indexOf(GRADE_3_I_CAN["g3-fractions"]));
-    expect(html.indexOf("Number sense")).toBeLessThan(html.indexOf("Operations"));
+    expect(html.indexOf("Number sense")).toBeLessThan(html.indexOf("Measurement"));
     expect(html).toContain(LOOKBACK_LABEL);
     expect(html).toContain('href="/practice/child-a/lesson/g3-place"');
     expect(html).not.toContain("/practice/child-a/lesson/g3-mult");
+    expect(html).not.toContain("10\u00A0×\u00A010");
     expect(html).toContain("I can do area of rectangles.");
     expect(html).toContain('name="skillId" value="g4-area"');
     expect(html).toContain("Learned");
@@ -375,11 +399,11 @@ function sampleView(): CanDoView {
     lessons: [
       { skillId: "g3-place", stage: "complete", completedOn: "2026-10-16" },
       { skillId: "g3-fractions", stage: "complete", completedOn: "2026-08-02" },
-      { skillId: "g3-mult", stage: "complete", completedOn: "2026-09-12" },
+      { skillId: "g3-perimeter", stage: "complete", completedOn: "2026-09-12" },
     ],
     reviews: [
       { skillId: "g3-place", gap: "day", dueOn: "2026-10-18", done: false },
-      { skillId: "g3-mult", gap: "week", dueOn: "2026-10-30", done: false },
+      { skillId: "g3-perimeter", gap: "week", dueOn: "2026-10-30", done: false },
       { skillId: "g4-area", gap: "month", dueOn: "2026-10-01", done: false },
     ],
     cards: [{ ...emptyCard("g4-area"), attempted: 10, correct: 10, fsrs: null }],
@@ -395,10 +419,10 @@ function sixSkills(): CanDoView {
     showReviewLinks: true,
     lessons: [
       { skillId: "g3-time", stage: "complete", completedOn: "2026-10-16" },
-      { skillId: "g3-perimeter", stage: "complete", completedOn: "2026-10-09" },
-      { skillId: "g3-fractions", stage: "complete", completedOn: "2026-09-28" },
-      { skillId: "g3-mult", stage: "complete", completedOn: "2026-09-12" },
-      { skillId: "g3-div-rem", stage: "complete", completedOn: "2026-08-30" },
+      { skillId: "g3-data", stage: "complete", completedOn: "2026-10-02" },
+      { skillId: "g3-perimeter", stage: "complete", completedOn: "2026-09-18" },
+      { skillId: "g3-fractions", stage: "complete", completedOn: "2026-09-04" },
+      { skillId: "g3-place", stage: "complete", completedOn: "2026-08-20" },
       { skillId: "g3-add-sub", stage: "complete", completedOn: "2026-08-02" },
     ],
     reviews: [{ skillId: "g3-time", gap: "day", dueOn: "2026-10-17", done: false }],

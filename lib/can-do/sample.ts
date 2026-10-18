@@ -4,7 +4,12 @@ import { emptyCard } from "@/lib/practice/scheduler";
 
 const today = "2026-10-18";
 
-/** Sample mastered skills for previews. Not a real child. */
+/**
+ * Sample mastered skills for previews. Not a real child.
+ * Only Ontario 2020 Grade 3 skills: place value, fractions, perimeter,
+ * time, and data. Addition within 1,000 stays in progress so the
+ * working line is that skill, not a later catalog title.
+ */
 export function sampleCanDo(kind: "filled" | "empty", showReviewLinks: boolean): CanDoView {
   if (kind === "empty") {
     return buildCanDo({
@@ -25,22 +30,19 @@ export function sampleCanDo(kind: "filled" | "empty", showReviewLinks: boolean):
     showReviewLinks,
     lessons: [
       { skillId: "g3-time", stage: "complete", completedOn: "2026-10-16" },
-      { skillId: "g3-perimeter", stage: "complete", completedOn: "2026-10-09" },
-      { skillId: "g3-fractions", stage: "complete", completedOn: "2026-09-28" },
-      { skillId: "g3-mult", stage: "complete", completedOn: "2026-09-12" },
-      { skillId: "g3-div-rem", stage: "complete", completedOn: "2026-08-30" },
-      { skillId: "g3-add-sub", stage: "complete", completedOn: "2026-08-02" },
-      { skillId: "g3-place", stage: "practice", completedOn: null },
+      { skillId: "g3-data", stage: "complete", completedOn: "2026-10-02" },
+      { skillId: "g3-perimeter", stage: "complete", completedOn: "2026-09-18" },
+      { skillId: "g3-fractions", stage: "complete", completedOn: "2026-09-04" },
+      { skillId: "g3-place", stage: "complete", completedOn: "2026-08-20" },
     ],
     reviews: [
       { skillId: "g3-time", gap: "day", dueOn: "2026-10-17", done: false },
       { skillId: "g3-time", gap: "week", dueOn: "2026-10-23", done: false },
-      { skillId: "g3-mult", gap: "month", dueOn: "2026-10-12", done: true },
-      { skillId: "g3-place", gap: "day", dueOn: "2026-10-01", done: false },
+      { skillId: "g3-place", gap: "day", dueOn: "2026-10-01", done: true },
     ],
     cards: [
       {
-        ...emptyCard("g3-place"),
+        ...emptyCard("g3-add-sub"),
         attempted: 3,
         correct: 2,
         fsrs: writeLearn(null, { lessonHold: true }),
