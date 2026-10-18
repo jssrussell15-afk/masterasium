@@ -18,6 +18,7 @@ import {
   scheduleReviews,
   syncReviewRows,
 } from "@/lib/lesson/store";
+import { logPracticeEvent } from "@/lib/practice/actions";
 import { answersMatch } from "@/lib/practice/answers";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { applyLearning } from "@/lib/practice/learning";
@@ -83,20 +84,25 @@ export async function lessonAction(
   const openRun = hold ? { ...before, feedbackNote: null, feedbackExpected: null } : before;
   const task = lessonTask(openRun, skill);
 
-  if (intent === "check" || intent === "show-how" || intent === "answer") {
+  if (intent === "check" || intent === "show-how" || intent === "show-me" || intent === "answer") {
     if (!task) return { ...previous, error: "That question is not ready." };
+    const showed = intent === "show-how" || intent === "show-me";
     const given = givenAnswer(task.answer, {
       answer: String(formData.get("answer") ?? ""),
       remainder: String(formData.get("remainder") ?? ""),
     });
-    const correct = intent === "show-how" ? false : answersMatch(task.answer, given);
+    const correct = showed ? false : answersMatch(task.answer, given);
     const result = reduceFeedback(
       feedbackFromMark(holdToMark(hold)),
-      intent === "show-how" ? { type: "show-how" } : { type: "check", correct },
+      showed ? { type: "show-me" } : { type: "check", correct },
     );
-    const mark = markFromState(result.state, holdToMark(hold), given, intent === "show-how");
+    const openingWalk = Boolean(task.walk) && (showed || result.state.phase === "revealed");
+    const mark = markFromState(result.state, holdToMark(hold), given, showed || openingWalk);
     if (!mark) {
       return { screen: buildLessonScreen(before, skill, lesson, { nextReview: null }) };
+    }
+    if (openingWalk && !hold?.showedHow) {
+      await logPracticeEvent(childId, "hint_rung", skillId, { rung: "show-me" });
     }
     const packed = packHold(mark);
     const held = { ...before, feedbackNote: packed.note, feedbackExpected: packed.expected };
@@ -117,7 +123,7 @@ export async function lessonAction(
   let given = "";
   let graded = false;
 
-  if (intent === "next") {
+  if (intent === "next" || intent === "your-turn") {
     if (!hold || (hold.phase !== "correct" && hold.phase !== "revealed") || !task) {
       return {
         ...previous,

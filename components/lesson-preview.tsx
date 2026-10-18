@@ -31,9 +31,9 @@ export function LessonPreview() {
           </div>
         </QuestionCard>
         <div className="help-row">
-          <span className="help-target">Hint</span>
+          <span className="help-target">Help me with this</span>
           <span className="help-target">Show me an example</span>
-          <span className="help-target">Show me how</span>
+          <span className="help-target">Show me</span>
         </div>
       </div>
     </figure>

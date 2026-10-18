@@ -133,6 +133,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           draft={question.resume?.draft ?? ""}
           pending={pending}
           assist={question.assist}
+          walk={question.walk ?? null}
           aside={allowsScratchpad(grade) ? <Scratchpad /> : undefined}
           action={action}
           fields={fields}

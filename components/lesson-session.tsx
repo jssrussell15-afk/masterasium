@@ -117,6 +117,8 @@ export function LessonView({
           draft={screen.draft}
           pending={pending}
           guideSteps={screen.guideSteps}
+          walk={screen.walk}
+          handoffIntent="next"
           action={action}
           fields={
             childId && skillId

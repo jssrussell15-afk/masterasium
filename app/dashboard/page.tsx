@@ -27,6 +27,7 @@ import type { TrendWeek } from "@/lib/practice/trend";
 import { buildParentProgress } from "@/lib/lesson/parent";
 import { loadParentBundle } from "@/lib/lesson/store";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
+import { showMeUseLine } from "@/lib/practice/walk";
 
 export default function DashboardPage(props: PageProps<"/dashboard">) {
   return (
@@ -172,6 +173,7 @@ async function ChildCard({
         saved={pinSaved}
       />
       <LearningStatus practicedToday={log.attempts.some((attempt) => attempt.date === today)} />
+      <ShowMeNote childId={child.id} supabase={supabase} />
       <ChildCanDo
         childId={child.id}
         grade={working}
@@ -254,6 +256,18 @@ async function GradeThreeProgress({
 
 function LearningStatus({ practicedToday }: { practicedToday: boolean }) {
   return <p>{practicedToday ? "Practiced today." : "Not yet today."}</p>;
+}
+
+async function ShowMeNote({ childId, supabase }: { childId: string; supabase: SupabaseClient }) {
+  const { count, error } = await supabase
+    .from("practice_events")
+    .select("id", { count: "exact", head: true })
+    .eq("child_id", childId)
+    .eq("kind", "hint_rung")
+    .contains("detail", { rung: "show-me" });
+  const line = error ? null : showMeUseLine(count ?? 0);
+  if (!line) return null;
+  return <p className="hint">{line}</p>;
 }
 
 function FullProgress({

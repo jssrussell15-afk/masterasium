@@ -41,9 +41,10 @@ describe("practice question screen", () => {
     const html = renderToStaticMarkup(createElement(PracticeSession, { view: view(2) }));
     expect(html).toContain("What is 4 + 5?");
     expect(html).toContain("Question 1 of 10");
-    expect(html).toContain(">Hint<");
+    expect(html).toContain("Help me with this");
     expect(html).toContain("Show me an example");
-    expect(html).toContain("Show me how");
+    expect(html).not.toContain(">Show me<");
+    expect(html).not.toContain("Show me how");
     expect(html).toContain(">Check<");
     expect(html).toContain("All skills");
     expect(html).toContain("number-pad");

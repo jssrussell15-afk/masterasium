@@ -8,6 +8,7 @@ import { hintLadder } from "@/lib/practice/hints";
 import { answerShape, type AnswerShape } from "@/lib/practice/parts";
 import type { Skill } from "@/lib/practice/skills";
 import type { Question } from "@/lib/practice/types";
+import { walkForSkill, type Walkthrough } from "@/lib/practice/walk";
 
 export type LessonScreen =
   | {
@@ -44,6 +45,7 @@ export type LessonScreen =
       solutionSteps: string[];
       solutionAnswer: string | null;
       draft: string;
+      walk: Walkthrough | null;
     }
   | {
       kind: "feedback";
@@ -67,6 +69,7 @@ export type LessonTask = {
   /** Full worked steps, shown only after the question is revealed. */
   worked: string[];
   hint: string | null;
+  walk: Walkthrough | null;
 };
 
 export function lessonTask(run: LessonRun, skill: Skill): LessonTask | null {
@@ -87,6 +90,7 @@ export function lessonTask(run: LessonRun, skill: Skill): LessonTask | null {
       steps: skill.exampleSteps.slice(0, -1),
       worked: skill.exampleSteps,
       hint: skill.exampleSteps[0] ?? skill.summary,
+      walk: walkForSkill(skill.id, skill.examplePrompt, skill.exampleAnswer),
     };
   }
   if (run.stage === "faded") {
@@ -209,6 +213,7 @@ function questionScreen(
     solutionSteps: revealed ? worked : [],
     solutionAnswer: revealed ? answer : null,
     draft: hold?.given ?? "",
+    walk: task?.walk ? { steps: task.walk.steps, answer: revealed ? answer : "" } : null,
   };
 }
 
@@ -229,6 +234,7 @@ function hideSteps(question: Question, showPriorSteps: boolean): LessonTask {
     steps,
     worked: question.steps,
     hint: showPriorSteps ? (question.steps[0] ?? null) : null,
+    walk: question.walk ?? walkForSkill(question.skillId, question.prompt, question.answer),
   };
 }
 

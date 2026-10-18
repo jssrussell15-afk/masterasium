@@ -15,7 +15,8 @@ import { readLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
 import type { AttemptPoint } from "@/lib/practice/portrait";
 import { getItemSource } from "@/lib/practice/source";
-import { packStoredAnswer, readAttemptMark, readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import { packStoredAnswer, readAttemptMark, readStoredPlan, readStoredWalk, unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import { walkForSkill, type Walkthrough } from "@/lib/practice/walk";
 import {
   accuracyScheduler,
   emptyCard,
@@ -82,6 +83,7 @@ function presentQuestion(
   cards: SkillCard[],
   intro: SkillIntro | null,
   mark: AttemptMark | null,
+  walk: Walkthrough | null,
 ): QuestionView {
   const shape = answerShape(prompt, expected);
   const assist = assistFor({
@@ -113,6 +115,7 @@ function presentQuestion(
       livePrompt: prompt,
       small: kind === "support",
     }),
+    walk: clientWalk(walk, expected, mark),
     ...(mark
       ? {
           resume: {
@@ -183,13 +186,16 @@ async function persistQuestion(
   cards: SkillCard[],
   plan: { kind: QuestionKind; small: boolean; rollbackSkillId?: string },
   intro: SkillIntro | null,
+  built?: Question,
 ): Promise<{ question: QuestionView | null; error: string | null }> {
   const removed = await supabase.from("pending_questions").delete().eq("child_id", childId);
   if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
 
-  const generated: Question = intro
-    ? nearTransfer(skill, Math.random, { small: plan.small })
-    : getItemSource("generated").next(skill, Math.random, { small: plan.small });
+  const generated: Question =
+    built ??
+    (intro
+      ? nearTransfer(skill, Math.random, { small: plan.small })
+      : getItemSource("generated").next(skill, Math.random, { small: plan.small }));
 
   const { data, error } = await supabase
     .from("pending_questions")
@@ -200,6 +206,7 @@ async function persistQuestion(
       answer: packStoredAnswer(generated.answer, generated.steps, {
         kind: plan.kind,
         rollbackSkillId: plan.rollbackSkillId,
+        walk: generated.walk ?? null,
       }),
     })
     .select("id, skill_id, prompt, answer")
@@ -224,6 +231,7 @@ async function persistQuestion(
       cards,
       intro,
       null,
+      generated.walk ?? null,
     ),
     error: null,
   };
@@ -254,6 +262,24 @@ export async function issueQuestion(
 
   const intro = await introForIssued(supabase, childId, skill, cards, plan, today);
   return persistQuestion(supabase, childId, skill, cards, plan, intro);
+}
+
+/** A new question of the same skill, with different numbers. It is a fresh first try. */
+export async function issueFollowUp(
+  supabase: SupabaseClient,
+  childId: string,
+  skillId: string,
+  cards: SkillCard[],
+  avoidPrompt: string,
+  plan: { kind: QuestionKind; small: boolean; rollbackSkillId?: string },
+): Promise<{ question: QuestionView | null; error: string | null }> {
+  const skill = skillById(skillId);
+  if (!skill) return { question: null, error: "That skill is not available." };
+  let generated = getItemSource("generated").next(skill, Math.random, { small: plan.small });
+  for (let attempt = 0; attempt < 12 && generated.prompt === avoidPrompt; attempt += 1) {
+    generated = getItemSource("generated").next(skill, Math.random, { small: plan.small });
+  }
+  return persistQuestion(supabase, childId, skill, cards, plan, null, generated);
 }
 
 export async function loadOrIssueQuestion(
@@ -312,6 +338,7 @@ export async function loadOrIssueQuestion(
         cards,
         null,
         readAttemptMark(existing.answer),
+        readStoredWalk(existing.answer) ?? walkForSkill(skill.id, existing.prompt, unpacked.answer),
       ),
       error: null,
     };
@@ -346,6 +373,15 @@ export async function loadAttemptLog(
       at: row.created_at,
     })),
     error: null,
+  };
+}
+
+/** The answer stays on the server until Show me or a second miss. */
+function clientWalk(walk: Walkthrough | null, expected: string, mark: AttemptMark | null): Walkthrough | null {
+  if (!walk) return null;
+  return {
+    steps: walk.steps,
+    answer: mark?.phase === "revealed" ? expected : "",
   };
 }
 
