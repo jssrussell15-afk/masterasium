@@ -53,7 +53,7 @@ describe("friendlyDbError", () => {
         code: "PGRST202",
       }),
     ).toBe(
-      "A child cannot be saved yet. Open Account settings and paste the child profile statements into the Supabase SQL editor.",
+      "A child cannot be saved yet. The child profile is not ready in the database.",
     );
   });
 

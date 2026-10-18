@@ -16,9 +16,9 @@ export function AddChildForm() {
     <form action={action} className="card grid gap-3">
       <div>
         <h2 className="text-lg font-semibold">Add a child</h2>
-        <p className="hint mt-1 text-sm">
-          First name, grade, and a PIN. You can add up to two. They sign in with their first name
-          and PIN. You can change the PIN on their profile.
+        <p className="hint mt-1">
+          First name, grade, and a PIN of 4 to 6 digits. You can add up to two. They sign in with
+          their first name and PIN. Change the PIN later under Student sign-in in account settings.
         </p>
       </div>
       <div className="field">

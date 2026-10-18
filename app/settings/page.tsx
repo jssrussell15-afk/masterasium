@@ -1,12 +1,8 @@
 import { Suspense } from "react";
-import { ChildNameSetupSql } from "@/components/child-name-setup-sql";
-import { EventSetupSql } from "@/components/event-setup-sql";
 import { GradeSettings } from "@/components/grade-settings";
-import { GradeSetupSql } from "@/components/grade-setup-sql";
 import { SetPinForm } from "@/components/student-access-forms";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
-import { StudentSetupSql } from "@/components/student-setup-sql";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
 import { loadRoster } from "@/lib/children/roster";
 import { friendlyDbError } from "@/lib/db-error";
@@ -41,7 +37,7 @@ async function Settings({
   const children = roster.children;
 
   return (
-    <div className="mt-6 grid max-w-xl gap-6">
+    <div className="mt-6 grid gap-6">
       <div>
         <p className="eyebrow">Parent account</p>
         <h1 className="display mt-2 text-4xl">Account settings</h1>
@@ -50,11 +46,6 @@ async function Settings({
         </p>
       </div>
 
-      {notice === "pin" ? (
-        <p className="feedback good" role="status">
-          PIN saved. They sign in with their first name and this PIN. An older PIN no longer works.
-        </p>
-      ) : null}
       {notice === "login" ? (
         <p className="feedback good" role="status">
           Student login saved. They sign in with their first name and PIN.
@@ -79,28 +70,22 @@ async function Settings({
       <section className="card grid gap-2">
         <h2 className="text-lg font-semibold">Email</h2>
         <p>{user.email}</p>
-        <p className="hint text-sm">This is the parent sign-in. Students do not use email.</p>
+        <p className="hint">This is the parent sign-in. Students do not use email.</p>
       </section>
 
       {roster.studentSetup ? (
-        <div className="grid gap-3">
-          <p className="feedback bad" role="alert">
-            {roster.studentSetup}
-          </p>
-          <StudentSetupSql open />
-        </div>
+        <p className="feedback bad" role="alert">
+          {roster.studentSetup}
+        </p>
       ) : null}
       {roster.gradeSetup ? (
-        <div className="grid gap-3">
-          <p className="feedback bad" role="alert">
-            {roster.gradeSetup}
-          </p>
-          <GradeSetupSql open />
-        </div>
+        <p className="feedback bad" role="alert">
+          {roster.gradeSetup}
+        </p>
       ) : null}
 
       {children.map((child) => (
-        <section key={child.id} className="card grid gap-3">
+        <section key={child.id} className="card grid gap-4">
           <div>
             <h2 className="text-2xl font-semibold">{child.first_name}</h2>
             <p className="hint mt-1">
@@ -118,24 +103,22 @@ async function Settings({
               requestedGrade={child.requestedGrade}
             />
           )}
-          <SetPinForm
-            childId={child.id}
-            firstName={child.first_name}
-            hasLogin={Boolean(child.username)}
-            returnTo="settings"
-            saved={notice === "pin"}
-          />
+          <div className="grid gap-3">
+            <h3 className="text-xl font-semibold">Student sign-in</h3>
+            <SetPinForm
+              childId={child.id}
+              firstName={child.first_name}
+              hasLogin={Boolean(child.username)}
+              returnTo="settings"
+              saved={notice === "pin"}
+            />
+          </div>
         </section>
       ))}
 
       {children.length === 0 ? (
         <p className="hint">Add a child from the parent desk. Then their login shows up here.</p>
       ) : null}
-
-      {roster.studentSetup ? null : <StudentSetupSql />}
-      {roster.gradeSetup ? null : <GradeSetupSql />}
-      <EventSetupSql />
-      <ChildNameSetupSql />
     </div>
   );
 }

@@ -16,6 +16,8 @@ import {
   loadCards,
   totals,
 } from "@/lib/practice/session";
+import { isLessonSkill } from "@/lib/lesson/catalog";
+import { syncReviewRows } from "@/lib/lesson/store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
 import { readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
@@ -199,6 +201,9 @@ export async function submitAnswer(
     correct,
   });
   if (attemptError) return { error: friendlyDbError(attemptError) };
+  if (isLessonSkill(question.skill_id)) {
+    await syncReviewRows(supabase, childId, question.skill_id, readLearn(nextCard.fsrs), today);
+  }
   await insertPracticeEvent(supabase, childId, {
     kind: "question_attempted",
     skillId: question.skill_id,
@@ -318,6 +323,9 @@ export async function openSkill(formData: FormData): Promise<void> {
   if (!skill || !isSupportedGrade(skill.grade) || !gradeIsOpen(access, skill.grade)) {
     redirect("/practice");
   }
+  if (isLessonSkill(skillId) && skill.grade === access.working) {
+    redirect(`/practice/${childId}/lesson/${skillId}`);
+  }
 
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) redirect("/practice");
@@ -340,6 +348,14 @@ export type StartState = { error?: string; note?: string };
 /** Opens a skill from the student home, then leaves the lists for the question. */
 export async function startSkill(_previous: StartState, formData: FormData): Promise<StartState> {
   const childId = String(formData.get("childId") ?? "");
+  const skillId = String(formData.get("skillId") ?? "");
+  if (childId && isLessonSkill(skillId)) {
+    const owned = await ownedChild(childId);
+    const skill = skillById(skillId);
+    if (!("error" in owned) && skill && skill.grade === owned.access.working) {
+      redirect(`/practice/${childId}/lesson/${skillId}`);
+    }
+  }
   const result = await chooseSkill({}, formData);
   if (result.requestNote && !result.next) return { note: result.requestNote };
   if (result.error && !result.next) return { error: result.error };

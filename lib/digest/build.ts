@@ -90,11 +90,7 @@ export function renderDigestText(summary: DigestSummary): string {
     `Accuracy: ${accuracy}`,
     `Current focus: ${summary.focusSkillTitle}`,
   ];
-  if (summary.streakDays && summary.streakDays > 0) {
-    const label = summary.streakDays === 1 ? "day" : "days";
-    lines.push(`Streak: ${summary.streakDays} ${label} in a row`);
-  }
   if (summary.recap) lines.push(summary.recap);
-  lines.push("", "This draft was saved. No email was sent.");
+  lines.push("", "Today's summary was saved. No email was sent.");
   return lines.join("\n");
 }

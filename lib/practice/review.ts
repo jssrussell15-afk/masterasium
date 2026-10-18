@@ -25,6 +25,27 @@ export function applyRetest(
     (before.reviewDueAt != null && before.reviewDueAt <= input.today) ||
     before.needsReview === true;
 
+  if (before.reviewPlan && before.reviewPlan.length > 0 && retest) {
+    if (!input.correct) {
+      learn.needsReview = true;
+      learn.reviewHits = undefined;
+      learn.reviewPlan = before.reviewPlan;
+      if (before.reviewDueAt) learn.reviewDueAt = before.reviewDueAt;
+      return;
+    }
+    const upcoming = before.reviewPlan.filter((date) => date > input.today);
+    learn.needsReview = undefined;
+    learn.reviewHits = undefined;
+    if (upcoming.length > 0) {
+      learn.reviewPlan = upcoming;
+      learn.reviewDueAt = upcoming[0];
+    } else {
+      learn.reviewPlan = undefined;
+      learn.reviewDueAt = undefined;
+    }
+    return;
+  }
+
   if (before.needsReview && input.correct) {
     const hits = (before.reviewHits ?? 0) + 1;
     if (hits >= REVIEW_CLEAR_HITS) {

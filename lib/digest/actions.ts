@@ -85,7 +85,6 @@ export async function saveDigestDraft(
     focusSkillId: focus.id,
     focusSkillTitle: focus.title,
     recap: portrait.recap,
-    streakDays: portrait.streakDays,
   });
 
   const { error } = await supabase.from("digest_stubs").upsert(
@@ -101,7 +100,7 @@ export async function saveDigestDraft(
   if (error) return { error: friendlyDbError(error) };
 
   return {
-    message: "Draft saved. No email was sent.",
+    message: "Today's summary saved. No email was sent.",
     text: renderDigestText(summary),
   };
 }

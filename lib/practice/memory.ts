@@ -24,6 +24,10 @@ export type LearnState = {
   supportLeft?: number;
   introSeenAt?: string;
   introCycle?: IntroCycle;
+  /** Upcoming spaced-review dates, soonest first. Absent on the 14-day retest. */
+  reviewPlan?: string[];
+  /** A lesson is in progress, so the 10-question bar must not open the next skill yet. */
+  lessonHold?: boolean;
 };
 
 export type SkillMemory = {
@@ -48,6 +52,14 @@ function introCycle(value: unknown): IntroCycle | undefined {
   return value === "new" || value === "relearn" || value === "rollback" ? value : undefined;
 }
 
+function dateList(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const dates = value.filter(
+    (item): item is string => typeof item === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item),
+  );
+  return dates.length > 0 ? dates : undefined;
+}
+
 export function readLearnFields(raw: Record<string, unknown>): LearnState {
   const lesson = raw.lessonCheck;
   const lessonCheck =
@@ -65,6 +77,8 @@ export function readLearnFields(raw: Record<string, unknown>): LearnState {
     supportLeft: positive(raw.supportLeft),
     introSeenAt: dateString(raw.introSeenAt),
     introCycle: introCycle(raw.introCycle),
+    reviewPlan: dateList(raw.reviewPlan),
+    lessonHold: raw.lessonHold === true ? true : undefined,
   };
 }
 
@@ -88,6 +102,8 @@ export function cleanLearn(learn: LearnState): LearnState {
   if (learn.supportLeft) next.supportLeft = learn.supportLeft;
   if (learn.introSeenAt) next.introSeenAt = learn.introSeenAt;
   if (learn.introCycle) next.introCycle = learn.introCycle;
+  if (learn.reviewPlan && learn.reviewPlan.length > 0) next.reviewPlan = learn.reviewPlan;
+  if (learn.lessonHold) next.lessonHold = true;
   return next;
 }
 

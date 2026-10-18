@@ -15,7 +15,9 @@ export function SiteHeader({
 }) {
   const links = navFor(role);
   return (
-    <header className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+      <header
+        className={`mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between ${role === "parent" ? "parent-page" : ""}`}
+      >
       <Link href={homeHref ?? homeFor(role)} className="wordmark">
         Masterasium
       </Link>
@@ -74,7 +76,7 @@ export function Shell({
       {banner ? <img src="/banner.png" alt="" className="page-banner" /> : null}
       <SiteHeader action={action} role={role} homeHref={homeHref} slimLink={slimLink} />
       <main
-        className={`mx-auto flex w-full flex-1 flex-col px-6 pb-16 ${narrow ? "max-w-xl" : "max-w-5xl"}`}
+        className={`mx-auto flex w-full flex-1 flex-col px-6 pb-16 ${narrow ? "max-w-xl" : "max-w-5xl"} ${role === "parent" ? "parent-page" : ""}`}
       >
         {children}
       </main>

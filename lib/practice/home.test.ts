@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { studentHome } from "@/lib/practice/home";
 import { writeLearn } from "@/lib/practice/memory";
 import { emptyCard } from "@/lib/practice/scheduler";
+import { reviewPlanDates } from "@/lib/lesson/flow";
 import { skillsForGrade } from "@/lib/practice/skills";
 import { allowsScratchpad } from "@/lib/practice/surface";
 
@@ -41,6 +42,32 @@ describe("student home", () => {
     expect(home.recommended.map((skill) => skill.id)).not.toContain(review.id);
     expect(home.recent[0]?.note).toBe("Practiced today");
     expect(home.recent.map((skill) => skill.id)).toContain(review.id);
+  });
+
+  it("puts a date-due review on the assigned list", () => {
+    const skills = skillsForGrade(3);
+    const due = skills[0];
+    expect(due).toBeDefined();
+    if (!due) return;
+    const home = studentHome({
+      grade: 3,
+      cards: [
+        {
+          ...emptyCard(due.id),
+          attempted: 8,
+          correct: 7,
+          fsrs: writeLearn(null, {
+            lessonCheck: "passed",
+            reviewDueAt: "2026-10-18",
+            reviewPlan: reviewPlanDates("2026-10-17"),
+          }),
+        },
+      ],
+      attempts: [],
+      today: "2026-10-18",
+    });
+    const assigned = home.assigned.find((skill) => skill.id === due.id);
+    expect(assigned?.note).toBe("Review today");
   });
 });
 

@@ -74,5 +74,6 @@ describe("Set PIN", () => {
     );
     expect(html).toContain("PIN saved");
     expect(html).toContain('role="status"');
+    expect(html.match(/PIN saved/g)).toHaveLength(1);
   });
 });
