@@ -14,6 +14,7 @@ export type RosterChild = {
   workingGrade: number;
   nextUnlocked: boolean;
   requestedGrade: number | null;
+  moveAhead: boolean;
 };
 
 type BasicRow = {
@@ -45,7 +46,22 @@ function asRoster(row: BasicRow, extra?: ExtraRow): RosterChild {
     workingGrade: access?.working ?? row.grade,
     nextUnlocked: access?.nextUnlocked ?? false,
     requestedGrade: access?.requested ?? null,
+    moveAhead: false,
   };
+}
+
+async function withMoveAhead(
+  supabase: SupabaseClient,
+  parentId: string,
+  children: RosterChild[],
+): Promise<RosterChild[]> {
+  if (children.length === 0) return children;
+  const extra = await supabase.from("children").select("id, move_ahead").eq("parent_id", parentId);
+  if (extra.error || !extra.data) return children;
+  const flags = new Map(
+    (extra.data as { id: string; move_ahead?: boolean | null }[]).map((row) => [row.id, Boolean(row.move_ahead)]),
+  );
+  return children.map((child) => ({ ...child, moveAhead: flags.get(child.id) ?? false }));
 }
 
 export async function loadRoster(
@@ -76,7 +92,11 @@ export async function loadRoster(
   if (!extra.error) {
     const byId = new Map(((extra.data ?? []) as ExtraRow[]).map((row) => [row.id, row]));
     return {
-      children: basics.map((row) => asRoster(row, byId.get(row.id))),
+      children: await withMoveAhead(
+        supabase,
+        parentId,
+        basics.map((row) => asRoster(row, byId.get(row.id))),
+      ),
       error: null,
       studentSetup: null,
       gradeSetup: null,
@@ -112,7 +132,11 @@ export async function loadRoster(
   for (const row of progressRows) byId.set(row.id, { ...byId.get(row.id), ...row });
 
   return {
-    children: basics.map((row) => asRoster(row, byId.get(row.id))),
+    children: await withMoveAhead(
+      supabase,
+      parentId,
+      basics.map((row) => asRoster(row, byId.get(row.id))),
+    ),
     error: null,
     studentSetup: names?.error && isStudentLoginMissing(names.error) ? friendlyDbError(names.error) : studentSetup,
     gradeSetup:

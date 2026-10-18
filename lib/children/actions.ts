@@ -369,3 +369,23 @@ export async function decideGradeRequest(
   if (error) return { error: friendlyDbError(error) };
   redirect(approve ? "/settings?notice=grade-approved" : "/settings?notice=grade-declined");
 }
+
+export async function setMoveAhead(_previous: ChildState, formData: FormData): Promise<ChildState> {
+  const { supabase } = await requireUser();
+  const childId = String(formData.get("childId") ?? "");
+  const enabled = String(formData.get("enabled") ?? "") === "1";
+  if (!childId) return { error: "Choose a child first." };
+
+  const { error } = await supabase.rpc("set_move_ahead", {
+    p_child_id: childId,
+    p_enabled: enabled,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("set_move_ahead") || message.includes("move_ahead")) {
+      return { error: "Let them move ahead is not ready yet." };
+    }
+    return { error: friendlyDbError(error) };
+  }
+  redirect("/dashboard");
+}
