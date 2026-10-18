@@ -4,6 +4,7 @@ import { iCanStatement } from "@/lib/can-do/statements";
 import { isLessonSkill } from "@/lib/lesson/catalog";
 import { readLearn, writeLearn } from "@/lib/practice/memory";
 import { accuracyScheduler, emptyCard, isConfirmed, type SkillCard } from "@/lib/practice/scheduler";
+import { orderedFurtherIds, wentFurtherLine } from "@/lib/practice/go-further";
 import { skillById } from "@/lib/practice/skills";
 
 export const PARENT_CAN_DO_LIMIT = 5;
@@ -37,6 +38,9 @@ export type CanDoView = {
   strands: CanDoStrand[];
   /** Every mastered skill, newest first. The parent desk shows the first five. */
   recent: CanDoItem[];
+  /** Finished Go further sets. Quiet lines, separate from the i-can statements. */
+  furtherSkillIds: string[];
+  further: string[];
 };
 
 export type CanDoLesson = {
@@ -76,6 +80,7 @@ export function buildCanDo(input: {
   reviews: CanDoReview[];
   cards: SkillCard[];
   practicedOn?: Record<string, string>;
+  furtherSkillIds?: string[];
 }): CanDoView {
   const practicedOn = input.practicedOn ?? {};
   const learnedOn = new Map<string, string>();
@@ -121,6 +126,7 @@ export function buildCanDo(input: {
     return skills.length > 0 ? [{ id: strand.id, label: strand.label, skills }] : [];
   });
 
+  const furtherSkillIds = orderedFurtherIds(input.furtherSkillIds ?? []);
   return {
     workingTitle: accuracyScheduler.chooseSkill({
       grade: input.grade,
@@ -130,6 +136,11 @@ export function buildCanDo(input: {
     }).title,
     strands,
     recent: [...items].sort(newestFirst).map(withoutOrder),
+    furtherSkillIds,
+    further: furtherSkillIds.flatMap((skillId) => {
+      const line = wentFurtherLine(skillId);
+      return line ? [line] : [];
+    }),
   };
 }
 

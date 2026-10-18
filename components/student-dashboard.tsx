@@ -20,6 +20,7 @@ export function StudentDashboard({
   skills,
   access,
   requestedGrade,
+  goFurther = [],
 }: {
   childId: string;
   childName: string;
@@ -28,6 +29,7 @@ export function StudentDashboard({
   skills: SkillProgress[];
   access: GradeAccess;
   requestedGrade: SupportedGrade | null;
+  goFurther?: { id: string; title: string }[];
 }) {
   const [state, action, pending] = useActionState(startSkill, initial);
 
@@ -60,6 +62,20 @@ export function StudentDashboard({
           <SkillChoices skills={home.recommended} childId={childId} action={action} pending={pending} />
         ) : null}
       </DashboardWidget>
+      {goFurther.length > 0 ? (
+        <DashboardWidget title="Go further" empty="">
+          <ul className="skill-taps">
+            {goFurther.map((skill) => (
+              <li key={skill.id}>
+                <Link className="skill-tap" href={`/practice/${childId}/go-further/${skill.id}`}>
+                  <span>{skill.title}</span>
+                  <span className="hint">Same numbers, a deeper look</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </DashboardWidget>
+      ) : null}
       <DashboardWidget title="Recently practiced" empty="No practice yet. Start with a recommended skill.">
         {home.recent.length > 0 ? (
           <SkillChoices skills={home.recent} childId={childId} action={action} pending={pending} />

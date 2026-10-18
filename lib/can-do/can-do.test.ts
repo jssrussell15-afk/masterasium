@@ -218,7 +218,12 @@ describe("can-do query", () => {
       today,
       showReviewLinks: true,
     });
-    expect(filters.map((filter) => filter.table).sort()).toEqual(["lesson_runs", "skill_reviews", "skill_states"]);
+    expect(filters.map((filter) => filter.table).sort()).toEqual([
+      "go_further_sets",
+      "lesson_runs",
+      "skill_reviews",
+      "skill_states",
+    ]);
     expect(filters.every((filter) => filter.column === "child_id" && filter.value === "child-a")).toBe(true);
     expect(loaded.error).toBeNull();
     expect(loaded.view?.recent.map((skill) => skill.skillId)).toEqual(["g3-place"]);
@@ -257,6 +262,55 @@ describe("can-do query", () => {
     expect(loaded.view?.recent[0]?.statement).toBe("I can do area of rectangles.");
     expect(loaded.view?.recent[0]?.month).toBe("May");
     expect(loaded.view?.recent[0]?.review).toBeNull();
+  });
+
+  it("adds a quiet Go further line and still loads when that table is missing", async () => {
+    const done = mockSupabase({
+      skill_states: [
+        {
+          child_id: "child-a",
+          skill_id: "g3-add-sub",
+          attempted: 10,
+          correct: 8,
+          streak: 1,
+          fsrs: null,
+          updated_at: "2026-10-02T16:00:00.000Z",
+        },
+      ],
+      go_further_sets: [{ child_id: "child-a", skill_id: "g3-add-sub", completed_at: "2026-10-03T16:00:00.000Z" }],
+    });
+    const loaded = await loadCanDo(done.client, {
+      childId: "child-a",
+      grade: 3,
+      today,
+      showReviewLinks: false,
+    });
+    expect(loaded.view?.recent[0]?.statement).toBe(GRADE_3_I_CAN["g3-add-sub"]);
+    expect(loaded.view?.further).toEqual(["Went further on adding with regrouping"]);
+
+    const missing = mockSupabase({
+      skill_states: [
+        {
+          child_id: "child-a",
+          skill_id: "g3-add-sub",
+          attempted: 10,
+          correct: 8,
+          streak: 1,
+          fsrs: null,
+          updated_at: "2026-10-02T16:00:00.000Z",
+        },
+      ],
+      go_further_sets: { error: { message: 'relation "public.go_further_sets" does not exist', code: "42P01" } },
+    });
+    const fallback = await loadCanDo(missing.client, {
+      childId: "child-a",
+      grade: 3,
+      today,
+      showReviewLinks: false,
+    });
+    expect(fallback.error).toBeNull();
+    expect(fallback.view?.further).toEqual([]);
+    expect(fallback.view?.recent[0]?.statement).toBe(GRADE_3_I_CAN["g3-add-sub"]);
   });
 
   it("does not invent a list when the skill query fails", async () => {

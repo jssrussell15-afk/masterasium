@@ -5,8 +5,10 @@ import { StudentDashboard } from "@/components/student-dashboard";
 import { requireStudent } from "@/lib/auth/student";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
+import { GO_FURTHER_SKILLS, goFurtherOffered } from "@/lib/practice/go-further";
 import { studentHome } from "@/lib/practice/home";
 import { describeCatalog } from "@/lib/practice/scheduler";
+import { skillById } from "@/lib/practice/skills";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
 export default function PracticeIndexPage() {
@@ -58,6 +60,12 @@ async function StudentHomeLoader() {
       skills={describeCatalog(access, cards)}
       access={access}
       requestedGrade={access.requested}
+      goFurther={GO_FURTHER_SKILLS.filter((id) =>
+        goFurtherOffered(id, cards.find((item) => item.skillId === id)),
+      ).flatMap((id) => {
+        const skill = skillById(id);
+        return skill ? [{ id, title: skill.title }] : [];
+      })}
     />
   );
 }
