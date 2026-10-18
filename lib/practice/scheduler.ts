@@ -32,6 +32,11 @@ export type SchedulerInput = {
   sessionCount: number;
   /** Toronto calendar day (YYYY-MM-DD). Omitted, date-due reviews stay quiet. */
   today?: string;
+  /**
+   * Skills marked provisionally known by a check-in.
+   * On a review turn they join the review pool. Omitted, the pool stays mastered skills only.
+   */
+  provisionalIds?: readonly string[];
 };
 
 export interface PracticeScheduler {
@@ -94,11 +99,15 @@ export class AccuracyScheduler implements PracticeScheduler {
 
     const reviewTurn =
       input.sessionCount > 0 && (input.sessionCount % 8 === 3 || input.sessionCount % 8 === 7);
-    if (reviewTurn && mastered.length > 0) {
-      const due = mastered.filter((skill) =>
+    const provisional = (input.provisionalIds ?? [])
+      .map((id) => skills.find((skill) => skill.id === id))
+      .filter((skill): skill is Skill => !!skill && !mastered.some((item) => item.id === skill.id));
+    const reviewPool = mastered.concat(provisional);
+    if (reviewTurn && reviewPool.length > 0) {
+      const due = reviewPool.filter((skill) =>
         isReviewDue(readLearn(cards.get(skill.id)?.fsrs), input.today),
       );
-      return lowestAccuracy(due.length > 0 ? due : mastered, cards);
+      return lowestAccuracy(due.length > 0 ? due : reviewPool, cards);
     }
 
     for (const skill of skills) {

@@ -10,6 +10,7 @@ import { whyLine, type AttemptMark } from "@/lib/practice/feedback";
 import { hintLadder } from "@/lib/practice/hints";
 import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/intro";
 import type { SkillIntro } from "@/lib/practice/intro-view";
+import { loadProvisionalIds } from "@/lib/eval/load";
 import { planNextQuestion } from "@/lib/practice/learning";
 import { readLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
@@ -196,16 +197,18 @@ async function persistQuestion(
   if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
 
   const lane = plan.kind === "review" ? "review" : "core";
-  const published = intro ? null : await findPublishedItem(supabase, skill.id, lane);
+  const found = intro ? null : await findPublishedItem(supabase, skill.id, lane);
+  const published = found && found.lane !== "eval" ? found : null;
   const generated: Question = published
     ? questionFromItem(skill.id, published, skill.responseHint)
     : intro
       ? nearTransfer(skill, Math.random, { small: plan.small })
       : getItemSource("generated").next(skill, Math.random, { small: plan.small });
-  const content: StoredContent | null = published
+  const practiceLane = published && published.lane !== "eval" ? published.lane : null;
+  const content: StoredContent | null = published && practiceLane
     ? {
         itemId: published.id,
-        lane: published.lane,
+        lane: practiceLane,
         difficulty: published.difficulty,
         answer: { expected: generated.answer, parts: published.template.slots },
       }
@@ -258,6 +261,7 @@ export async function issueQuestion(
 ): Promise<{ question: QuestionView | null; error: string | null }> {
   const sessionCount = cards.reduce((total, card) => total + card.attempted, 0);
   const today = torontoDate();
+  const provisionalIds = await loadProvisionalIds(supabase, childId);
   const plan = planNextQuestion({
     grade,
     cards,
@@ -266,6 +270,7 @@ export async function issueQuestion(
     requestedSkillId: options?.skillId,
     explicit: options?.explicit,
     coachSmall: Boolean(options?.small) && !options?.explicit,
+    provisionalIds,
   });
   const skill = skillById(plan.skillId);
   if (!skill || skill.grade !== grade) {

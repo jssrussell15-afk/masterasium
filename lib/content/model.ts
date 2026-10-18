@@ -1,6 +1,6 @@
 import { mistakeAnswerMatches, satisfies } from "@/lib/content/rules";
 
-export const LANES = ["core", "go_further", "review"] as const;
+export const LANES = ["core", "go_further", "review", "eval"] as const;
 export type Lane = (typeof LANES)[number];
 
 export const DIFFICULTIES = [1, 2, 3] as const;

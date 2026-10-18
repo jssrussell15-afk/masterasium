@@ -22,6 +22,7 @@ export function planNextQuestion(input: {
   requestedSkillId?: string;
   explicit?: boolean;
   coachSmall?: boolean;
+  provisionalIds?: readonly string[];
 }): QuestionPlan {
   const inGrade = (id: string | undefined): id is string =>
     !!id && skillsForGrade(input.grade).some((skill) => skill.id === id);
@@ -35,6 +36,7 @@ export function planNextQuestion(input: {
     cards: input.cards,
     sessionCount: input.sessionCount,
     today: input.today,
+    provisionalIds: input.provisionalIds,
   });
   const card = input.cards.find((item) => item.skillId === chosen.id);
   const learn = readLearn(card?.fsrs);
