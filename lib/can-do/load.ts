@@ -6,6 +6,7 @@ import { torontoDate } from "@/lib/digest/build";
 import type { SupportedGrade } from "@/lib/grades";
 import { lessonTableMissing } from "@/lib/lesson/store";
 import { buildCanDo, type CanDoLesson, type CanDoReview, type CanDoView } from "@/lib/can-do/view";
+import { goFurtherTableMissing } from "@/lib/practice/go-further";
 import type { SkillCard } from "@/lib/practice/scheduler";
 
 type DbError = { message: string; code?: string };
@@ -50,13 +51,14 @@ export async function loadCanDo(
   input: { childId: string; grade: SupportedGrade; today: string; showReviewLinks: boolean },
 ): Promise<CanDoLoad> {
   const childId = input.childId;
-  const [runs, reviews, states] = await Promise.all([
+  const [runs, reviews, states, further] = await Promise.all([
     supabase.from("lesson_runs").select("skill_id, stage, completed_at").eq("child_id", childId),
     supabase.from("skill_reviews").select("skill_id, gap, due_on, done_at").eq("child_id", childId),
     supabase
       .from("skill_states")
       .select("skill_id, attempted, correct, streak, fsrs, updated_at")
       .eq("child_id", childId),
+    supabase.from("go_further_sets").select("skill_id, completed_at").eq("child_id", childId),
   ]);
 
   if (states.error && !lessonTableMissing(states.error)) {
@@ -108,11 +110,23 @@ export async function loadCanDo(
       showReviewLinks: input.showReviewLinks,
       lessons,
       reviews: reviewRows,
-      cards,
-      practicedOn,
-    }),
+    cards,
+    practicedOn,
+    furtherSkillIds: furtherIds(further.error, further.data),
+  }),
     error: null,
   };
+}
+
+function furtherIds(
+  error: DbError | null,
+  data: { skill_id: string; completed_at: string | null }[] | null,
+): string[] {
+  if (error) {
+    if (goFurtherTableMissing(error)) return [];
+    return [];
+  }
+  return (data ?? []).filter((row) => row.completed_at).map((row) => row.skill_id);
 }
 
 function optionalRows<T>(error: DbError | null, data: T[] | null): { rows: T[]; error: string | null } {

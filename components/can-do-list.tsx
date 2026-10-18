@@ -9,6 +9,7 @@ import {
   type CanDoItem,
   type CanDoView,
 } from "@/lib/can-do/view";
+import { parentGoFurtherLine } from "@/lib/practice/go-further";
 
 export function StudentCanDo({ view }: { view: CanDoView }) {
   return (
@@ -20,6 +21,7 @@ export function StudentCanDo({ view }: { view: CanDoView }) {
       ) : (
         <StrandGroups view={view} showReview />
       )}
+      <FurtherLines lines={view.further} />
       <Link className="can-do-entry" href="/practice">
         Back to practice
       </Link>
@@ -39,6 +41,7 @@ export function ParentCanDoAll({ view, childName }: { view: CanDoView; childName
       ) : (
         <StrandGroups view={view} heading="h3" />
       )}
+      <FurtherLines lines={parentLine(view) ? [parentLine(view)!] : []} />
     </div>
   );
 }
@@ -67,7 +70,25 @@ export function ParentCanDoSummary({ view, seeAllHref }: { view: CanDoView; seeA
           See all
         </Link>
       ) : null}
+      <FurtherLines lines={parentLine(view) ? [parentLine(view)!] : []} />
     </section>
+  );
+}
+
+function parentLine(view: CanDoView): string | null {
+  return parentGoFurtherLine(view.furtherSkillIds);
+}
+
+function FurtherLines({ lines }: { lines: string[] }) {
+  if (lines.length === 0) return null;
+  return (
+    <div className="can-do-further-list">
+      {lines.map((line) => (
+        <p key={line} className="can-do-further">
+          {line}
+        </p>
+      ))}
+    </div>
   );
 }
 
