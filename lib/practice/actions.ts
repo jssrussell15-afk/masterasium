@@ -69,8 +69,6 @@ async function snapshot(
     correctCount: score.correct,
     focusTitle: focus.title,
     skills: describeCatalog(access, cards),
-    streakDays: portrait.streakDays,
-    streakMilestone: portrait.streakMilestone,
     recap: portrait.recap,
     requestedGrade: access.requested,
     workingGrade: access.working,
@@ -90,7 +88,7 @@ async function saveCard(
       skill_id: card.skillId,
       attempted: card.attempted,
       correct: card.correct,
-      streak: card.streak,
+      consecutive_correct: card.consecutiveCorrect,
       fsrs: card.fsrs,
       updated_at: new Date().toISOString(),
     },
@@ -470,7 +468,7 @@ function introCycleFrom(formData: FormData, skillId: string): IntroCycle | null 
 type IntroStateRow = {
   attempted: number;
   correct: number;
-  streak: number;
+  consecutive_correct: number;
   fsrs: unknown;
   updated_at: string;
 };
@@ -498,7 +496,7 @@ async function stampIntro(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data, error } = await supabase
       .from("skill_states")
-      .select("attempted, correct, streak, fsrs, updated_at")
+      .select("attempted, correct, consecutive_correct, fsrs, updated_at")
       .eq("child_id", childId)
       .eq("skill_id", skillId)
       .maybeSingle();
@@ -510,7 +508,7 @@ async function stampIntro(
           skillId,
           attempted: row.attempted,
           correct: row.correct,
-          streak: row.streak,
+          consecutiveCorrect: row.consecutive_correct,
           fsrs: row.fsrs,
         }
       : emptyCard(skillId);
@@ -528,7 +526,7 @@ async function stampIntro(
           skill_id: skillId,
           attempted: 0,
           correct: 0,
-          streak: 0,
+          consecutive_correct: 0,
           fsrs,
           updated_at: new Date().toISOString(),
         })

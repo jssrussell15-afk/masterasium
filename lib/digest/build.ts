@@ -12,7 +12,6 @@ export type DigestSummary = {
   focusSkillId: string;
   focusSkillTitle: string;
   recap?: string | null;
-  streakDays?: number;
 };
 
 export function torontoDate(now = new Date()): string {
@@ -72,7 +71,6 @@ export function buildDigestSummary(input: {
   focusSkillId: string;
   focusSkillTitle: string;
   recap?: string | null;
-  streakDays?: number;
 }): DigestSummary {
   return {
     ...input,

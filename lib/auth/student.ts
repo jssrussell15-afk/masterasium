@@ -16,7 +16,7 @@ export type StudentChild = {
   requested_grade: number | null;
 };
 
-export function createAnonClient(): SupabaseClient {
+export function createAnonClient(deviceKey?: string | null): SupabaseClient {
   const { url, key } = requireSupabaseEnv();
   return createSupabaseClient(url, key, {
     auth: {
@@ -24,10 +24,11 @@ export function createAnonClient(): SupabaseClient {
       autoRefreshToken: false,
       detectSessionInUrl: false,
     },
+    global: deviceHeaders(deviceKey),
   });
 }
 
-export function createStudentClient(token: string): SupabaseClient {
+export function createStudentClient(token: string, deviceKey?: string | null): SupabaseClient {
   const { url, key } = requireSupabaseEnv();
   return createSupabaseClient(url, key, {
     auth: {
@@ -36,9 +37,17 @@ export function createStudentClient(token: string): SupabaseClient {
       detectSessionInUrl: false,
     },
     global: {
-      headers: { "x-student-token": token },
+      headers: {
+        "x-student-token": token,
+        ...(deviceKey ? { "x-device-key": deviceKey } : {}),
+      },
     },
   });
+}
+
+function deviceHeaders(deviceKey?: string | null): { headers: { "x-device-key": string } } | undefined {
+  if (!deviceKey) return undefined;
+  return { headers: { "x-device-key": deviceKey } };
 }
 
 export async function readStudentToken(): Promise<string | null> {

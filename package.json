@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "scan:secrets": "node scripts/scan-client-secrets.mjs",
     "preview": "node scripts/patch-opennext-preview-props.mjs && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "postinstall": "node scripts/patch-opennext-preview-props.mjs",
     "deploy": "node scripts/patch-opennext-preview-props.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
@@ -23,6 +24,7 @@
     "pdfjs-dist": "^6.4.299",
     "react": "19.3.0",
     "react-dom": "19.3.0",
+    "stripe": "^23.0.0",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {

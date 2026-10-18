@@ -35,7 +35,7 @@ type StateRow = {
   skill_id: string;
   attempted: number;
   correct: number;
-  streak: number;
+  consecutive_correct: number;
   fsrs: unknown;
   updated_at: string | null;
 };
@@ -55,7 +55,7 @@ export async function loadCanDo(
     supabase.from("skill_reviews").select("skill_id, gap, due_on, done_at").eq("child_id", childId),
     supabase
       .from("skill_states")
-      .select("skill_id, attempted, correct, streak, fsrs, updated_at")
+      .select("skill_id, attempted, correct, consecutive_correct, fsrs, updated_at")
       .eq("child_id", childId),
   ]);
 
@@ -96,7 +96,7 @@ export async function loadCanDo(
     skillId: row.skill_id,
     attempted: row.attempted,
     correct: row.correct,
-    streak: row.streak,
+    consecutiveCorrect: row.consecutive_correct,
     fsrs: row.fsrs ?? null,
   }));
 

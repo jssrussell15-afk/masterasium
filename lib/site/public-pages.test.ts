@@ -47,7 +47,8 @@ describe("public pages", () => {
     expect(html).toContain("1 day");
     expect(html).toContain("1 week");
     expect(html).toContain("1 month");
-    expect(html).toContain("streaks");
+    expect(html).toContain("Why there are no rewards");
+    expect(html.toLowerCase()).not.toContain("streak");
     expect(html).not.toContain("$");
   });
 

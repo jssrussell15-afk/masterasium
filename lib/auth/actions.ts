@@ -3,6 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { clearSupabaseSession } from "@/lib/auth/clear-session";
+import { ensureDeviceKey } from "@/lib/auth/device-key";
 import { STUDENT_COOKIE, studentCookieOptions } from "@/lib/auth/student-cookie";
 import {
   createAnonClient,
@@ -103,7 +104,7 @@ export async function signInStudent(
   if (!isValidFirstName(firstName)) return { error: "Use a first name, up to 40 letters." };
   if (!isValidPin(pin)) return { error: "Use a PIN of 4 to 6 digits." };
 
-  const anon = createAnonClient();
+  const anon = createAnonClient(await ensureDeviceKey());
   const { data, error } = await anon.rpc("start_student_session_by_name", {
     p_first_name: firstName,
     p_pin: pin,
@@ -120,7 +121,7 @@ export async function signInStudent(
   }
 
   if (data === "locked") {
-    return { error: "Too many tries. Wait a few minutes and try again." };
+    return { error: "Too many tries. Wait 15 minutes and try again." };
   }
   if (typeof data !== "string" || !/^[0-9a-f]{64}$/.test(data)) {
     return { error: "That name or PIN is not right." };

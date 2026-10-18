@@ -87,7 +87,7 @@ export function applyLearning(input: {
 
   const learn: LearnState = {
     ...before,
-    missStreak: input.correct ? 0 : (before.missStreak ?? 0) + 1,
+    consecutiveMisses: input.correct ? 0 : (before.consecutiveMisses ?? 0) + 1,
   };
 
   if (input.kind === "check") {

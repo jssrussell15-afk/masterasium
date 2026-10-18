@@ -61,8 +61,6 @@ async function PracticeLoader({
         correct: 0,
         focusTitle: issued.question.skillTitle,
         skills: [],
-        streakDays: 0,
-        streakMilestone: null,
         recap: null,
         requestedGrade: access.requested,
         today: torontoDate(),

@@ -18,7 +18,8 @@ export type SkillCard = {
   skillId: string;
   attempted: number;
   correct: number;
-  streak: number;
+  /** Consecutive correct answers on this skill. Reset to 0 on a miss. Not shown. */
+  consecutiveCorrect: number;
   fsrs: unknown;
 };
 
@@ -69,13 +70,13 @@ export function recordAttempt(card: SkillCard, correct: boolean): SkillCard {
     ...card,
     attempted: card.attempted + 1,
     correct: card.correct + (correct ? 1 : 0),
-    streak: correct ? card.streak + 1 : 0,
+    consecutiveCorrect: correct ? card.consecutiveCorrect + 1 : 0,
     fsrs: card.fsrs ?? null,
   };
 }
 
 export function emptyCard(skillId: string): SkillCard {
-  return { skillId, attempted: 0, correct: 0, streak: 0, fsrs: null };
+  return { skillId, attempted: 0, correct: 0, consecutiveCorrect: 0, fsrs: null };
 }
 
 function lowestAccuracy(skills: Skill[], cards: Map<string, SkillCard>): Skill {

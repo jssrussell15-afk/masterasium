@@ -41,6 +41,8 @@ jobs:
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/curriculum_checks.sql
       - name: SQL negative check
         run: psql -v ON_ERROR_STOP=1 -f supabase/tests/curriculum_checks_negative.sql
+      - name: RLS isolation
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/rls_isolation.sql
       - uses: actions/upload-artifact@v4
         if: always()
         with:

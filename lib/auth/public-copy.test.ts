@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import HomePage from "@/app/page";
 import SignUpPage from "@/app/signup/page";
 import { DashboardMock } from "@/components/dashboard-mock";
-import { StreakMark } from "@/components/streak-mark";
 
 describe("public copy", () => {
   it("says practice is free while we test and does not publish a price or trial", async () => {
@@ -26,12 +25,10 @@ describe("public copy", () => {
     expect(home).toContain("6 × 7 = ?");
   });
 
-  it("drops the streak milestone from the day count", () => {
-    const html = renderToStaticMarkup(createElement(StreakMark, { days: 12 }));
-    expect(html).not.toContain("streak-milestone");
-    expect(html).not.toContain("That's 12 days");
+  it("keeps rewards off the parent desk preview", () => {
     const mock = renderToStaticMarkup(createElement(DashboardMock));
     expect(mock).toContain("Learned this week: decimals to hundredths");
-    expect(mock).not.toContain("streak");
+    expect(mock.toLowerCase()).not.toContain("streak");
+    expect(mock).not.toContain("in a row");
   });
 });

@@ -145,8 +145,6 @@ function practiceView(question: QuestionView): PracticeView {
     correct: 0,
     focusTitle: question.skillTitle,
     skills: [],
-    streakDays: 0,
-    streakMilestone: null,
     recap: null,
     requestedGrade: null,
     today: "2026-10-18",

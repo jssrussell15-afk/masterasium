@@ -3,7 +3,6 @@ import { badgeTree, type BadgePiece } from "@/lib/practice/badges";
 import { readLearn } from "@/lib/practice/memory";
 import { accuracyScheduler, isConfirmed, type SkillCard } from "@/lib/practice/scheduler";
 import { skillsForGrade } from "@/lib/practice/skills";
-import { sessionStreak, type StreakMilestone } from "@/lib/practice/streak";
 import { sessionRecap } from "@/lib/practice/summary";
 
 export type AttemptPoint = {
@@ -15,8 +14,6 @@ export type AttemptPoint = {
 };
 
 export type PracticePortrait = {
-  streakDays: number;
-  streakMilestone: StreakMilestone | null;
   recap: string | null;
   badges: BadgePiece[];
   needsReview: { skillId: string; title: string }[];
@@ -28,10 +25,6 @@ export function buildPortrait(input: {
   attempts: AttemptPoint[];
   today: string;
 }): PracticePortrait {
-  const streak = sessionStreak(
-    input.attempts.map((attempt) => attempt.date),
-    input.today,
-  );
   const focus = accuracyScheduler.chooseSkill({
     grade: input.grade,
     cards: input.cards,
@@ -57,8 +50,6 @@ export function buildPortrait(input: {
   const card = input.cards.find((item) => item.skillId === trend.id);
 
   return {
-    streakDays: streak.days,
-    streakMilestone: streak.milestone,
     recap: sessionRecap({
       todayAttempted: todayRows.length,
       todayCorrect: todayRows.filter((attempt) => attempt.correct).length,
