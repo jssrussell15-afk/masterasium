@@ -21,7 +21,7 @@ export function CurriculumSwitch({
             <Link
               key={item.slug}
               href={curriculumPath(item.slug, grade)}
-              aria-pressed={item.slug === province}
+              aria-current={item.slug === province ? "page" : undefined}
               aria-label={item.name}
             >
               {item.name}
@@ -35,7 +35,7 @@ export function CurriculumSwitch({
           <Link
             key={item}
             href={curriculumPath(province, item)}
-            aria-pressed={item === grade}
+            aria-current={item === grade ? "page" : undefined}
             aria-label={`Grade ${item}`}
           >
             {item}

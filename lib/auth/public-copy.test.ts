@@ -22,7 +22,8 @@ describe("public copy", () => {
     }
     expect(home).not.toContain("12-day streak");
     expect(home).not.toContain("streak");
-    expect(home).toContain("Learned this week: decimals to hundredths");
+    expect(home).toContain("Try a free lesson");
+    expect(home).toContain("6 × 7 = ?");
   });
 
   it("drops the streak milestone from the day count", () => {
