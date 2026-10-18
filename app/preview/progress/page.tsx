@@ -1,5 +1,7 @@
+import { ParentCanDoSummary } from "@/components/can-do-list";
 import { DigestPanel } from "@/components/digest-panel";
 import { ParentProgressView } from "@/components/parent-progress";
+import { sampleCanDo } from "@/lib/can-do/sample";
 import { StartPracticeButton } from "@/components/start-practice-button";
 import { SetPinForm } from "@/components/student-access-forms";
 import { Shell } from "@/components/site-header";
@@ -75,10 +77,8 @@ export default function ProgressSamplePage() {
           hasLogin
           returnTo="dashboard"
         />
-        <div className="grid gap-1">
-          <p>Practiced today.</p>
-          <p>Working on Place value to 1,000.</p>
-        </div>
+        <p>Practiced today.</p>
+        <ParentCanDoSummary view={sampleCanDo("filled", false)} seeAllHref="/preview/can-do" />
         <ParentProgressView progress={progress} digestHref="/preview/digest" />
         <DigestPanel childId="00000000-0000-4000-8000-000000000001" savedText={null} />
       </article>

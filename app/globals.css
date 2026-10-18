@@ -1667,6 +1667,124 @@ html:has(.question-screen) main {
   gap: 1rem;
 }
 
+.can-do,
+.can-do-desk,
+.can-do-groups,
+.can-do-strand {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.can-do {
+  margin-top: var(--space-4);
+}
+
+.can-do-entry,
+.can-do-see-all,
+.can-do-lookback {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  width: fit-content;
+  max-width: 100%;
+  min-height: var(--tap);
+  color: var(--color-blue-deep);
+  font-size: var(--text-body);
+  font-weight: 650;
+  line-height: var(--leading-snug);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+button.can-do-lookback {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+}
+
+.can-do-now,
+.can-do-statement,
+.can-do-month,
+.can-do-empty,
+.can-do-strand h2,
+.can-do-strand h3 {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.can-do-strand h2,
+.can-do-strand h3,
+.can-do-desk h3 {
+  font-size: var(--text-lg);
+  font-weight: 650;
+}
+
+.can-do-month {
+  color: var(--color-muted);
+}
+
+.can-do-skills {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.can-do-skill {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: var(--space-3);
+  row-gap: var(--space-1);
+  align-items: start;
+  min-width: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
+}
+
+.can-do-check {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.5rem;
+  margin-top: 0.15rem;
+  color: var(--color-muted);
+}
+
+.can-do-check svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.can-do-lookback,
+.can-do-skill form {
+  grid-column: 2;
+}
+
+.can-do-statement {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.can-do-month {
+  grid-column: 2;
+}
+
+@media (max-width: 420px) {
+  .can-do-skill {
+    grid-template-columns: 1.1rem minmax(0, 1fr);
+    column-gap: var(--space-2);
+  }
+}
+
 .ask-card {
   display: grid;
   gap: 0.65rem;

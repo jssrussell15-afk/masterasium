@@ -7,7 +7,9 @@ import { DigestPanel } from "@/components/digest-panel";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { MasteryMark } from "@/components/mastery-mark";
+import { ParentCanDoSummary } from "@/components/can-do-list";
 import { ParentProgressView } from "@/components/parent-progress";
+import { loadCanDo } from "@/lib/can-do/load";
 import { loadRoster, type RosterChild } from "@/lib/children/roster";
 import { friendlyDbError } from "@/lib/db-error";
 import { renderDigestText, torontoDate, type DigestSummary } from "@/lib/digest/build";
@@ -16,7 +18,7 @@ import { ensureProfile, requireUser } from "@/lib/auth/session";
 import { isSimpleDesk } from "@/lib/dashboard/desk";
 import { formatAccuracy } from "@/lib/practice/format";
 import { weeklyAccuracy } from "@/lib/practice/trend";
-import { isSupportedGrade } from "@/lib/grades";
+import { isSupportedGrade, type SupportedGrade } from "@/lib/grades";
 import { masteryLabel, masteryMark } from "@/lib/practice/mastery";
 import { buildPortrait } from "@/lib/practice/portrait";
 import { accuracyScheduler, describeSkills, type SkillCard } from "@/lib/practice/scheduler";
@@ -169,9 +171,13 @@ async function ChildCard({
         returnTo="dashboard"
         saved={pinSaved}
       />
-      <LearningStatus
-        practicedToday={log.attempts.some((attempt) => attempt.date === today)}
-        focusTitle={focus.title}
+      <LearningStatus practicedToday={log.attempts.some((attempt) => attempt.date === today)} />
+      <ChildCanDo
+        childId={child.id}
+        grade={working}
+        supabase={supabase}
+        today={today}
+        fallbackTitle={focus.title}
       />
       {working === 3 ? (
         <GradeThreeProgress childId={child.id} supabase={supabase} today={today} />
@@ -186,6 +192,37 @@ async function ChildCard({
       <DigestPanel childId={child.id} savedText={saved} />
     </article>
   );
+}
+
+async function ChildCanDo({
+  childId,
+  grade,
+  supabase,
+  today,
+  fallbackTitle,
+}: {
+  childId: string;
+  grade: SupportedGrade;
+  supabase: SupabaseClient;
+  today: string;
+  fallbackTitle: string;
+}) {
+  const loaded = await loadCanDo(supabase, {
+    childId,
+    grade,
+    today,
+    showReviewLinks: false,
+  });
+  if (loaded.error || !loaded.view) {
+    return (
+      <section className="can-do-desk" aria-label="Can do now">
+        <h3 className="font-semibold">Can do now</h3>
+        <p className="can-do-now">Working on now: {fallbackTitle}.</p>
+        <p className="feedback bad">{loaded.error ?? "Could not load skills."}</p>
+      </section>
+    );
+  }
+  return <ParentCanDoSummary view={loaded.view} seeAllHref={`/dashboard/can-do/${childId}`} />;
 }
 
 async function GradeThreeProgress({
@@ -215,19 +252,8 @@ async function GradeThreeProgress({
   );
 }
 
-function LearningStatus({
-  practicedToday,
-  focusTitle,
-}: {
-  practicedToday: boolean;
-  focusTitle: string;
-}) {
-  return (
-    <div className="grid gap-1">
-      <p>{practicedToday ? "Practiced today." : "Not yet today."}</p>
-      <p>Working on {focusTitle}.</p>
-    </div>
-  );
+function LearningStatus({ practicedToday }: { practicedToday: boolean }) {
+  return <p>{practicedToday ? "Practiced today." : "Not yet today."}</p>;
 }
 
 function FullProgress({

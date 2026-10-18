@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState } from "react";
 import { DashboardWidget } from "@/components/dashboard-widget";
 import { TopicPicker } from "@/components/topic-picker";
@@ -35,6 +36,9 @@ export function StudentDashboard({
       <div>
         <h1 className="display text-4xl">{childName}</h1>
         <p className="hint mt-1">Grade {grade}</p>
+        <Link href="/practice/can-do" className="can-do-entry">
+          Things I can do
+        </Link>
       </div>
       {state.note ? (
         <p className="hint" role="status">
