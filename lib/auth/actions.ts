@@ -22,6 +22,7 @@ import {
 import { friendlyDbError, STUDENT_LOGIN_SETUP_MESSAGE } from "@/lib/db-error";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { publicOrigin } from "@/lib/site/hosts";
 import { isValidEmail, isValidFirstName, isValidPin, normalizeEmail, normalizeFirstName } from "@/lib/validation";
 
 export type AuthState = {
@@ -31,9 +32,9 @@ export type AuthState = {
 
 async function siteOrigin(): Promise<string> {
   const headerList = await headers();
-  const proto = headerList.get("x-forwarded-proto") ?? "http";
+  const proto = headerList.get("x-forwarded-proto");
   const host = headerList.get("x-forwarded-host") ?? headerList.get("host") ?? "localhost:3000";
-  return `${proto}://${host}`;
+  return publicOrigin(host, proto);
 }
 
 function passwordError(password: string): string | null {

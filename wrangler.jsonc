@@ -14,6 +14,23 @@
       "service": "masterasium"
     }
   ],
+  "vars": {
+    "APP_ENV": "production"
+  },
+  "env": {
+    "staging": {
+      "name": "masterasium-staging",
+      "vars": {
+        "APP_ENV": "staging"
+      },
+      "services": [
+        {
+          "binding": "WORKER_SELF_REFERENCE",
+          "service": "masterasium-staging"
+        }
+      ]
+    }
+  },
   "observability": {
     "logs": {
       "enabled": true,

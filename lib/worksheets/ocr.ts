@@ -1,3 +1,4 @@
+import { scrubError } from "@/lib/log/scrub";
 import { presentPageText, UNREADABLE_PAGE_MESSAGE, type PageTextResult } from "@/lib/worksheets/page-text";
 import type { PageScanKind } from "@/lib/worksheets/page-scan";
 
@@ -24,7 +25,8 @@ export async function readPrintedPage(file: Blob, kind: PageScanKind): Promise<P
     const raw = await recognizePrinted(image);
     return presentPageText(raw);
   } catch (error) {
-    console.error(error);
+    const message = error instanceof Error ? error.message : "The page could not be read.";
+    console.error(scrubError({ message, stack: error instanceof Error ? error.stack : undefined }));
     return { ok: false, message: UNREADABLE_PAGE_MESSAGE };
   }
 }

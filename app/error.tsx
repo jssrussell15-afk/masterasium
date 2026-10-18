@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { CalmState } from "@/components/calm-state";
 import { Shell } from "@/components/site-header";
+import { scrubError } from "@/lib/log/scrub";
 
 export default function AppError({
   error,
@@ -13,7 +14,7 @@ export default function AppError({
   retry: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    console.error(scrubError(error));
   }, [error]);
 
   return (
