@@ -5,13 +5,15 @@ import { toSessionRow } from "@/lib/create/session-meta";
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const row = toSessionRow(body);
-  if (!row) return Response.json({ ok: false, error: "meta" }, { status: 400 });
+  if (!row) {
+    return Response.json({ ok: false, error: "meta" }, { status: 400, headers: { "cache-control": "no-store" } });
+  }
 
   const token = await readStudentToken();
-  if (!token) return Response.json({ ok: true, stored: false });
+  if (!token) return Response.json({ ok: true, stored: false }, { headers: { "cache-control": "no-store" } });
 
   const supabase = createStudentClient(token);
   const { error } = await supabase.from("create_sessions").insert(row);
-  if (error) return Response.json({ ok: true, stored: false });
-  return Response.json({ ok: true, stored: true });
+  if (error) return Response.json({ ok: true, stored: false }, { headers: { "cache-control": "no-store" } });
+  return Response.json({ ok: true, stored: true }, { headers: { "cache-control": "no-store" } });
 }

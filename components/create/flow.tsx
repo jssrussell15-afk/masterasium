@@ -14,7 +14,8 @@ import {
   wrongOptions,
 } from "@/lib/create/copy";
 import { createCreateDraftStore } from "@/lib/create/draft-store";
-import { prefilterWriteMyOwn } from "@/lib/create/moderate";
+import { screenWriteMyOwn } from "@/lib/create/blocklist";
+import { KID_SAFETY_MESSAGE } from "@/lib/create/moderate";
 import { metaFromDraft } from "@/lib/create/session-meta";
 import {
   characterCards,
@@ -74,6 +75,7 @@ export function CreateExperience({
   const [fixOpen, setFixOpen] = useState(false);
   const [clearAsk, setClearAsk] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [safetyNote, setSafetyNote] = useState("");
 
   useEffect(() => {
     let cancel = false;
@@ -111,24 +113,32 @@ export function CreateExperience({
           childId,
           projectType: stamped.project,
           kind,
-          chips: [
-            stamped.characterChips.size,
-            stamped.characterChips.colour,
-            stamped.characterChips.mood,
-            stamped.characterChips.special,
-            ...(page?.fixes ?? []),
-          ],
-          pageIndex: stamped.pageIndex + 1,
-          refresh: kind === "spark" ? stamped.sparkRefresh : kind === "page" ? page?.variant ?? 0 : stamped.characterRegen,
-          optIn: access.enabled,
-          consent: Boolean(access.consentAt),
-          projectsToday: access.projectsToday,
-          dailyLimit: access.dailyLimit,
-          generationsThisProject: stamped.generations,
+          cardId: page?.sentenceId ?? (kind === "character" ? "pip" : kind === "setting" ? "meadow" : "river"),
+          chips: {
+            size: stamped.characterChips.size,
+            colour: stamped.characterChips.colour,
+            mood: stamped.characterChips.mood,
+            special: stamped.characterChips.special,
+            ...(page?.fixes[0] ? { fix: page.fixes[0] } : {}),
+          },
+          pageIndex: Math.min(4, stamped.pageIndex + 1),
+          refresh: Math.min(3, kind === "spark" ? stamped.sparkRefresh : page?.variant ?? 0),
+          ...(page?.own ? { writeMyOwn: page.own } : {}),
         }),
-      }).catch(() => undefined);
+      })
+        .then(async (response) => {
+          const payload = (await response.json().catch(() => null)) as { message?: string } | null;
+          if (payload?.message === KID_SAFETY_MESSAGE || payload?.message === childCopy.pause) {
+            setSafetyNote(payload.message);
+          }
+        })
+        .catch(() => undefined);
     }
     if (href) router.push(href);
+  }
+
+  if (access.moderationBlocksToday >= 6) {
+    return <p className="create-prompt">{childCopy.pause}</p>;
   }
 
   if (!draft) return <p className="status">Loading your project…</p>;
@@ -143,6 +153,7 @@ export function CreateExperience({
         </Link>
         <p className="create-step">{childCopy.step(stepNumber(step))}</p>
       </div>
+      {safetyNote ? <p role="status">{safetyNote}</p> : null}
       {step === "pick" ? (
         <Entry
           basePath={basePath}
@@ -518,7 +529,7 @@ function PagesStep({
             id="own-sentence"
             className="create-text"
             value={ownText}
-            maxLength={80}
+            maxLength={60}
             onChange={(event) => onOwnText(event.target.value)}
           />
           <div className="create-chips">
@@ -544,9 +555,9 @@ function PagesStep({
               type="button"
               className="create-chip"
               onClick={() => {
-                const checked = prefilterWriteMyOwn(ownText);
+                const checked = screenWriteMyOwn(ownText);
                 if (!checked.ok) {
-                  onNote("Try a different sentence.");
+                  onNote(childCopy.differentChoice);
                   return;
                 }
                 onNote("");
@@ -567,7 +578,20 @@ function PagesStep({
             <p>{chosen}</p>
             <ReadAloud text={chosen} label="Speak the sentence" />
           </div>
-          <img className={`create-scene size-${draft.characterChips.size}`} src={art.src} alt="" />
+          {page.reported ? (
+            <p>{childCopy.reported}</p>
+          ) : (
+            <img className={`create-scene size-${draft.characterChips.size}`} src={art.src} alt="" />
+          )}
+          <button
+            type="button"
+            className="create-chip"
+            onClick={() =>
+              update({ ...page, reported: true }, { reportCount: draft.reportCount + (page.reported ? 0 : 1) })
+            }
+          >
+            {childCopy.report}
+          </button>
           <div className="create-chips">
             <Chip
               label={childCopy.keep}

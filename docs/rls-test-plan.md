@@ -27,6 +27,12 @@ Hosted migrations are not applied from this branch. Run these checks in a stagin
 - `anon` may select `create_enabled`, `create_write_own`, and `create_daily_limit` on the signed-in child only, through the existing student select policy.
 - Defaults: Create off, write-my-own off, daily limit 1, consent timestamp null.
 
+## Create guardrail tables
+
+`create_moderation_events` stores a category code and the prompt version. Parents can read events for their own children. Students do not get direct table writes. `reserve_create_generation` inserts the event inside the same transaction as the counters.
+
+`create_daily_counters`, `create_parent_daily`, and `create_ip_daily` are written only by that function. `create_ip_daily` stores a hash, not a raw IP. Parents can read the child-day counter. They cannot read other accounts' IP hashes.
+
 ## Retention
 
 Raw `create_sessions` rows stay for 12 months, then roll up to counts with no `child_id`. The migration records that policy and does not schedule the job. A later change should add the roll-up explicitly and prove the roll-up table has no `child_id` and no free text.

@@ -60,6 +60,7 @@ export type PageWork = {
   fixes: FixChip[];
   kept: boolean;
   match: MatchMark | null;
+  reported?: boolean;
 };
 
 export type CreateDraft = {
@@ -86,6 +87,8 @@ export type CreateDraft = {
   retryCount: number;
   fixCount: number;
   generations: number;
+  moderationBlocks: number;
+  reportCount: number;
   updatedAt: string;
 };
 
@@ -96,6 +99,7 @@ export type CreateFlags = {
   consentAt: string | null;
   consentVersion: string | null;
   projectsToday: number;
+  moderationBlocksToday: number;
 };
 
 export const DEFAULT_CREATE_FLAGS: CreateFlags = {
@@ -105,6 +109,7 @@ export const DEFAULT_CREATE_FLAGS: CreateFlags = {
   consentAt: null,
   consentVersion: null,
   projectsToday: 0,
+  moderationBlocksToday: 0,
 };
 
 export const IMAGE_CONSENT_VERSION = "2026-10-18";
@@ -176,6 +181,8 @@ export function emptyDraft(childId: string, day: string, now = new Date().toISOS
     retryCount: 0,
     fixCount: 0,
     generations: 0,
+    moderationBlocks: 0,
+    reportCount: 0,
     updatedAt: now,
   };
 }

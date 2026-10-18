@@ -139,7 +139,7 @@ Do not turn on live generation until a reviewed set covers at least:
 
 - empty and whitespace
 - an ordinary grade-level sentence (allowed)
-- over 80 characters
+- over 60 characters
 - violence and weapons
 - sexual content
 - insults
@@ -150,10 +150,40 @@ Do not turn on live generation until a reviewed set covers at least:
 
 The prototype stub checks empty, length, and a short blocklist. It does not log the sentence.
 
+## Safety and content guardrails
+
+Every Create request is built on the server from `CREATE_SYSTEM_PROMPT` plus one fixed template in `lib/create/prompts.ts`. The version string is `create-system-2026-10-18`. The prompt keeps output family-rated: no nudity or private parts, no sexual content, no profanity, no violence beyond a mild cartoon conflict, no hate or discrimination, no scary, gory, or disturbing imagery, and no real people, brands, or copyrighted characters. The client cannot send or replace that text. A body that includes `prompt` or `system` is rejected.
+
+Input is card ids, chip enums, and dropdowns, checked with a zod schema against allowlists. The only free text is the parent-gated write-my-own field: 60 characters, letters, numbers, and basic punctuation. It is normalized (case, leetspeak, spacing) and checked against `lib/create/blocklist.ts` for profanity, slurs, and personal info (emails, phone numbers, addresses, full names). That sentence is never stored.
+
+Generated text and images pass `SafetyFilter` before anything is returned. The prototype stub checks sample ids and does not call a vendor. A live provider is still an open question: OpenAI omni-moderation covers text and images; an equivalent vendor is acceptable. Fail closed. If the check errors or times out, nothing is shown. The child sees only "Let's try a different choice." A failed attempt consumes a generation and a moderation block. The category code, with no content, can be written to `create_moderation_events`. The session row stores the block count and the prompt version.
+
+There is no file input, camera, drag-and-drop, or paste-image in Create. The generate route rejects multipart bodies and JSON over 2 KB. Responses use `Cache-Control: no-store`. Live images, when they exist, are streamed to the child and are not written to Supabase Storage or R2.
+
+`create_sessions` stores metadata only: project type, choice ids, chip enums, timestamps, keep, retry, and fix counts, moderation block count, report count, prompt version, and `used_write_my_own`. It does not store generated text, images, or the write-my-own sentence.
+
+Create stays invisible until the parent turns on Allow Create. The home tile and `/create` both check that on the server. If it is off, or the working grade is outside 3–6, the route is a 404. Live image generation also needs the separate image consent. Settings and consent saves require the parent account. A child PIN session cannot change them.
+
+Limits, enforced by the pure check now and by `reserve_create_generation` when the migration is applied: 1 project a day by default, parent-adjustable to 3; 18 generations per project; 6 moderation blocks a day, then "Create can start again tomorrow."; 6 projects a day for the parent account; 36 generations a day for a hashed IP. The raw IP is not stored. These sit on top of the xAI monthly spend cap through `spendGuard`.
+
+Use the Supabase function rather than a Durable Object. The parent relationship, the session row, and the category counter already live in Postgres, and one transaction can lock the child, account, and IP-hash rows. A Durable Object would be a second system of record for a limit this small.
+
+No filter is fully reliable. Generated pictures can still be odd or unsuitable. Parents share that responsibility, and a parent should be nearby for the first projects. The child can press "Report this picture", which removes it and logs a metadata-only flag. Next to Allow Create, and on the consent screen: "Pictures and words are made by a computer and checked by filters for anything unsafe or not family-friendly. Filters catch most problems but not all, so please stay close for the first few projects."
+
+Before launch, a privacy lawyer needs to review:
+
+- sending kid-derived choices to xAI and to a moderation vendor, both third-party processors, with cross-border transfer to the US
+- vendor data retention and training opt-outs
+- whether a 60-character write-my-own counts as collecting personal info
+- browser dictation sending audio to the browser vendor
+- the consent wording and versioning under COPPA verifiable parental consent, PIPEDA meaningful consent, and Quebec Law 25
+- audit log retention
+- the incident process if something unsafe gets through
+
 ## Open questions
 
-- Privacy review: device-only stories, student inserts of metadata, whether browser dictation sends audio to the browser vendor, what a live prompt is allowed to contain, how withdrawal of consent is recorded, and the 12-month roll-up.
-- Which image-safety vendor runs the post-filter, and whether a failed check shows a sample instead of an error.
+- The privacy-lawyer list in Safety and content guardrails is unanswered.
+- Which moderation vendor runs `SafetyFilter` (OpenAI omni-moderation or an equivalent). The prototype does not call one. A failed check shows nothing.
 - Teacher review of the prompt templates and the sentence bank.
 - Sign-off on the cost sketch and on the cap of 18.
 - Whether a grade 2 child who is working in grade 3 should see Create. The prototype uses the working grade.

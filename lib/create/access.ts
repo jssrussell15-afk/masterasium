@@ -17,6 +17,7 @@ export function flagsFromRow(row: Record<string, unknown> | null): CreateFlags {
     consentVersion:
       typeof row.create_image_consent_version === "string" ? row.create_image_consent_version : null,
     projectsToday: 0,
+    moderationBlocksToday: 0,
   };
 }
 

@@ -48,6 +48,7 @@ export function ConsentScreen({
       <p>{parentCopy.consentKept}</p>
       <p>{parentCopy.consentWithdraw}</p>
       <p>{parentCopy.samplesOnly}</p>
+      <p>{parentCopy.disclosure}</p>
       <p>
         {parentCopy.versionLabel} {IMAGE_CONSENT_VERSION}
         {version ? ` · recorded ${version}` : ""}

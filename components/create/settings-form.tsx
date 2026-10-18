@@ -48,6 +48,7 @@ export function CreateSettingsForm({
         <span>{parentCopy.allow}</span>
       </label>
       <p className="hint">{parentCopy.allowHint}</p>
+      <p>{parentCopy.disclosure}</p>
       <label className="create-check">
         <input type="checkbox" checked={writeOwn} onChange={(event) => setWriteOwn(event.target.checked)} />
         <span>{parentCopy.writeOwn}</span>

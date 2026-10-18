@@ -2,8 +2,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { literacyTrend, sessionSentence } from "@/lib/create/copy";
 import { createMemoryDraftStore } from "@/lib/create/draft-store";
-import { handleCreateGenerate } from "@/lib/create/generate";
-import { prefilterWriteMyOwn } from "@/lib/create/moderate";
+import { clientGeneratePayload, handleCreateGenerate } from "@/lib/create/generate";
+import { screenWriteMyOwn } from "@/lib/create/blocklist";
+import { KID_SAFETY_MESSAGE } from "@/lib/create/moderate";
 import { fillTemplate, PROMPT_TEMPLATES } from "@/lib/create/prompts";
 import { metaFromDraft, SESSION_COLUMNS, toSessionRow, type SessionMeta } from "@/lib/create/session-meta";
 import { spendGuard } from "@/lib/create/spend-guard";
@@ -13,14 +14,21 @@ const baseInput = {
   childId: "child-1",
   projectType: "story" as const,
   kind: "page" as const,
-  chips: ["medium", "blue", "calm", "scarf"],
+  cardId: "story-1-0" as const,
+  chips: { size: "medium" as const, colour: "blue" as const, mood: "calm" as const, special: "scarf" as const },
   pageIndex: 1,
   refresh: 0,
+};
+
+const baseContext = {
   optIn: true,
   consent: true,
   projectsToday: 0,
-  dailyLimit: 1,
+  dailyProjectLimit: 1,
   generationsThisProject: 0,
+  moderationBlocksToday: 0,
+  parentProjectsToday: 0,
+  ipGenerationsToday: 0,
 };
 
 function storyRow(overrides: Partial<SessionMeta> = {}): SessionMeta {
@@ -36,6 +44,11 @@ function storyRow(overrides: Partial<SessionMeta> = {}): SessionMeta {
     mismatch_flags: [2],
     reflection_taps: ["changed-colour"],
     used_write_my_own: false,
+    choice_ids: [],
+    chip_enums: [],
+    moderation_blocks: 0,
+    prompt_version: "create-system-2026-10-18",
+    report_count: 0,
     ...overrides,
   };
 }
@@ -49,7 +62,8 @@ describe("create generate guards", () => {
       throw new Error("network");
     }) as typeof fetch;
     const result = await handleCreateGenerate(
-      { ...baseInput, consent: false, writeMyOwn: "Pip finds a red kite." },
+      { ...baseInput, writeMyOwn: "Pip finds a red kite." },
+      { ...baseContext, consent: false },
       {
         mode: "prototype",
         fetchImpl,
@@ -66,23 +80,25 @@ describe("create generate guards", () => {
     expect(result.source).toBe("sample");
     expect(result.assets[0]?.src).toMatch(/^\/create-samples\//);
     expect(result.notice).toBe("sample-only");
-    expect(result.promptBuilt).not.toContain("kite");
+    expect(result.promptBuilt).not.toContain("Pip finds a red kite.");
+    expect(result.promptBuilt).toContain("family-rated");
     expect(JSON.stringify(result)).not.toContain("secret-key");
   });
 
   it("refuses when Create is off", async () => {
-    const result = await handleCreateGenerate({ ...baseInput, optIn: false }, { mode: "prototype" });
-    expect(result).toMatchObject({ ok: false, status: 403, error: "opt-in-off" });
+    const result = await handleCreateGenerate(baseInput, { ...baseContext, optIn: false }, { mode: "prototype" });
+    expect(result).toMatchObject({ ok: false, status: 404, error: "not-found" });
   });
 
   it("refuses live generation without image consent", async () => {
-    const result = await handleCreateGenerate({ ...baseInput, consent: false }, { mode: "live" });
+    const result = await handleCreateGenerate(baseInput, { ...baseContext, consent: false }, { mode: "live" });
     expect(result).toMatchObject({ ok: false, status: 403, error: "consent" });
   });
 
   it("refuses when the daily project limit is used up", async () => {
     const result = await handleCreateGenerate(
-      { ...baseInput, projectsToday: 1, dailyLimit: 1 },
+      baseInput,
+      { ...baseContext, projectsToday: 1, startingProject: true },
       { mode: "prototype" },
     );
     expect(result).toMatchObject({ ok: false, status: 429, error: "daily-limit" });
@@ -94,7 +110,7 @@ describe("create generate guards", () => {
       fetches += 1;
       throw new Error("network");
     }) as typeof fetch;
-    const result = await handleCreateGenerate(baseInput, {
+    const result = await handleCreateGenerate(baseInput, baseContext, {
       mode: "live",
       fetchImpl,
       spentUsd: 12,
@@ -108,18 +124,23 @@ describe("create generate guards", () => {
   });
 
   it("does not enable live image calls when the guards pass", async () => {
-    const result = await handleCreateGenerate(baseInput, { mode: "live", spentUsd: 0, capUsd: 5 });
+    const result = await handleCreateGenerate(baseInput, baseContext, { mode: "live", spentUsd: 0, capUsd: 5 });
     expect(result).toMatchObject({ ok: false, status: 501, error: "live-not-enabled" });
   });
 
   it("pre-filters write-my-own text without echoing it", async () => {
     const blocked = await handleCreateGenerate(
       { ...baseInput, writeMyOwn: "a gun in the picture" },
+      baseContext,
       { mode: "prototype" },
     );
-    expect(blocked).toMatchObject({ ok: false, error: "moderation" });
-    expect(JSON.stringify(blocked)).not.toContain("gun");
-    expect(prefilterWriteMyOwn("   ")).toEqual({ ok: false, reason: "empty" });
+    expect(clientGeneratePayload(blocked)).toEqual({
+      ok: false,
+      error: "safety",
+      message: KID_SAFETY_MESSAGE,
+    });
+    expect(JSON.stringify(clientGeneratePayload(blocked))).not.toContain("gun");
+    expect(screenWriteMyOwn("   ")).toMatchObject({ ok: false, reason: "empty" });
   });
 });
 
@@ -171,7 +192,9 @@ describe("create session metadata", () => {
     expect(blob).not.toContain("fox");
     expect(blob).not.toContain("secret");
     expect(blob).not.toContain("kitchen");
-    expect(blob).not.toContain("prompt");
+    expect(blob).not.toContain("draw a fox");
+    expect(row).not.toHaveProperty("prompt");
+    expect(row?.prompt_version).toBe("create-system-2026-10-18");
   });
 
   it("drops a sentence that exists only on the device draft", () => {
@@ -252,6 +275,12 @@ describe("create migration", () => {
       "mismatch_flags",
       "reflection_taps",
       "used_write_my_own",
+      "choice_ids",
+      "chip_enums",
+      "moderation_blocks",
+      "prompt_version",
+      "report_count",
+      "reserve_create_generation",
     ]) {
       expect(sql).toContain(column);
     }

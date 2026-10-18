@@ -4,7 +4,8 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { requireStudent } from "@/lib/auth/student";
 import { loadCreateFlags } from "@/lib/create/access";
-import { createGradeOk } from "@/lib/create/types";
+import { createAccessDecision } from "@/lib/create/gate";
+import { notFound } from "next/navigation";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 
 export default function CreatePage() {
@@ -26,12 +27,12 @@ async function CreateEntry() {
     nextUnlocked: session.child.next_grade_unlocked,
     requested: session.child.requested_grade,
   });
-  if (!access || !createGradeOk(access.working)) {
-    return <p className="hint mt-8">Create is for Grades 3 to 6.</p>;
-  }
   const flags = await loadCreateFlags(session.supabase, session.child.id);
-  if (!flags.enabled) {
-    return <p className="hint mt-8">Create is turned off for this login.</p>;
+  if (
+    !access ||
+    createAccessDecision({ enabled: flags.enabled, grade: access.working }) === "not-found"
+  ) {
+    notFound();
   }
   return (
     <CreateExperience

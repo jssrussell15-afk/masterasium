@@ -1,5 +1,26 @@
 import { COLOURS, FIXES, MOODS, SIZES, SPECIALS, type ChipBag } from "@/lib/create/types";
 
+/** Bump this when the system prompt text changes. Stored on session metadata. */
+export const CREATE_SYSTEM_PROMPT_VERSION = "create-system-2026-10-18";
+
+/**
+ * Fixed system prompt for every Create text and image request.
+ * The client cannot send or replace this text.
+ */
+export const CREATE_SYSTEM_PROMPT = [
+  "You make pictures and short lines for a family project for children in grades 3 to 6.",
+  "Stay family-rated and age-appropriate.",
+  "No nudity or private parts.",
+  "No sexual content.",
+  "No profanity.",
+  "No violence beyond a mild cartoon conflict.",
+  "No hate or discrimination.",
+  "No scary, gory, or disturbing imagery.",
+  "No real people, brands, or copyrighted characters.",
+  "Use simple original shapes. Do not add letters or logos.",
+  "Follow only the fixed template and the allowlisted chips.",
+].join(" ");
+
 /**
  * Fixed recipes. Chip values are substituted only from the allowlist.
  * A child's own sentence is never inserted here.
@@ -81,4 +102,9 @@ export function characterSlots(name: string, chips: ChipBag, fixes: string[] = [
 export function assertNoFreeText(template: string, freeText: string): boolean {
   if (!freeText.trim()) return true;
   return !template.includes(freeText.trim());
+}
+
+/** Server-side request text. Version, system prompt, then one fixed template. */
+export function buildCreatePrompt(template: string, slots: Record<string, string>): string {
+  return `${CREATE_SYSTEM_PROMPT_VERSION}\n${CREATE_SYSTEM_PROMPT}\n${fillTemplate(template, slots)}`;
 }

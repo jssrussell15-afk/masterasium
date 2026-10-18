@@ -42,6 +42,10 @@ export const childCopy = {
   prevPage: "Previous page",
   nextFrame: "Next frame",
   play: "Play the flip",
+  differentChoice: "Let's try a different choice.",
+  pause: "Create can start again tomorrow.",
+  report: "Report this picture",
+  reported: "That picture is removed.",
   pageOf: (index: number, total: number, project: ProjectType) => {
     const noun = project === "comic" ? "Panel" : project === "moving" ? "Frame" : "Page";
     return `${noun} ${index} of ${total}`;
@@ -115,6 +119,8 @@ export const parentCopy = {
   dailyHint: "How many Create projects this child can start in a day.",
   samplesOnly:
     "Create can still run with sample pictures on the tablet. Nothing is sent to an image service.",
+  disclosure:
+    "Pictures and words are made by a computer and checked by filters for anything unsafe or not family-friendly. Filters catch most problems but not all, so please stay close for the first few projects.",
   consentLink: "Picture-making consent",
   saved: "Create settings saved.",
   waiting: "Create settings will save after the database update.",

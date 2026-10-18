@@ -17,6 +17,11 @@ const rows: SessionMeta[] = [
     mismatch_flags: [],
     reflection_taps: [],
     used_write_my_own: false,
+    choice_ids: [],
+    chip_enums: [],
+    moderation_blocks: 0,
+    prompt_version: "create-system-2026-10-18",
+    report_count: 0,
   },
   {
     child_id: "preview-child",
@@ -30,6 +35,11 @@ const rows: SessionMeta[] = [
     mismatch_flags: [2],
     reflection_taps: ["changed-colour"],
     used_write_my_own: false,
+    choice_ids: ["pip"],
+    chip_enums: ["green"],
+    moderation_blocks: 0,
+    prompt_version: "create-system-2026-10-18",
+    report_count: 0,
   },
 ];
 
