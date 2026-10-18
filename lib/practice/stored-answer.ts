@@ -6,10 +6,17 @@ export type StoredPlan = {
   rollbackSkillId: string | null;
 };
 
+export type StoredContent = {
+  itemId: string | null;
+  lane: "core" | "go_further" | "review";
+  difficulty: 1 | 2 | 3;
+  answer: Record<string, unknown>;
+};
+
 export function packStoredAnswer(
   answer: string,
   steps: string[],
-  meta?: { kind?: QuestionKind; rollbackSkillId?: string },
+  meta?: { kind?: QuestionKind; rollbackSkillId?: string; content?: StoredContent },
 ): string {
   return JSON.stringify({
     v: 1,
@@ -17,6 +24,7 @@ export function packStoredAnswer(
     steps,
     ...(meta?.kind ? { kind: meta.kind } : {}),
     ...(meta?.rollbackSkillId ? { rollbackSkillId: meta.rollbackSkillId } : {}),
+    ...(meta?.content ? { content: meta.content } : {}),
   });
 }
 
@@ -70,15 +78,36 @@ export function readAttemptMark(stored: string): AttemptMark | null {
   }
 }
 
+export function readStoredContent(stored: string): StoredContent | null {
+  try {
+    const parsed = JSON.parse(stored) as { v?: number; content?: Partial<StoredContent> };
+    const content = parsed?.v === 1 ? parsed.content : undefined;
+    if (!content) return null;
+    if (content.lane !== "core" && content.lane !== "go_further" && content.lane !== "review") return null;
+    if (content.difficulty !== 1 && content.difficulty !== 2 && content.difficulty !== 3) return null;
+    const answer = content.answer;
+    return {
+      itemId: typeof content.itemId === "string" ? content.itemId : null,
+      lane: content.lane,
+      difficulty: content.difficulty,
+      answer: answer && typeof answer === "object" ? (answer as Record<string, unknown>) : {},
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function withAttemptMark(stored: string, mark: AttemptMark): string {
   const { answer, steps } = unpackStoredAnswer(stored);
   const plan = readStoredPlan(stored);
+  const content = readStoredContent(stored);
   return JSON.stringify({
     v: 1,
     answer,
     steps,
     ...(plan.kind ? { kind: plan.kind } : {}),
     ...(plan.rollbackSkillId ? { rollbackSkillId: plan.rollbackSkillId } : {}),
+    ...(content ? { content } : {}),
     mark,
   });
 }

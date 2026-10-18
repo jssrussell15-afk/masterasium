@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import { IntroModal } from "@/components/intro-modal";
+import { PlaceToStop } from "@/components/place-to-stop";
 import { QuestionPractice } from "@/components/question-practice";
+import { contentFlagsEnabled } from "@/lib/content/flag";
 import { Scratchpad } from "@/components/scratchpad";
 import { logPracticeEvent, markIntroSeen, practiceAction } from "@/lib/practice/actions";
 import { PRACTICE_SET_SIZE } from "@/lib/practice/feedback";
@@ -100,6 +102,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           {state.error}
         </p>
       ) : null}
+      <PlaceToStop minutes={view.setLengthMinutes ?? 15} />
       {showingIntro && intro && card ? (
         <IntroModal
           key={introToken}
@@ -137,6 +140,12 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           action={action}
           fields={fields}
           onElapsed={stampElapsed}
+          report={{
+            enabled: contentFlagsEnabled(),
+            childId: view.childId,
+            skillId: question.skillId,
+            itemId: question.contentItemId ?? null,
+          }}
         />
       )}
     </div>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
+import { SomethingLooksWrong } from "@/components/something-looks-wrong";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -32,6 +33,7 @@ export function QuestionPractice({
   action,
   fields = [],
   onElapsed,
+  report = null,
 }: {
   questionId: string;
   eyebrow: string;
@@ -55,6 +57,7 @@ export function QuestionPractice({
   action?: (formData: FormData) => void;
   fields?: { name: string; value: string }[];
   onElapsed?: (form: HTMLFormElement) => void;
+  report?: { enabled: boolean; childId: string; skillId: string; itemId?: string | null } | null;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
   const [hintOpen, setHintOpen] = useState(false);
@@ -122,11 +125,23 @@ export function QuestionPractice({
         {responseHint ? <p className="hint">{responseHint}</p> : null}
         {phase === "answering" ? <AssistedPrompt assist={assist} /> : null}
         {guideSteps.length > 0 && phase === "answering" ? (
-          <ol className="guide-steps">
-            {guideSteps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
+          <div className="walk-card">
+            <ol className="guide-steps">
+              {guideSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+            {report ? (
+              <SomethingLooksWrong
+                enabled={report.enabled}
+                surface="walkthrough"
+                childId={report.childId}
+                skillId={report.skillId}
+                itemId={report.itemId}
+                prompt={prompt}
+              />
+            ) : null}
+          </div>
         ) : null}
         {showHint && hint ? <p className="inline-help">{hint}</p> : null}
         {exampleOpen && example ? <WorkedExampleBlock example={example} /> : null}
@@ -150,6 +165,16 @@ export function QuestionPractice({
               <p>
                 The answer is <strong>{expected}</strong>.
               </p>
+            ) : null}
+            {report ? (
+              <SomethingLooksWrong
+                enabled={report.enabled}
+                surface="explanation"
+                childId={report.childId}
+                skillId={report.skillId}
+                itemId={report.itemId}
+                prompt={prompt}
+              />
             ) : null}
           </div>
         ) : null}
@@ -208,6 +233,16 @@ export function QuestionPractice({
             </form>
           </div>
         )}
+        {report ? (
+          <SomethingLooksWrong
+            enabled={report.enabled}
+            surface="question"
+            childId={report.childId}
+            skillId={report.skillId}
+            itemId={report.itemId}
+            prompt={prompt}
+          />
+        ) : null}
       </section>
       {aside}
       </div>

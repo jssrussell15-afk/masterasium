@@ -9,6 +9,7 @@ import { Shell } from "@/components/site-header";
 import { MasteryMark } from "@/components/mastery-mark";
 import { ParentCanDoSummary } from "@/components/can-do-list";
 import { MoveAheadSetting } from "@/components/move-ahead-setting";
+import { SetLengthSetting } from "@/components/set-length-setting";
 import { ParentProgressView } from "@/components/parent-progress";
 import { loadCanDo } from "@/lib/can-do/load";
 import { loadRoster, type RosterChild } from "@/lib/children/roster";
@@ -174,6 +175,7 @@ async function ChildCard({
       />
       <LearningStatus practicedToday={log.attempts.some((attempt) => attempt.date === today)} />
       <MoveAheadSetting childId={child.id} enabled={child.moveAhead} />
+      <SetLengthSetting childId={child.id} minutes={child.setLengthMinutes} />
       <ChildCanDo
         childId={child.id}
         grade={working}

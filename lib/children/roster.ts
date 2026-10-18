@@ -5,6 +5,7 @@ import {
   isStudentLoginMissing,
 } from "@/lib/db-error";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
+import { setLengthMinutes } from "@/lib/practice/set-length";
 
 export type RosterChild = {
   id: string;
@@ -15,6 +16,7 @@ export type RosterChild = {
   nextUnlocked: boolean;
   requestedGrade: number | null;
   moveAhead: boolean;
+  setLengthMinutes: number;
 };
 
 type BasicRow = {
@@ -47,7 +49,25 @@ function asRoster(row: BasicRow, extra?: ExtraRow): RosterChild {
     nextUnlocked: access?.nextUnlocked ?? false,
     requestedGrade: access?.requested ?? null,
     moveAhead: false,
+    setLengthMinutes: 15,
   };
+}
+
+async function withSetLength(
+  supabase: SupabaseClient,
+  parentId: string,
+  children: RosterChild[],
+): Promise<RosterChild[]> {
+  if (children.length === 0) return children;
+  const extra = await supabase.from("children").select("id, set_length_minutes").eq("parent_id", parentId);
+  if (extra.error || !extra.data) return children;
+  const lengths = new Map(
+    (extra.data as { id: string; set_length_minutes?: number | null }[]).map((row) => [
+      row.id,
+      setLengthMinutes(row.set_length_minutes),
+    ]),
+  );
+  return children.map((child) => ({ ...child, setLengthMinutes: lengths.get(child.id) ?? 15 }));
 }
 
 async function withMoveAhead(
@@ -92,10 +112,14 @@ export async function loadRoster(
   if (!extra.error) {
     const byId = new Map(((extra.data ?? []) as ExtraRow[]).map((row) => [row.id, row]));
     return {
-      children: await withMoveAhead(
+      children: await withSetLength(
         supabase,
         parentId,
-        basics.map((row) => asRoster(row, byId.get(row.id))),
+        await withMoveAhead(
+          supabase,
+          parentId,
+          basics.map((row) => asRoster(row, byId.get(row.id))),
+        ),
       ),
       error: null,
       studentSetup: null,
@@ -132,10 +156,14 @@ export async function loadRoster(
   for (const row of progressRows) byId.set(row.id, { ...byId.get(row.id), ...row });
 
   return {
-    children: await withMoveAhead(
+    children: await withSetLength(
       supabase,
       parentId,
-      basics.map((row) => asRoster(row, byId.get(row.id))),
+      await withMoveAhead(
+        supabase,
+        parentId,
+        basics.map((row) => asRoster(row, byId.get(row.id))),
+      ),
     ),
     error: null,
     studentSetup: names?.error && isStudentLoginMissing(names.error) ? friendlyDbError(names.error) : studentSetup,

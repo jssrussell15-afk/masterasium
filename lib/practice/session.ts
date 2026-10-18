@@ -14,8 +14,16 @@ import { planNextQuestion } from "@/lib/practice/learning";
 import { readLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
 import type { AttemptPoint } from "@/lib/practice/portrait";
+import { findPublishedItem, questionFromItem } from "@/lib/content/serve";
 import { getItemSource } from "@/lib/practice/source";
-import { packStoredAnswer, readAttemptMark, readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import {
+  packStoredAnswer,
+  readAttemptMark,
+  readStoredContent,
+  readStoredPlan,
+  unpackStoredAnswer,
+  type StoredContent,
+} from "@/lib/practice/stored-answer";
 import {
   accuracyScheduler,
   emptyCard,
@@ -187,9 +195,21 @@ async function persistQuestion(
   const removed = await supabase.from("pending_questions").delete().eq("child_id", childId);
   if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
 
-  const generated: Question = intro
-    ? nearTransfer(skill, Math.random, { small: plan.small })
-    : getItemSource("generated").next(skill, Math.random, { small: plan.small });
+  const lane = plan.kind === "review" ? "review" : "core";
+  const published = intro ? null : await findPublishedItem(supabase, skill.id, lane);
+  const generated: Question = published
+    ? questionFromItem(skill.id, published, skill.responseHint)
+    : intro
+      ? nearTransfer(skill, Math.random, { small: plan.small })
+      : getItemSource("generated").next(skill, Math.random, { small: plan.small });
+  const content: StoredContent | null = published
+    ? {
+        itemId: published.id,
+        lane: published.lane,
+        difficulty: published.difficulty,
+        answer: { expected: generated.answer, parts: published.template.slots },
+      }
+    : null;
 
   const { data, error } = await supabase
     .from("pending_questions")
@@ -200,6 +220,7 @@ async function persistQuestion(
       answer: packStoredAnswer(generated.answer, generated.steps, {
         kind: plan.kind,
         rollbackSkillId: plan.rollbackSkillId,
+        ...(content ? { content } : {}),
       }),
     })
     .select("id, skill_id, prompt, answer")
@@ -213,20 +234,19 @@ async function persistQuestion(
   }
 
   const row = data as PendingRow;
-  return {
-    question: presentQuestion(
-      row.id,
-      skill,
-      generated.prompt,
-      generated.answer,
-      generated.steps,
-      plan.kind,
-      cards,
-      intro,
-      null,
-    ),
-    error: null,
-  };
+  const question = presentQuestion(
+    row.id,
+    skill,
+    generated.prompt,
+    generated.answer,
+    generated.steps,
+    plan.kind,
+    cards,
+    intro,
+    null,
+  );
+  if (content?.itemId) question.contentItemId = content.itemId;
+  return { question, error: null };
 }
 
 export async function issueQuestion(
@@ -301,20 +321,19 @@ export async function loadOrIssueQuestion(
         intro,
       );
     }
-    return {
-      question: presentQuestion(
-        existing.id,
-        skill,
-        existing.prompt,
-        unpacked.answer,
-        unpacked.steps,
-        kind,
-        cards,
-        null,
-        readAttemptMark(existing.answer),
-      ),
-      error: null,
-    };
+    const question = presentQuestion(
+      existing.id,
+      skill,
+      existing.prompt,
+      unpacked.answer,
+      unpacked.steps,
+      kind,
+      cards,
+      null,
+      readAttemptMark(existing.answer),
+    );
+    question.contentItemId = readStoredContent(existing.answer)?.itemId ?? null;
+    return { question, error: null };
   }
 
   return issueQuestion(supabase, childId, grade, cards);

@@ -2313,3 +2313,132 @@ html:has(.question-screen) .site-footer {
   height: 1.5rem;
   accent-color: var(--sage, #3f6b4e);
 }
+
+.set-length-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.set-length-option {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 48px;
+  font-weight: 650;
+}
+
+.place-to-stop {
+  margin: 0 0 0.75rem;
+}
+
+.quiet-flag {
+  margin-top: 0.35rem;
+  min-height: 48px;
+  padding: 0.35rem 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  text-decoration: underline;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.quiet-flag-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+}
+
+.quiet-flag-sent {
+  margin: 0.35rem 0 0;
+}
+
+.content-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.content-filters label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+
+.content-filters select,
+.content-admin textarea,
+.content-admin input[type="text"],
+.content-admin input:not([type="hidden"]):not([type="radio"]):not([type="checkbox"]) {
+  min-height: 2.4rem;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.55rem;
+  background: white;
+}
+
+.content-admin-main {
+  display: grid;
+  gap: 1rem;
+  align-items: start;
+}
+
+.content-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.content-table th {
+  text-align: left;
+  font-weight: 650;
+  padding: 0.45rem 0.35rem;
+}
+
+.content-table td {
+  padding: 0.35rem;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.content-table tr[data-selected="true"] {
+  background: #f3f6f3;
+}
+
+.content-row {
+  background: none;
+  border: 0;
+  padding: 0.4rem 0;
+  font-weight: 700;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.content-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.flag-list {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+
+.flag-row {
+  display: grid;
+  gap: 0.3rem;
+}
+
+@media (min-width: 960px) {
+  .content-admin-main {
+    grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.85fr);
+  }
+}

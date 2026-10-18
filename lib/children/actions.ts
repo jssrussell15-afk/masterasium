@@ -389,3 +389,26 @@ export async function setMoveAhead(_previous: ChildState, formData: FormData): P
   }
   redirect("/dashboard");
 }
+
+export async function setPracticeLength(_previous: ChildState, formData: FormData): Promise<ChildState> {
+  const { supabase } = await requireUser();
+  const childId = String(formData.get("childId") ?? "");
+  const minutes = Number(formData.get("minutes"));
+  if (!childId) return { error: "Choose a child first." };
+  if (minutes !== 10 && minutes !== 15 && minutes !== 20) {
+    return { error: "Practice length is 10, 15, or 20 minutes." };
+  }
+
+  const { error } = await supabase.rpc("set_practice_length", {
+    p_child_id: childId,
+    p_minutes: minutes,
+  });
+  if (error) {
+    const message = error.message.toLowerCase();
+    if (message.includes("set_practice_length") || message.includes("set_length_minutes")) {
+      return { error: "Practice length is not ready yet." };
+    }
+    return { error: friendlyDbError(error) };
+  }
+  redirect("/dashboard");
+}
