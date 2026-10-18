@@ -1016,39 +1016,14 @@ body:has(dialog[open]) {
   outline-offset: 3px;
 }
 
-.pill-row a[aria-current="page"] {
-  background: #d3ebf7;
-  border: 2px solid var(--blue);
-  color: var(--ink);
+.pill-row span[aria-disabled="true"] {
+  opacity: 0.45;
 }
 
 .pill-soon {
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 650;
-}
-
-.segmented {
-  display: inline-flex;
-  gap: 0.25rem;
-  padding: 0.2rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: rgb(255 255 255 / 70%);
-}
-
-.segmented a {
-  min-height: 44px;
-  border-radius: 999px;
-  padding: 0.45rem 0.9rem;
-  color: var(--ink);
-  font-weight: 650;
-  text-decoration: none;
-}
-
-.segmented a[aria-current="page"] {
-  background: #d3ebf7;
-  border: 2px solid var(--blue);
 }
 
 .code-chip {
@@ -1125,11 +1100,6 @@ body:has(dialog[open]) {
 
 .strand-subhead {
   padding-bottom: 0;
-}
-
-.pill-row span[aria-disabled="true"] {
-  color: var(--muted);
-  cursor: default;
 }
 
 .pill-row button {
