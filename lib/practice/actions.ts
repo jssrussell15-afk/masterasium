@@ -29,6 +29,7 @@ import { isSupportedGrade } from "@/lib/grades";
 import { friendlyDbError } from "@/lib/db-error";
 import { requireStudent } from "@/lib/auth/student";
 import { gradeAccessFrom, gradeIsOpen, type GradeAccess } from "@/lib/practice/grade-access";
+import { nextUpFor } from "@/lib/practice/move-ahead-load";
 
 type PendingAnswer = {
   id: string;
@@ -302,16 +303,24 @@ async function advancePractice(
     updatedCards = replaceCard(updatedCards, applied.extra);
   }
   const questionSkill = skillById(question.skill_id);
+  const nextUp = await nextUpFor(supabase, childId, access.working, updatedCards);
+  const stayOnNext = nextUp.some((skill) => skill.id === question.skill_id);
   const scheduleGrade =
-    coach && questionSkill && isSupportedGrade(questionSkill.grade)
+    stayOnNext && questionSkill && isSupportedGrade(questionSkill.grade)
       ? questionSkill.grade
-      : access.working;
+      : coach && questionSkill && isSupportedGrade(questionSkill.grade)
+        ? questionSkill.grade
+        : access.working;
   const issued = await issueQuestion(
     supabase,
     childId,
     scheduleGrade,
     updatedCards,
-    coach ? { skillId: question.skill_id, small: true } : undefined,
+    stayOnNext
+      ? { skillId: question.skill_id, explicit: true }
+      : coach
+        ? { skillId: question.skill_id, small: true }
+        : undefined,
   );
   if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
 
@@ -430,6 +439,31 @@ export async function startSkill(_previous: StartState, formData: FormData): Pro
   if (result.requestNote && !result.next) return { note: result.requestNote };
   if (result.error && !result.next) return { error: result.error };
   if (!childId) return { error: "Choose a skill to practice." };
+  redirect(`/practice/${childId}`);
+}
+
+/** Opens a next-grade skill without moving the working grade or showing a grade label. */
+export async function startNextUp(_previous: StartState, formData: FormData): Promise<StartState> {
+  const childId = String(formData.get("childId") ?? "");
+  const skillId = String(formData.get("skillId") ?? "");
+  if (!childId || !skillId) return { error: "Choose a skill to practice." };
+
+  const owned = await ownedChild(childId);
+  if ("error" in owned) return { error: owned.error };
+  const { supabase, access } = owned;
+  const skill = skillById(skillId);
+  if (!skill || !isSupportedGrade(skill.grade)) return { error: "That skill is not available." };
+
+  const { cards, error: cardError } = await loadCards(supabase, childId);
+  if (cardError) return { error: cardError };
+  const open = await nextUpFor(supabase, childId, access.working, cards);
+  if (!open.some((item) => item.id === skillId)) return { error: "That skill is not open." };
+
+  const issued = await issueQuestion(supabase, childId, skill.grade, cards, {
+    skillId,
+    explicit: true,
+  });
+  if (!issued.question) return { error: issued.error ?? "Could not load that skill." };
   redirect(`/practice/${childId}`);
 }
 

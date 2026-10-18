@@ -6,7 +6,9 @@ import { Shell } from "@/components/site-header";
 import { requireStudent } from "@/lib/auth/student";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
+import { nextUpFor } from "@/lib/practice/move-ahead-load";
 import { loadCards, loadOrIssueQuestion } from "@/lib/practice/session";
+import { skillById } from "@/lib/practice/skills";
 
 export default function PracticePage(props: PageProps<"/practice/[childId]">) {
   return (
@@ -44,7 +46,18 @@ async function PracticeLoader({
   const { cards, error: cardError } = await loadCards(supabase, data.id);
   if (cardError) return <p className="feedback bad mt-8">{cardError}</p>;
 
-  const issued = await loadOrIssueQuestion(supabase, data.id, access.working, cards);
+  const nextUp = await nextUpFor(supabase, data.id, access.working, cards);
+  const pending = await supabase
+    .from("pending_questions")
+    .select("skill_id")
+    .eq("child_id", data.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const pendingSkill = pending.data?.skill_id ? skillById(String(pending.data.skill_id)) : undefined;
+  const practiceGrade =
+    pendingSkill && nextUp.some((skill) => skill.id === pendingSkill.id) ? pendingSkill.grade : access.working;
+  const issued = await loadOrIssueQuestion(supabase, data.id, practiceGrade, cards);
   if (!issued.question) {
     return <p className="feedback bad mt-8">{issued.error}</p>;
   }

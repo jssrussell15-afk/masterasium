@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { DashboardWidget } from "@/components/dashboard-widget";
 import { TopicPicker } from "@/components/topic-picker";
-import { startSkill, type StartState } from "@/lib/practice/actions";
+import { startNextUp, startSkill, type StartState } from "@/lib/practice/actions";
 import type { GradeAccess } from "@/lib/practice/grade-access";
 import type { StudentHome, HomeSkill } from "@/lib/practice/home";
 import type { SkillProgress } from "@/lib/practice/types";
@@ -20,6 +20,7 @@ export function StudentDashboard({
   skills,
   access,
   requestedGrade,
+  nextUp = [],
 }: {
   childId: string;
   childName: string;
@@ -28,8 +29,10 @@ export function StudentDashboard({
   skills: SkillProgress[];
   access: GradeAccess;
   requestedGrade: SupportedGrade | null;
+  nextUp?: { id: string; title: string }[];
 }) {
   const [state, action, pending] = useActionState(startSkill, initial);
+  const [nextState, nextAction, nextPending] = useActionState(startNextUp, initial);
 
   return (
     <div className="practice-home mt-4 grid gap-4">
@@ -49,6 +52,30 @@ export function StudentDashboard({
         <p className="feedback bad" role="alert">
           {state.error}
         </p>
+      ) : null}
+      {nextState.error ? (
+        <p className="feedback bad" role="alert">
+          {nextState.error}
+        </p>
+      ) : null}
+      {nextUp.length > 0 ? (
+        <section className="card dash-widget" aria-label="Next up">
+          <h2>Next up</h2>
+          <ul className="skill-taps">
+            {nextUp.map((skill) => (
+              <li key={skill.id}>
+                <form action={nextAction}>
+                  <input type="hidden" name="childId" value={childId} />
+                  <input type="hidden" name="skillId" value={skill.id} />
+                  <button className="skill-tap" type="submit" disabled={nextPending || pending}>
+                    <span>{skill.title}</span>
+                    <span className="hint">Next up</span>
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </section>
       ) : null}
       <DashboardWidget title="Assigned" empty="Nothing else is waiting in this grade.">
         {home.assigned.length > 0 ? (

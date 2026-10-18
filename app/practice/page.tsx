@@ -6,6 +6,7 @@ import { requireStudent } from "@/lib/auth/student";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { studentHome } from "@/lib/practice/home";
+import { nextUpFor } from "@/lib/practice/move-ahead-load";
 import { describeCatalog } from "@/lib/practice/scheduler";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
@@ -48,6 +49,7 @@ async function StudentHomeLoader() {
     attempts: log.attempts,
     today: torontoDate(),
   });
+  const nextUp = await nextUpFor(supabase, child.id, access.working, cards);
 
   return (
     <StudentDashboard
@@ -58,6 +60,7 @@ async function StudentHomeLoader() {
       skills={describeCatalog(access, cards)}
       access={access}
       requestedGrade={access.requested}
+      nextUp={nextUp}
     />
   );
 }

@@ -8,6 +8,7 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { MasteryMark } from "@/components/mastery-mark";
 import { ParentCanDoSummary } from "@/components/can-do-list";
+import { MoveAheadSetting } from "@/components/move-ahead-setting";
 import { ParentProgressView } from "@/components/parent-progress";
 import { loadCanDo } from "@/lib/can-do/load";
 import { loadRoster, type RosterChild } from "@/lib/children/roster";
@@ -172,6 +173,7 @@ async function ChildCard({
         saved={pinSaved}
       />
       <LearningStatus practicedToday={log.attempts.some((attempt) => attempt.date === today)} />
+      <MoveAheadSetting childId={child.id} enabled={child.moveAhead} />
       <ChildCanDo
         childId={child.id}
         grade={working}

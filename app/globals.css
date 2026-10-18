@@ -2297,3 +2297,19 @@ html:has(.question-screen) .site-footer {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+.move-ahead {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.move-ahead input {
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--sage, #3f6b4e);
+}
