@@ -182,16 +182,30 @@ a {
   position: absolute;
   top: 50%;
   right: 0.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 44px;
+  min-width: 44px;
   height: 44px;
+  min-height: 44px;
   transform: translateY(-50%);
   border: 0;
   border-radius: 0.7rem;
   background: transparent;
   color: var(--blue);
   padding: 0;
-  font-size: 0.85rem;
-  font-weight: 650;
+}
+
+.password-toggle:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.password-eye {
+  display: block;
+  width: 1.35rem;
+  height: 1.35rem;
 }
 
 .field textarea {
@@ -572,13 +586,6 @@ a {
   gap: 0.75rem;
 }
 
-.streak-row {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-}
-
 .streak {
   display: inline-flex;
   align-items: center;
@@ -591,13 +598,6 @@ a {
 .streak svg {
   width: 1rem;
   height: 1rem;
-}
-
-.streak-milestone {
-  margin: 0;
-  color: var(--ink);
-  font-size: 0.95rem;
-  animation: fade-note 4s ease forwards;
 }
 
 .assist,
@@ -735,9 +735,57 @@ a {
   }
 }
 
-/* Auth screens below 640px: slim header, text-3xl heading, tighter card. */
+/* Auth screens below 640px: slim header, text-3xl heading, tighter card.
+   The slim link stays available at every width when it is the only header action,
+   so student sign-in is not a dead end on a tablet. */
 .auth-slim {
   display: none;
+}
+
+.header-home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.35rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-home:hover {
+  color: var(--blue);
+}
+
+.student-entry {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.35rem;
+  color: var(--blue);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.student-entry:hover {
+  color: var(--ink);
+}
+
+.site-footer {
+  margin-top: auto;
+  padding: 0.5rem 1.5rem 1.75rem;
+  color: var(--muted);
+  text-align: center;
+  font-size: 0.95rem;
+}
+
+.site-footer p {
+  margin: 0;
 }
 
 @media (max-width: 639px) {
@@ -778,6 +826,20 @@ a {
   html:has(.auth-screen) h1.display {
     font-size: var(--text-3xl, 1.875rem);
     letter-spacing: normal;
+  }
+}
+
+@media (min-width: 640px) {
+  html:has(.auth-screen) header nav:not(:has(.btn)) .auth-slim {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--blue);
+    font-size: 1rem;
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
   }
 }
 
@@ -867,25 +929,25 @@ body:has(dialog[open]) {
   overflow: hidden;
 }
 
-@keyframes fade-note {
-  0% { opacity: 0; }
-  12% { opacity: 1; }
-  70% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .streak-milestone {
-    animation: none;
-  }
-}
-
 .switch-bar {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.75rem 1.25rem;
+}
+
+.province-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
+.province-soon {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .pill-row {
@@ -917,9 +979,21 @@ body:has(dialog[open]) {
 }
 
 .pill-row a[aria-pressed="true"] {
-  background: white;
-  color: var(--ink);
+  background: var(--blue);
+  color: white;
   border-color: var(--blue);
+  font-weight: 800;
+}
+
+.pill-row a[aria-pressed="true"]::before {
+  content: "✓";
+  margin-right: 0.28rem;
+}
+
+.pill-row a:focus-visible,
+.pill-row button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .pill-row span[aria-disabled="true"] {
@@ -947,19 +1021,37 @@ body:has(dialog[open]) {
 }
 
 .grade-picks button {
+  position: relative;
   width: 100%;
   min-width: 60px;
   min-height: 60px;
   padding: 0;
   border-width: 2px;
   font-size: 20px;
+  font-weight: 700;
   color: var(--ink);
+}
+
+.grade-picks button:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
 }
 
 .grade-picks button[aria-checked="true"] {
   border-color: var(--blue);
-  background: #d3ebf7;
+  background: var(--blue);
+  color: white;
+  font-weight: 800;
   box-shadow: none;
+}
+
+.grade-pick-check {
+  position: absolute;
+  top: 0.28rem;
+  right: 0.42rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 /* Signup confirmation card. Stacked choices, full width, no motion. */

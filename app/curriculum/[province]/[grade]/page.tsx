@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CurriculumSwitch } from "@/components/curriculum-switch";
+import { sessionChrome } from "@/components/header-auth";
 import { SampleRequest } from "@/components/sample-request";
 import { Shell } from "@/components/site-header";
 import { curriculumOverview } from "@/lib/curriculum/overview";
@@ -36,9 +37,10 @@ export default async function CurriculumPage({ params }: { params: Promise<Route
   const page = curriculumOverview(province, gradeSlug);
   if (!page) notFound();
   const skills = page.strands.flatMap((strand) => strand.skills);
+  const chrome = await sessionChrome();
 
   return (
-    <Shell>
+    <Shell {...chrome}>
       <div className="mt-6 grid gap-6">
         <CurriculumSwitch province={page.province.slug} grade={page.grade} />
         <div>
@@ -72,7 +74,7 @@ export default async function CurriculumPage({ params }: { params: Promise<Route
             skills={skills}
           />
           <Link href="/signup" className="btn btn-primary">
-            Start free trial
+            Create a parent account
           </Link>
         </div>
       </div>

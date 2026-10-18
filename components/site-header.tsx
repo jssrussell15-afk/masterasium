@@ -20,11 +20,21 @@ export function SiteHeader({
         Masterasium
       </Link>
       <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:justify-end">
+        {links.length === 0 ? (
+          <Link href={homeHref ?? homeFor(role)} className="header-home">
+            Home
+          </Link>
+        ) : null}
         {links.map((link) => (
           <Link key={link.href} href={link.href} className="nav-link">
             {link.label}
           </Link>
         ))}
+        {role === "public" ? (
+          <Link href="/login?as=student" className="student-entry">
+            Student sign in
+          </Link>
+        ) : null}
         {action === undefined ? (
           <Link href="/login" className="btn btn-primary">
             Sign in
@@ -68,6 +78,9 @@ export function Shell({
       >
         {children}
       </main>
+      <footer className="site-footer">
+        <p>Practice is free while we test.</p>
+      </footer>
     </>
   );
   if (!slimLink) return screen;

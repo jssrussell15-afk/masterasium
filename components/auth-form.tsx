@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, type FormEvent, type MouseEvent, type ReactNode } from "react";
+import { PasswordField } from "@/components/password-field";
 import { signIn, signUp, type AuthState } from "@/lib/auth/actions";
 import {
   authSummary,
@@ -18,7 +19,6 @@ const FIELD_ORDER = ["email", "password"] as const;
 export function AuthForm({ mode, before }: { mode: "sign-in" | "sign-up"; before?: ReactNode }) {
   const action = mode === "sign-in" ? signIn : signUp;
   const [state, formAction, pending] = useActionState(action, initial);
-  const [passwordVisible, setPasswordVisible] = useState(false);
   const [clientErrors, setClientErrors] = useState<FieldErrors>({});
   const [useClient, setUseClient] = useState(false);
   const [clientTick, setClientTick] = useState(0);
@@ -90,54 +90,15 @@ export function AuthForm({ mode, before }: { mode: "sign-in" | "sign-up"; before
           />
           <FieldError id="auth-email-error" message={emailError} />
         </div>
-        {mode === "sign-up" ? (
-          <div className="field">
-            <label htmlFor={passwordId}>Password</label>
-            <div className="password-field">
-              <input
-                id={passwordId}
-                name="password"
-                type={passwordVisible ? "text" : "password"}
-                autoComplete="new-password"
-                minLength={8}
-                required
-                aria-invalid={passwordError ? true : undefined}
-                aria-describedby={fieldDescribedBy("signup-password-error", passwordError, [
-                  "signup-password-hint",
-                ])}
-                onInvalid={onInvalid}
-              />
-              <button
-                type="button"
-                className="password-toggle"
-                aria-pressed={passwordVisible}
-                onClick={() => setPasswordVisible((current) => !current)}
-              >
-                {passwordVisible ? "Hide" : "Show"}
-              </button>
-            </div>
-            <FieldError id="signup-password-error" message={passwordError} />
-            <p id="signup-password-hint" className="hint">
-              At least 8 characters
-            </p>
-          </div>
-        ) : (
-          <div className="field">
-            <label htmlFor={passwordId}>Password</label>
-            <input
-              id={passwordId}
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              minLength={8}
-              required
-              aria-invalid={passwordError ? true : undefined}
-              aria-describedby={fieldDescribedBy("auth-password-error", passwordError)}
-              onInvalid={onInvalid}
-            />
-            <FieldError id="auth-password-error" message={passwordError} />
-          </div>
-        )}
+        <PasswordField
+          id={passwordId}
+          autoComplete={mode === "sign-up" ? "new-password" : "current-password"}
+          errorId={mode === "sign-up" ? "signup-password-error" : "auth-password-error"}
+          error={passwordError}
+          hintId={mode === "sign-up" ? "signup-password-hint" : undefined}
+          hint={mode === "sign-up" ? "At least 8 characters" : undefined}
+          onInvalid={onInvalid}
+        />
         <button className="btn btn-primary" type="submit" disabled={pending} onClick={onSubmitClick}>
           {pending ? "Please wait…" : mode === "sign-in" ? "Sign in" : "Create free account"}
         </button>

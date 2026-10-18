@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SetPinForm } from "@/components/student-access-forms";
-import { StudentLoginForm } from "@/components/student-login-form";
+import { pinDigitAnnouncement, StudentLoginForm } from "@/components/student-login-form";
 
 describe("Set PIN", () => {
   it("asks for a numeric PIN and does not ask for a username", () => {
@@ -40,7 +40,39 @@ describe("Set PIN", () => {
     expect(html).not.toContain('name="username"');
     expect(html).not.toContain(">Username<");
     expect(html).not.toContain(">First name<");
+    expect(html).not.toContain("No student is saved on this tablet yet.");
     expect(html).not.toContain("streak");
     expect(html).not.toContain("points");
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("0 of 6 digits entered");
+    expect(pinDigitAnnouncement(2)).toBe("2 of 6 digits entered");
+    expect(pinDigitAnnouncement(4)).toBe("4 of 6 digits entered");
+  });
+
+  it("asks for a first name and PIN when the tablet has no saved student", () => {
+    const html = renderToStaticMarkup(createElement(StudentLoginForm, { students: [] }));
+    expect(html).toContain("First time on this tablet? Ask a grown-up to sign in and tap Start practice.");
+    expect(html).toContain(">First name<");
+    expect(html).toContain('id="student-name"');
+    expect(html).toContain('name="firstName"');
+    expect(html).toContain('class="pin-pad"');
+    expect(html).toContain(">Start practice<");
+    expect(html).toContain('aria-live="polite"');
+    expect(html).not.toContain("No student is saved on this tablet yet.");
+    expect(html).not.toContain('name="username"');
+  });
+
+  it("shows PIN saved beside the form after a PIN is stored", () => {
+    const html = renderToStaticMarkup(
+      createElement(SetPinForm, {
+        childId: "child-1",
+        firstName: "Sam",
+        hasLogin: true,
+        returnTo: "dashboard",
+        saved: true,
+      }),
+    );
+    expect(html).toContain("PIN saved");
+    expect(html).toContain('role="status"');
   });
 });

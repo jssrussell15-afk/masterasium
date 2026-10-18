@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AddChildForm } from "@/components/add-child-form";
+import { StartPracticeButton } from "@/components/start-practice-button";
 import { SetPinForm } from "@/components/student-access-forms";
 import { DigestPanel } from "@/components/digest-panel";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -95,7 +96,7 @@ async function Desk({
       ) : (
         <div className="grid gap-4">
           {children.map((child) => (
-            <ChildCard key={child.id} child={child} supabase={supabase} />
+            <ChildCard key={child.id} child={child} supabase={supabase} pinSaved={notice === "pin"} />
           ))}
         </div>
       )}
@@ -108,9 +109,11 @@ async function Desk({
 async function ChildCard({
   child,
   supabase,
+  pinSaved,
 }: {
   child: RosterChild;
   supabase: SupabaseClient;
+  pinSaved: boolean;
 }) {
   const working = isSupportedGrade(child.workingGrade) ? child.workingGrade : null;
   if (!isSupportedGrade(child.grade) || !working) {
@@ -118,11 +121,13 @@ async function ChildCard({
       <article className="card grid gap-3">
         <h2 className="text-2xl font-semibold">{child.first_name}</h2>
         <p className="hint mt-2">Grade {child.grade} is not open yet.</p>
+        <StartPracticeButton childId={child.id} />
         <SetPinForm
           childId={child.id}
           firstName={child.first_name}
           hasLogin={Boolean(child.username)}
           returnTo="dashboard"
+          saved={pinSaved}
         />
       </article>
     );
@@ -167,11 +172,13 @@ async function ChildCard({
           Asked to work in Grade {child.requestedGrade}. Approve it in account settings.
         </p>
       ) : null}
+      <StartPracticeButton childId={child.id} />
       <SetPinForm
         childId={child.id}
         firstName={child.first_name}
         hasLogin={Boolean(child.username)}
         returnTo="dashboard"
+        saved={pinSaved}
       />
       {isSimpleDesk(working) ? (
         <SimpleProgress

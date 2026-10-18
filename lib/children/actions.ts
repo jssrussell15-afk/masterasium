@@ -2,6 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { clearSupabaseSession } from "@/lib/auth/clear-session";
 import {
   SIGNUP_PRACTICE_COOKIE,
   STUDENT_COOKIE,
@@ -27,6 +28,7 @@ import {
 } from "@/lib/children/tablet";
 import { storedUsername } from "@/lib/children/username";
 import {
+  childFirstNameError,
   isValidFirstName,
   isValidPin,
   isValidUsername,
@@ -73,9 +75,8 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
   const grade = Number(formData.get("grade"));
   const pin = pinFields(formData);
 
-  if (!isValidFirstName(firstName)) {
-    return { error: "Use a first name, up to 40 letters." };
-  }
+  const nameError = childFirstNameError(firstName);
+  if (nameError) return { error: nameError };
   if (!isSupportedGrade(grade)) {
     return { error: "Choose a grade from 1 to 8." };
   }
@@ -112,9 +113,8 @@ export async function addSignupChild(
   const firstName = normalizeFirstName(String(formData.get("firstName") ?? ""));
   const grade = Number(formData.get("grade"));
 
-  if (!isValidFirstName(firstName) || firstName.length > 30) {
-    return { error: "Use a first name, up to 30 letters." };
-  }
+  const nameError = childFirstNameError(firstName);
+  if (nameError) return { error: nameError };
   if (!isSupportedGrade(grade)) {
     return { error: "Choose a grade from 1 to 8." };
   }
@@ -154,16 +154,43 @@ export async function startSignupPractice(
   }
 
   const { supabase } = await requireUser();
-  const { data, error } = await supabase.from("children").select("id").eq("id", childId).maybeSingle();
+  const { data, error } = await supabase
+    .from("children")
+    .select("id, first_name")
+    .eq("id", childId)
+    .maybeSingle();
   if (error) return { error: friendlyDbError(error) };
   if (!data) return { error: "That child is not on this account." };
 
+  const firstName = normalizeFirstName(String(data.first_name ?? ""));
+  if (isValidFirstName(firstName)) {
+    const next = rememberChild(readRememberedChildren(store.get(TABLET_CHILDREN_COOKIE)?.value), {
+      id: data.id,
+      firstName,
+    });
+    store.set(
+      TABLET_CHILDREN_COOKIE,
+      writeRememberedChildren(next),
+      studentCookieOptions(TABLET_CHILDREN_MAX_AGE),
+    );
+  }
+
   const previous = await readStudentToken();
-  await supabase.auth.signOut();
+  await clearSupabaseSession();
   await revokeStudentToken(previous);
   store.set(STUDENT_COOKIE, handoff.token, studentCookieOptions());
   store.set(SIGNUP_PRACTICE_COOKIE, "", studentCookieOptions(0));
   redirect(signupPracticePath(childId));
+}
+
+/** Saves this child on the device, then opens student sign-in for their name and PIN. */
+export async function startPracticeOnDevice(
+  previous: TabletState,
+  formData: FormData,
+): Promise<TabletState> {
+  const saved = await rememberTabletChild(previous, formData);
+  if (saved.error || !saved.remembered) return saved;
+  redirect("/login?as=student");
 }
 
 export type TabletState = {

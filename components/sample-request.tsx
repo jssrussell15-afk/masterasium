@@ -74,8 +74,8 @@ export function SampleRequest({
         ) : (
           <form action={action} className="mt-4 grid gap-3">
             <p className="hint text-sm">
-              Enter your email and agree to hear from us. Then the Grade {grade} samples open for
-              printing. We do not send the sheet by email.
+              Enter your email to request the Grade {grade} sample sheet. Then the samples open for
+              printing.
             </p>
             <input type="hidden" name="province" value={province} />
             <input type="hidden" name="grade" value={grade} />
@@ -84,8 +84,8 @@ export function SampleRequest({
               <input name="email" type="email" autoComplete="email" required />
             </label>
             <label className="check-row">
-              <input type="checkbox" name="consent" value="yes" required />
-              <span>I agree to receive these samples and occasional notes about Masterasium.</span>
+              <input type="checkbox" name="marketing" value="yes" />
+              <span>Optional: email me occasional updates about Masterasium. You can unsubscribe at any time.</span>
             </label>
             <button className="btn btn-primary w-fit" type="submit" disabled={pending}>
               {pending ? "Saving…" : "Show the samples"}

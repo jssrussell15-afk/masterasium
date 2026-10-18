@@ -17,7 +17,7 @@ export function DashboardMock() {
     <aside className="card dash-mock" aria-label="Example parent desk for a Grade 5 student">
       <p className="eyebrow">Parent desk</p>
       <h2 className="mt-1 text-2xl font-semibold">Amina</h2>
-      <p className="hint text-sm">Grade 5 · 12-day streak · Working on decimals to hundredths</p>
+      <p className="hint text-sm">Grade 5 · Learned this week: decimals to hundredths</p>
       <div className="mt-4">
         <h3 className="font-semibold">Skills</h3>
         <ul className="skill-list mt-2">

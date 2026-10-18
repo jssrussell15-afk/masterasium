@@ -13,6 +13,8 @@ describe("signup step 2", () => {
     expect(html).toContain('autoCapitalize="words"');
     expect(html).toContain('maxLength="30"');
     expect(html).toContain('role="radiogroup"');
+    expect(html).toContain("grade-pick-check");
+    expect(html).toContain("✓");
     expect(html).toContain("pill-row grade-picks");
     expect(html).toContain("You can change the grade any time.");
     expect(html).toContain('aria-checked="true"');

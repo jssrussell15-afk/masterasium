@@ -1,8 +1,10 @@
+import { sessionChrome } from "@/components/header-auth";
 import { Shell } from "@/components/site-header";
 
-export default function SetupPage() {
+export default async function SetupPage() {
+  const chrome = await sessionChrome();
   return (
-    <Shell narrow>
+    <Shell narrow {...chrome}>
       <section className="card mt-8 grid gap-3">
         <h1 className="display text-4xl">Add the Supabase keys</h1>
         <p className="lede">

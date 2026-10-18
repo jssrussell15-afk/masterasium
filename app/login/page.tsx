@@ -66,11 +66,9 @@ async function LoginBody({
       homeHref="/"
       slimLink={{ href: "/signup", label: "Create account" }}
       action={
-        mode === "parent" ? (
-          <Link href="/signup" className="btn btn-secondary">
-            Create account
-          </Link>
-        ) : null
+        <Link href="/signup" className="btn btn-secondary">
+          Create account
+        </Link>
       }
     >
     <section className="card mt-8 grid gap-4">
@@ -111,7 +109,11 @@ async function LoginBody({
               <SignInSwitch mode={mode} />
               <div>
                 <h1 className="display text-4xl">Student sign in</h1>
-                <p className="hint mt-2">Tap your name. Ask a grown-up if you forget your PIN.</p>
+                <p className="hint mt-2">
+                  {students.length === 0
+                    ? "Enter your first name and PIN."
+                    : "Tap your name. Ask a grown-up if you forget your PIN."}
+                </p>
               </div>
             </>
           }
