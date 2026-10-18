@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { QuestionPractice } from "@/components/question-practice";
+import { ReadAloud } from "@/components/read-aloud";
 import { lessonAction, type LessonClientState } from "@/lib/lesson/actions";
 import type { LessonScreen } from "@/lib/lesson/screen";
 
@@ -61,7 +62,10 @@ export function LessonView({
       {screen.kind === "intro" ? (
         <section className="card grid gap-4" aria-label="Lesson introduction">
           <p className="eyebrow">{screen.eyebrow}</p>
-          <h1 className="display text-4xl">{screen.title}</h1>
+          <div className="speak-row">
+            <h1 className="display text-4xl">{screen.title}</h1>
+            <ReadAloud text={`${screen.title}. ${screen.summary}`} label="Speak the introduction" />
+          </div>
           <VideoSlot video={screen.video} />
           <p className="text-xl leading-snug">{screen.summary}</p>
           <StepForm
@@ -80,7 +84,13 @@ export function LessonView({
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-3xl">{screen.title}</h1>
           {screen.lead ? <p className="text-lg">{screen.lead}</p> : null}
-          <p className={numeralClass(screen.prompt)}>{screen.prompt}</p>
+          <div className="speak-row">
+            <p className={numeralClass(screen.prompt)}>{screen.prompt}</p>
+            <ReadAloud
+              text={`${screen.prompt}. ${screen.steps.join(". ")}. Answer: ${screen.answer}.`}
+              label="Speak the example"
+            />
+          </div>
           <ol className="lesson-steps">
             {screen.steps.map((step) => (
               <li key={step}>{step}</li>
@@ -132,7 +142,13 @@ export function LessonView({
         <section className="card grid gap-4" aria-label="What to look at" role="status">
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-3xl">Look at this step</h1>
-          <p className="text-xl leading-snug">{screen.note}</p>
+          <div className="speak-row">
+            <p className="text-xl leading-snug">{screen.note}</p>
+            <ReadAloud
+              text={`${screen.note} The answer is ${screen.expected}.`}
+              label="Speak the feedback"
+            />
+          </div>
           <p className="text-xl">
             The answer is <strong>{screen.expected}</strong>.
           </p>
@@ -152,7 +168,10 @@ export function LessonView({
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-4xl">{screen.title}</h1>
           <p className="hint">You can tell a parent:</p>
-          <p className="lesson-learned">{screen.sentence}</p>
+          <div className="speak-row">
+            <p className="lesson-learned">{screen.sentence}</p>
+            <ReadAloud text={screen.sentence} label="Speak what I learned" />
+          </div>
           {screen.nextReview ? (
             <p className="hint">This comes back for a quiet review on {screen.nextReview}.</p>
           ) : (

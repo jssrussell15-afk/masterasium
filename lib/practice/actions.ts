@@ -2,6 +2,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
+import { attemptWritePlan, isAttemptId } from "@/lib/practice/attempt-once";
 import { answersMatch } from "@/lib/practice/answers";
 import { feedbackFromMark, markFromState, reduceFeedback, whyLine } from "@/lib/practice/feedback";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
@@ -162,6 +163,22 @@ async function markPractice(
   const question = loaded.question;
   const unpacked = unpackStoredAnswer(question.answer);
   const existing = readAttemptMark(question.answer);
+  const checkId = String(formData.get("checkId") ?? "");
+  if (existing?.clientCheckId && existing.clientCheckId === checkId && isAttemptId(checkId)) {
+    const { cards, error: cardError } = await loadCards(supabase, childId);
+    if (cardError) return { error: cardError };
+    const issued = await loadOrIssueQuestion(supabase, childId, access.working, cards);
+    if (!issued.question) return { error: issued.error ?? "Could not keep this question." };
+    return snapshot(supabase, childId, access, cards, {
+      feedbackFor: question.id,
+      phase: existing.phase,
+      why: existing.phase === "correct" ? whyLine(unpacked.steps) : null,
+      steps: existing.phase === "revealed" ? unpacked.steps : undefined,
+      expected: existing.phase === "revealed" ? unpacked.answer : undefined,
+      saveNote: "saved",
+      next: issued.question,
+    });
+  }
   const given =
     mode === "show-how"
       ? (existing?.given ?? "")
@@ -174,8 +191,9 @@ async function markPractice(
     feedbackFromMark(existing),
     mode === "show-how" ? { type: "show-how" } : { type: "check", correct },
   );
-  const mark = markFromState(result.state, existing, given, mode === "show-how");
-  if (!mark) return previous;
+  const marked = markFromState(result.state, existing, given, mode === "show-how");
+  if (!marked) return previous;
+  const mark = isAttemptId(checkId) ? { ...marked, clientCheckId: checkId } : marked;
 
   const { error: updateError } = await supabase
     .from("pending_questions")
@@ -209,6 +227,17 @@ async function advancePractice(
   const owned = await ownedChild(childId);
   if ("error" in owned) return { error: owned.error };
   const { supabase, access } = owned;
+  const attemptId = String(formData.get("attemptId") ?? "");
+  const prior = await readClientAttempt(supabase, childId, attemptId);
+  if (prior.error) return { error: prior.error };
+  const plan = isAttemptId(attemptId) ? attemptWritePlan(prior.row) : "insert";
+  if (plan === "skip") return continueAfterSave(supabase, childId, access);
+  if (plan === "apply" && prior.row) {
+    const appliedError = await applyStoredAttempt(supabase, childId, attemptId, prior.row);
+    if (appliedError) return { error: appliedError };
+    return continueAfterSave(supabase, childId, access);
+  }
+
   const loaded = await loadPending(supabase, childId, questionId);
   if ("error" in loaded) return { error: loaded.error };
   const question = loaded.question;
@@ -257,22 +286,44 @@ async function advancePractice(
     };
   }
 
-  const stateError = await saveCard(supabase, childId, nextCard);
-  if (stateError) return { error: stateError };
-  if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
-    const extraError = await saveCard(supabase, childId, applied.extra);
-    if (extraError) return { error: extraError };
-  }
-
-  const { error: attemptError } = await supabase.from("attempts").insert({
+  const inserted = await supabase.from("attempts").insert({
     child_id: childId,
     skill_id: question.skill_id,
     prompt: question.prompt,
     expected: unpacked.answer,
     given,
     correct,
+    ...(isAttemptId(attemptId)
+      ? { client_attempt_id: attemptId, learning_applied: false }
+      : {}),
   });
-  if (attemptError) return { error: friendlyDbError(attemptError) };
+  if (inserted.error) {
+    if (inserted.error.code === "23505" && isAttemptId(attemptId)) {
+      const again = await readClientAttempt(supabase, childId, attemptId);
+      if (again.error) return { error: again.error };
+      if (again.row?.learning_applied) return continueAfterSave(supabase, childId, access);
+      const appliedError = again.row
+        ? await applyStoredAttempt(supabase, childId, attemptId, again.row)
+        : null;
+      if (appliedError) return { error: appliedError };
+      return continueAfterSave(supabase, childId, access);
+    }
+    return { error: friendlyDbError(inserted.error) };
+  }
+
+  const stateError = await saveCard(supabase, childId, nextCard);
+  if (stateError) return { error: stateError };
+  if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
+    const extraError = await saveCard(supabase, childId, applied.extra);
+    if (extraError) return { error: extraError };
+  }
+  if (isAttemptId(attemptId)) {
+    await supabase
+      .from("attempts")
+      .update({ learning_applied: true })
+      .eq("child_id", childId)
+      .eq("client_attempt_id", attemptId);
+  }
   if (isLessonSkill(question.skill_id)) {
     await syncReviewRows(supabase, childId, question.skill_id, readLearn(nextCard.fsrs), today);
   }
@@ -318,6 +369,74 @@ async function advancePractice(
   return snapshot(supabase, childId, access, updatedCards, {
     feedbackFor: issued.question.questionId,
     note,
+    saveNote: "saved",
+    next: issued.question,
+  });
+}
+
+type ClientAttemptRow = {
+  learning_applied: boolean;
+  skill_id: string;
+  correct: boolean;
+};
+
+async function readClientAttempt(
+  supabase: SupabaseClient,
+  childId: string,
+  attemptId: string,
+): Promise<{ row: ClientAttemptRow | null; error: string | null }> {
+  if (!isAttemptId(attemptId)) return { row: null, error: null };
+  const { data, error } = await supabase
+    .from("attempts")
+    .select("learning_applied, skill_id, correct")
+    .eq("child_id", childId)
+    .eq("client_attempt_id", attemptId)
+    .maybeSingle();
+  if (error) return { row: null, error: friendlyDbError(error) };
+  return { row: (data as ClientAttemptRow | null) ?? null, error: null };
+}
+
+async function applyStoredAttempt(
+  supabase: SupabaseClient,
+  childId: string,
+  attemptId: string,
+  row: ClientAttemptRow,
+): Promise<string | null> {
+  const { cards, error } = await loadCards(supabase, childId);
+  if (error) return error;
+  const today = torontoDate();
+  const applied = applyLearning({
+    card: cardFor(cards, row.skill_id),
+    correct: row.correct,
+    kind: "focus",
+    today,
+  });
+  const saved = await saveCard(supabase, childId, applied.card);
+  if (saved) return saved;
+  if (applied.extra && applied.extra.skillId !== applied.card.skillId) {
+    const extraError = await saveCard(supabase, childId, applied.extra);
+    if (extraError) return extraError;
+  }
+  const { error: flagError } = await supabase
+    .from("attempts")
+    .update({ learning_applied: true })
+    .eq("child_id", childId)
+    .eq("client_attempt_id", attemptId);
+  return flagError ? friendlyDbError(flagError) : null;
+}
+
+async function continueAfterSave(
+  supabase: SupabaseClient,
+  childId: string,
+  access: GradeAccess,
+): Promise<PracticeState> {
+  const { cards, error } = await loadCards(supabase, childId);
+  if (error) return { error };
+  const issued = await loadOrIssueQuestion(supabase, childId, access.working, cards);
+  if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
+  return snapshot(supabase, childId, access, cards, {
+    feedbackFor: issued.question.questionId,
+    saveNote: "saved",
     next: issued.question,
   });
 }

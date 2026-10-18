@@ -11,6 +11,8 @@ export type AttemptMark = {
   firstTryCorrect: boolean;
   given: string;
   showedHow: boolean;
+  /** Client id for this check. A retry with the same id does not count again. */
+  clientCheckId?: string;
 };
 
 export type FeedbackState = {

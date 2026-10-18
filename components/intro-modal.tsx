@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { ReadAloud } from "@/components/read-aloud";
 
 export function IntroModal({
   title,
@@ -20,6 +21,15 @@ export function IntroModal({
   const onFinishedRef = useRef(onFinished);
   const onViewedRef = useRef(onViewed);
   const [showAnswer, setShowAnswer] = useState(false);
+  const spoken = [
+    title,
+    ...sentences,
+    example?.prompt ?? "",
+    ...(example?.steps ?? []),
+    showAnswer && example ? `Answer: ${example.answer}.` : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
   onFinishedRef.current = onFinished;
   onViewedRef.current = onViewed;
 
@@ -36,16 +46,19 @@ export function IntroModal({
     node.addEventListener("cancel", close);
     return () => {
       node.removeEventListener("cancel", close);
-      if (node.open) node.close();
+      if (node.open && typeof node.close === "function") node.close();
     };
   }, [title]);
 
   return (
     <dialog ref={dialog} className="intro-dialog" aria-labelledby="intro-title">
       <section className="intro-card">
-        <h1 id="intro-title" className="display">
-          {title}
-        </h1>
+        <div className="speak-row">
+          <h1 id="intro-title" className="display">
+            {title}
+          </h1>
+          <ReadAloud text={spoken} label="Speak the introduction" />
+        </div>
         {sentences.map((sentence) => (
           <p key={sentence} className="intro-sentence">
             {sentence}

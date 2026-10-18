@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
+import { ReadAloud } from "@/components/read-aloud";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -26,12 +27,14 @@ export function QuestionPractice({
   draft = "",
   exampleStartsOpen = false,
   pending = false,
+  saveNote = null,
   guideSteps = [],
   assist = null,
   aside,
   action,
   fields = [],
   onElapsed,
+  onDraft,
 }: {
   questionId: string;
   eyebrow: string;
@@ -49,12 +52,14 @@ export function QuestionPractice({
   draft?: string;
   exampleStartsOpen?: boolean;
   pending?: boolean;
+  saveNote?: "saving" | "saved" | null;
   guideSteps?: string[];
   assist?: AssistView | null;
   aside?: ReactNode;
   action?: (formData: FormData) => void;
   fields?: { name: string; value: string }[];
   onElapsed?: (form: HTMLFormElement) => void;
+  onDraft?: (answer: string, remainder: string) => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
   const [hintOpen, setHintOpen] = useState(false);
@@ -67,6 +72,14 @@ export function QuestionPractice({
   const progressText = progress ? progressLabel(progress.index, progress.total) : null;
   const announcement =
     phase === "correct" ? "That's right." : phase === "retry" ? "Not quite. Try again." : phase === "revealed" ? "Here's how." : "";
+  const feedbackSpeech =
+    phase === "correct"
+      ? ["That's right.", why ?? ""].filter(Boolean).join(" ")
+      : phase === "retry"
+        ? "Not quite. Try again."
+        : phase === "revealed"
+          ? ["Here's how.", ...steps, expected ? `The answer is ${expected}.` : ""].filter(Boolean).join(" ")
+          : "";
 
   useEffect(() => {
     setValues(valuesFor(shape, draft));
@@ -118,8 +131,16 @@ export function QuestionPractice({
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
       <section className="question-card" aria-label="Question">
         <p className="topic-label">{eyebrow}</p>
-        <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
-        {responseHint ? <p className="hint">{responseHint}</p> : null}
+        <div className="speak-row">
+          <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
+          <ReadAloud text={prompt} label="Speak the question" />
+        </div>
+        {responseHint ? (
+          <div className="speak-row">
+            <p className="hint">{responseHint}</p>
+            <ReadAloud text={responseHint} label="Speak the hint" />
+          </div>
+        ) : null}
         {phase === "answering" ? <AssistedPrompt assist={assist} /> : null}
         {guideSteps.length > 0 && phase === "answering" ? (
           <ol className="guide-steps">
@@ -128,11 +149,23 @@ export function QuestionPractice({
             ))}
           </ol>
         ) : null}
-        {showHint && hint ? <p className="inline-help">{hint}</p> : null}
+        {showHint && hint ? (
+          <div className="speak-row">
+            <p className="inline-help">{hint}</p>
+            <ReadAloud text={hint} label="Speak the hint" />
+          </div>
+        ) : null}
         {exampleOpen && example ? <WorkedExampleBlock example={example} /> : null}
         <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
           {announcement}
+          {saveNote === "saving" ? " Saving." : saveNote === "saved" ? " Saved." : ""}
         </p>
+        {saveNote ? (
+          <p className="save-note" aria-hidden="true">
+            {saveNote === "saving" ? "Saving…" : "Saved"}
+          </p>
+        ) : null}
+        {feedbackSpeech ? <ReadAloud text={feedbackSpeech} label="Speak the feedback" /> : null}
         {phase === "correct" && why ? <p className="why-line">{why}</p> : null}
         {phase === "retry" ? <p className="feedback warm">Not quite. Try again.</p> : null}
         {phase === "correct" ? <p className="feedback good">That's right.</p> : null}
@@ -160,7 +193,11 @@ export function QuestionPractice({
           <AnswerFields
             shape={shape}
             values={values}
-            onChange={(name, value) => setValues((current) => ({ ...current, [name]: value }))}
+            onChange={(name, value) => {
+              const next = { ...values, [name]: value };
+              setValues(next);
+              onDraft?.(next.answer ?? "", next.remainder ?? "");
+            }}
             readOnly={finished}
             disabled={pending}
             inputRef={inputRef}
@@ -246,6 +283,10 @@ function WorkedExampleBlock({ example }: { example: WorkedExample }) {
       <p>
         Answer: <strong>{example.answer}</strong>
       </p>
+      <ReadAloud
+        text={`${example.prompt}. ${example.steps.join(". ")}. Answer: ${example.answer}.`}
+        label="Speak the example"
+      />
     </aside>
   );
 }
@@ -262,12 +303,18 @@ function NumberKeypad({
   return (
     <div className="number-pad" role="group" aria-label="Number keypad">
       {DIGITS.map((digit) => (
-        <button key={digit} type="button" disabled={disabled} onClick={() => onDigit(digit)}>
+        <button
+          key={digit}
+          type="button"
+          aria-label={`Digit ${digit}`}
+          disabled={disabled}
+          onClick={() => onDigit(digit)}
+        >
           {digit}
         </button>
       ))}
       <span aria-hidden="true" />
-      <button type="button" disabled={disabled} onClick={() => onDigit("0")}>
+      <button type="button" aria-label="Digit 0" disabled={disabled} onClick={() => onDigit("0")}>
         0
       </button>
       <button type="button" data-key="delete" aria-label="Delete" disabled={disabled} onClick={onDelete}>
