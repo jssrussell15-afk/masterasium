@@ -8,6 +8,7 @@ import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
 import type { AssistView } from "@/lib/practice/types";
+import { emptyLiveTrace, noteKey, noteShowMeStep, noteWrongAnswer, packTrace } from "@/lib/strategy/trace";
 
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
@@ -65,6 +66,9 @@ export function QuestionPractice({
   const [activeField, setActiveField] = useState("answer");
   const inputRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
+  const traceRef = useRef(emptyLiveTrace());
+  const traceInput = useRef<HTMLInputElement>(null);
+  const notedRetry = useRef(false);
   const finished = phase === "correct" || phase === "revealed";
   const showHint = Boolean(hint) && (hintOpen || phase === "retry" || phase === "revealed");
   const progressText = progress ? progressLabel(progress.index, progress.total) : null;
@@ -76,6 +80,8 @@ export function QuestionPractice({
     setHintOpen(false);
     setExampleOpen(exampleStartsOpen);
     setActiveField("answer");
+    traceRef.current = exampleStartsOpen ? noteShowMeStep(emptyLiveTrace(), 0) : emptyLiveTrace();
+    notedRetry.current = false;
     // A parent re-render must not wipe a retry the child is still typing.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [questionId]);
@@ -93,8 +99,14 @@ export function QuestionPractice({
     nextRef.current?.focus();
   }, [finished, questionId]);
 
+  function publishTrace() {
+    if (traceInput.current) traceInput.current.value = packTrace(traceRef.current);
+  }
+
   function typeDigit(digit: string) {
     if (finished || pending) return;
+    traceRef.current = noteKey(traceRef.current, digit);
+    publishTrace();
     setValues((current) => ({
       ...current,
       [activeField]: `${current[activeField] ?? ""}${digit}`,
@@ -104,6 +116,8 @@ export function QuestionPractice({
 
   function deleteDigit() {
     if (finished || pending) return;
+    traceRef.current = noteKey(traceRef.current, "delete");
+    publishTrace();
     setValues((current) => ({
       ...current,
       [activeField]: (current[activeField] ?? "").slice(0, -1),
@@ -112,8 +126,20 @@ export function QuestionPractice({
   }
 
   function stamp(event: FormEvent<HTMLFormElement>) {
+    publishTrace();
     onElapsed?.(event.currentTarget);
   }
+
+  useEffect(() => {
+    if (phase !== "retry") {
+      notedRetry.current = false;
+      return;
+    }
+    if (notedRetry.current) return;
+    notedRetry.current = true;
+    traceRef.current = noteWrongAnswer(traceRef.current, values.answer ?? "");
+    publishTrace();
+  }, [phase, questionId, values.answer]);
 
   return (
     <div className="question-column">
@@ -181,6 +207,7 @@ export function QuestionPractice({
 
         <form action={action} className="question-form" onSubmit={stamp}>
           <HiddenFields fields={fields} />
+          <input ref={traceInput} type="hidden" name="strategy_trace" defaultValue="" />
           <input type="hidden" name="intent" value={finished ? "next" : "check"} />
           <AnswerFields
             shape={shape}
@@ -219,7 +246,11 @@ export function QuestionPractice({
                 type="button"
                 className="help-target"
                 disabled={pending}
-                onClick={() => setExampleOpen(true)}
+                onClick={() => {
+                  traceRef.current = noteShowMeStep(traceRef.current, 0);
+                  publishTrace();
+                  setExampleOpen(true);
+                }}
               >
                 Show me an example
               </button>

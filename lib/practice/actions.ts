@@ -21,6 +21,7 @@ import {
 import { isLessonSkill } from "@/lib/lesson/catalog";
 import { syncReviewRows } from "@/lib/lesson/store";
 import { skillById } from "@/lib/practice/skills";
+import { strategyFromForm } from "@/lib/strategy/store";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
 import {
   readAttemptMark,
@@ -272,6 +273,12 @@ async function advancePractice(
   }
 
   const content = readStoredContent(question.answer);
+  const tagged = strategyFromForm({
+    rawTrace: String(formData.get("strategy_trace") ?? ""),
+    selfReport: String(formData.get("strategy_report") ?? ""),
+    skillId: question.skill_id,
+    correct,
+  });
   const attemptRow = {
     child_id: childId,
     skill_id: question.skill_id,
@@ -287,11 +294,18 @@ async function advancePractice(
           answer: { ...content.answer, given },
         }
       : {}),
+    ...(tagged ?? {}),
   };
   let { error: attemptError } = await supabase.from("attempts").insert(attemptRow);
-  if (attemptError && content) {
+  if (attemptError && (content || tagged)) {
     const message = attemptError.message.toLowerCase();
-    if (message.includes("lane") || message.includes("content_item_id") || message.includes("answer")) {
+    if (
+      message.includes("lane") ||
+      message.includes("content_item_id") ||
+      message.includes("answer") ||
+      message.includes("strategy") ||
+      message.includes("interaction_trace")
+    ) {
       ({ error: attemptError } = await supabase.from("attempts").insert({
         child_id: childId,
         skill_id: question.skill_id,
