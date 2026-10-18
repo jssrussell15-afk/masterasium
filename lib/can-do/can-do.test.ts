@@ -29,7 +29,15 @@ const today = "2026-10-18";
 
 describe("i can statements", () => {
   it("maps a short line only to genuine Ontario Grade 3 skills", () => {
-    const genuine = ["g3-place", "g3-add-sub", "g3-fractions", "g3-perimeter", "g3-time", "g3-data"];
+    const genuine = [
+      "g3-place",
+      "g3-add-sub",
+      "g3-fractions",
+      "g3-mult",
+      "g3-perimeter",
+      "g3-time",
+      "g3-data",
+    ];
     expect(Object.keys(GRADE_3_I_CAN).sort()).toEqual([...genuine].sort());
     for (const id of genuine) {
       const skill = skillById(id);
@@ -45,15 +53,16 @@ describe("i can statements", () => {
       expect(line.toLowerCase()).not.toContain("numerator");
     }
     expect(GRADE_3_I_CAN["g3-place"]).toBe("I can show what each digit is worth to 1,000.");
-    expect(GRADE_3_I_CAN["g3-fractions"]).toBe("I can name a fraction by counting the equal parts.");
-    expect(GRADE_3_I_CAN["g3-mult"]).toBeUndefined();
+    expect(GRADE_3_I_CAN["g3-fractions"]).toBe("I can name equal fractions for a fair share.");
+    expect(GRADE_3_I_CAN["g3-mult"]).toBe("I can multiply and divide by 2, 5, and 10.");
+    expect(GRADE_3_I_CAN["g3-perimeter"]).toBe("I can find the distance around a polygon.");
+    expect(GRADE_3_I_CAN["g3-time"]).toBe("I can tell time in hours, minutes, and seconds.");
+    expect(GRADE_3_I_CAN["g3-data"]).toBe("I can read pictographs and bar graphs.");
     expect(GRADE_3_I_CAN["g3-div-rem"]).toBeUndefined();
 
-    const mult = skillById("g3-mult");
     const remainders = skillById("g3-div-rem");
-    expect(mult && remainders).toBeTruthy();
-    if (!mult || !remainders) return;
-    expect(iCanStatement(mult)).toBe("I can do multiplication facts to 10\u00A0×\u00A010.");
+    expect(remainders).toBeTruthy();
+    if (!remainders) return;
     expect(iCanStatement(remainders)).toBe("I can do division with remainders.");
     expect(iCanStatement({ id: "sample-product", grade: 4, title: "Facts of 2 × 5" })).toBe(
       "I can do facts of 2\u00A0×\u00A05.",
@@ -141,6 +150,7 @@ describe("can-do query", () => {
       "g3-data",
       "g3-perimeter",
       "g3-fractions",
+      "g3-mult",
       "g3-place",
     ]);
     for (const skill of filled.recent) {
@@ -149,7 +159,6 @@ describe("can-do query", () => {
       expect(skill.statement.toLowerCase()).not.toContain("remainder");
     }
     expect(filled.recent[0]?.review).toMatchObject({ kind: "lesson" });
-    expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-mult");
     expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-div-rem");
     expect(filled.recent.map((skill) => skill.skillId)).not.toContain("g3-add-sub");
     expect(sampleCanDo("empty", true).recent).toEqual([]);

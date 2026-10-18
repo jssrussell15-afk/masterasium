@@ -6,9 +6,9 @@ const today = "2026-10-18";
 
 /**
  * Sample mastered skills for previews. Not a real child.
- * Only Ontario 2020 Grade 3 skills: place value, fractions, perimeter,
- * time, and data. Addition within 1,000 stays in progress so the
- * working line is that skill, not a later catalog title.
+ * Only hosted Ontario Grade 3 skills. Addition within 1,000 stays
+ * in progress so the working line is that skill. Division with
+ * remainders is Grade 4 and is left off the list.
  */
 export function sampleCanDo(kind: "filled" | "empty", showReviewLinks: boolean): CanDoView {
   if (kind === "empty") {
@@ -33,6 +33,7 @@ export function sampleCanDo(kind: "filled" | "empty", showReviewLinks: boolean):
       { skillId: "g3-data", stage: "complete", completedOn: "2026-10-02" },
       { skillId: "g3-perimeter", stage: "complete", completedOn: "2026-09-18" },
       { skillId: "g3-fractions", stage: "complete", completedOn: "2026-09-04" },
+      { skillId: "g3-mult", stage: "complete", completedOn: "2026-08-28" },
       { skillId: "g3-place", stage: "complete", completedOn: "2026-08-20" },
     ],
     reviews: [
