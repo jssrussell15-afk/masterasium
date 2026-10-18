@@ -1016,8 +1016,120 @@ body:has(dialog[open]) {
   outline-offset: 3px;
 }
 
+.pill-row a[aria-current="page"] {
+  background: #d3ebf7;
+  border: 2px solid var(--blue);
+  color: var(--ink);
+}
+
+.pill-soon {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.segmented {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 70%);
+}
+
+.segmented a {
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 0.45rem 0.9rem;
+  color: var(--ink);
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.segmented a[aria-current="page"] {
+  background: #d3ebf7;
+  border: 2px solid var(--blue);
+}
+
+.code-chip {
+  display: inline-block;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+}
+
+.code-chip summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  padding: 0.15rem 0.55rem;
+  color: var(--blue);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.masterasium-ref {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.chip-popover {
+  margin-top: 0.4rem;
+  max-width: 40rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: white;
+  padding: 0.8rem 1rem;
+  color: var(--ink);
+  font-weight: 450;
+}
+
+.practice-soon,
+.strand-note {
+  color: var(--muted);
+}
+
+.process-tag {
+  display: inline-block;
+  margin: 0.15rem 0.35rem 0.15rem 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.sequence-badge {
+  display: inline-block;
+  margin-left: 0.4rem;
+  border-radius: 999px;
+  background: #d3ebf7;
+  padding: 0.15rem 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.keep-practising {
+  margin-top: 0.8rem;
+  color: var(--muted);
+}
+
+.banner {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: #d3ebf7;
+  padding: 0.8rem 1rem;
+}
+
+.strand-subhead {
+  padding-bottom: 0;
+}
+
 .pill-row span[aria-disabled="true"] {
-  opacity: 0.45;
+  color: var(--muted);
+  cursor: default;
 }
 
 .pill-row button {
