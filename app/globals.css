@@ -2442,3 +2442,20 @@ html:has(.question-screen) .site-footer {
     grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.85fr);
   }
 }
+
+.strategy-desk {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.strategy-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.strategy-strand {
+  font-weight: 650;
+}
