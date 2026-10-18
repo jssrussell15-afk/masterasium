@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { SubjectTiles } from "@/components/create/tiles";
 import { DashboardWidget } from "@/components/dashboard-widget";
 import { TopicPicker } from "@/components/topic-picker";
 import { startSkill, type StartState } from "@/lib/practice/actions";
@@ -20,6 +21,8 @@ export function StudentDashboard({
   skills,
   access,
   requestedGrade,
+  createEnabled = false,
+  createHref = "/create",
 }: {
   childId: string;
   childName: string;
@@ -28,6 +31,8 @@ export function StudentDashboard({
   skills: SkillProgress[];
   access: GradeAccess;
   requestedGrade: SupportedGrade | null;
+  createEnabled?: boolean;
+  createHref?: string;
 }) {
   const [state, action, pending] = useActionState(startSkill, initial);
 
@@ -40,6 +45,8 @@ export function StudentDashboard({
           Things I can do
         </Link>
       </div>
+      {createEnabled ? <SubjectTiles createHref={createHref} /> : null}
+      <div id="practice-skills" className="grid gap-4">
       {state.note ? (
         <p className="hint" role="status">
           {state.note}
@@ -73,6 +80,7 @@ export function StudentDashboard({
         access={access}
         requestedGrade={requestedGrade}
       />
+      </div>
     </div>
   );
 }

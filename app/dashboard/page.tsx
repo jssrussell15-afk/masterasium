@@ -9,7 +9,10 @@ import { Shell } from "@/components/site-header";
 import { MasteryMark } from "@/components/mastery-mark";
 import { ParentCanDoSummary } from "@/components/can-do-list";
 import { ParentProgressView } from "@/components/parent-progress";
+import { CreateParentCard } from "@/components/create/parent-card";
 import { loadCanDo } from "@/lib/can-do/load";
+import { loadCreateSessions } from "@/lib/create/access";
+import { createGradeOk } from "@/lib/create/types";
 import { loadRoster, type RosterChild } from "@/lib/children/roster";
 import { friendlyDbError } from "@/lib/db-error";
 import { renderDigestText, torontoDate, type DigestSummary } from "@/lib/digest/build";
@@ -189,6 +192,7 @@ async function ChildCard({
           review={portrait.needsReview}
         />
       )}
+      {createGradeOk(working) ? <CreateSessions childId={child.id} supabase={supabase} /> : null}
       <DigestPanel childId={child.id} savedText={saved} />
     </article>
   );
@@ -250,6 +254,17 @@ async function GradeThreeProgress({
       missing={bundle.missing}
     />
   );
+}
+
+async function CreateSessions({
+  childId,
+  supabase,
+}: {
+  childId: string;
+  supabase: SupabaseClient;
+}) {
+  const loaded = await loadCreateSessions(supabase, childId);
+  return <CreateParentCard rows={loaded.rows} unavailable={loaded.unavailable} />;
 }
 
 function LearningStatus({ practicedToday }: { practicedToday: boolean }) {
