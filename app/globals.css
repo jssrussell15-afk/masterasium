@@ -2673,3 +2673,80 @@ html:has(.question-screen) .site-footer {
 .eval-after {
   background: var(--ink);
 }
+
+.show-style {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.show-style-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: baseline;
+}
+
+.show-style-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+.show-style-caption {
+  font-size: 1.35rem;
+}
+
+.show-style-steps {
+  display: grid;
+  gap: 0.55rem;
+  padding-left: 1.2rem;
+}
+
+.show-style-step {
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  padding: 0.7rem 0.9rem;
+}
+
+.show-style-faded span {
+  opacity: 0.38;
+}
+
+.show-style-faded input {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  margin-top: 0.35rem;
+  border: 2px solid var(--line);
+  border-radius: 0.8rem;
+  padding: 0.4rem 0.7rem;
+}
+
+.walk-spot {
+  position: relative;
+  display: inline-block;
+}
+
+.walk-ring {
+  border-radius: 0.4rem;
+  box-shadow: 0 0 0 3px var(--ink);
+}
+
+.walk-arrow {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 4.5rem;
+  height: 2rem;
+}
+
+.walk-arrow-line,
+.walk-arrow-head {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+}

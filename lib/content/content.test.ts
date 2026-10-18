@@ -95,6 +95,7 @@ describe("content store", () => {
       "added_instead_of_grouped",
       "counted_tick_marks_not_spaces",
       "treated_equals_as_answer_here",
+      "hour_stays_past_sixty",
     ]);
   });
 

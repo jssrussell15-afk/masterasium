@@ -29,6 +29,7 @@ import type { TrendWeek } from "@/lib/practice/trend";
 import { buildParentProgress } from "@/lib/lesson/parent";
 import { loadParentBundle } from "@/lib/lesson/store";
 import { EvalDesk } from "@/components/eval-desk";
+import { ShowMeDesk } from "@/components/show-me-desk";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
 export default function DashboardPage(props: PageProps<"/dashboard">) {
@@ -168,6 +169,7 @@ async function ChildCard({
       ) : null}
       <StartPracticeButton childId={child.id} />
       <EvalDesk supabase={supabase} childId={child.id} />
+      <ShowMeDesk supabase={supabase} childId={child.id} />
       <SetPinForm
         childId={child.id}
         firstName={child.first_name}

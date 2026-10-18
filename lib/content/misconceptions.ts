@@ -42,6 +42,12 @@ export const MISCONCEPTIONS: readonly MisconceptionLink[] = [
     description: "The blank was treated as the answer to the whole line, instead of the missing part.",
     surfaces: ["explanation"],
   },
+  {
+    id: "hour_stays_past_sixty",
+    skillSlug: "g3-time",
+    description: "The hour was left in place after the minutes passed 60.",
+    surfaces: ["show-me"],
+  },
 ];
 
 export function misconceptionByTag(tag: string): MisconceptionLink | undefined {
