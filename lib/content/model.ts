@@ -1,3 +1,5 @@
+import { mistakeAnswerMatches, satisfies } from "@/lib/content/rules";
+
 export const LANES = ["core", "go_further", "review"] as const;
 export type Lane = (typeof LANES)[number];
 
@@ -25,10 +27,14 @@ export const QUESTION_TYPES = [
   "bar",
   "pattern",
   "explanation",
+  "open",
+  "estimate",
+  "mistake",
+  "logic",
 ] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
-export const CHECKERS = ["numeric-equal", "choice-match", "true-false"] as const;
+export const CHECKERS = ["numeric-equal", "choice-match", "true-false", "conditions", "mistake-line"] as const;
 export type CheckerKey = (typeof CHECKERS)[number];
 
 export const DECISIONS = ["approve", "request_changes", "retire"] as const;
@@ -50,6 +56,13 @@ export type ContentTemplate = {
   answer: string;
   choices?: string[];
   steps?: string[];
+  lines?: string[];
+  wrongLine?: number;
+  fix?: string;
+  rule?: string;
+  topic?: string;
+  hint?: string;
+  solution?: string;
 };
 
 export type ContentItem = {
@@ -161,6 +174,14 @@ export function runChecker(
   const filled = fillTemplate(template);
   if (!CHECKERS.includes(checker)) {
     return { ok: false, note: "That checker is not known." };
+  }
+  if (checker === "conditions") {
+    const ok = satisfies(template.rule ?? "", template.slots, given);
+    return { ok, note: ok ? "That matches." : "Those numbers do not fit." };
+  }
+  if (checker === "mistake-line") {
+    const ok = mistakeAnswerMatches(template.wrongLine, template.fix, given);
+    return { ok, note: ok ? "That matches." : "That is not the line to fix." };
   }
   const ok =
     checker === "numeric-equal"
