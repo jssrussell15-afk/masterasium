@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { PracticeSession } from "@/components/practice-session";
+import { QuestionPractice } from "@/components/question-practice";
 import { INTRO_PLACEHOLDER, type SkillIntro } from "@/lib/practice/intro-view";
 import type { PracticeView } from "@/lib/practice/types";
 
@@ -18,8 +19,10 @@ function view(grade: 2 | 4 = 2): PracticeView {
       skillTitle: "Add within 20",
       responseHint: null,
       kind: "focus",
-      shape: { kind: "single" },
+      shape: { kind: "single", inputMode: "numeric" },
       assist: null,
+      hints: { hint: "Start at the first number and count on.", example: "2 + 3 = 5." },
+      example: { prompt: "2 + 3 = ?", steps: ["Start at 2 and count on 3.", "2 + 3 = 5."], answer: "5" },
     },
     attempted: 0,
     correct: 0,
@@ -37,12 +40,17 @@ describe("practice question screen", () => {
   it("shows one question with fixed hint prompts and no rewards", () => {
     const html = renderToStaticMarkup(createElement(PracticeSession, { view: view(2) }));
     expect(html).toContain("What is 4 + 5?");
-    expect(html).toContain("Give me a hint");
+    expect(html).toContain("Question 1 of 10");
+    expect(html).toContain(">Hint<");
     expect(html).toContain("Show me an example");
-    expect(html).toContain("I give up");
+    expect(html).toContain("Show me how");
     expect(html).toContain(">Check<");
     expect(html).toContain("All skills");
-    expect(html).toContain("hint-dock");
+    expect(html).toContain("number-pad");
+    expect(html.toLowerCase()).toContain('inputmode="numeric"');
+    expect(html).not.toContain("hint-dock");
+    expect(html).not.toContain("I give up");
+    expect(html).not.toContain("The answer is");
     expect(html).not.toContain("Choose a topic");
     expect(html).not.toContain("mastery-mark");
     expect(html).not.toContain("badge-tree");
@@ -87,19 +95,94 @@ describe("practice question screen", () => {
         },
       }),
     );
-    const introAt = html.indexOf('aria-label="Topic introduction"');
-    const timerAt = html.indexOf("Practice starts in");
-    expect(introAt).toBeGreaterThan(-1);
-    expect(timerAt).toBeGreaterThan(introAt);
-    const card = html.slice(introAt, timerAt);
-    expect(card).toContain("Quick intro coming soon");
-    expect(card).toContain("4 + 3 = ?");
-    expect(card).not.toContain("<button");
-    expect(card.toLowerCase()).not.toContain("skip");
-    expect(html).toContain("Practice starts in 10 seconds.");
+    expect(html).toContain('class="intro-dialog"');
+    expect(html).toContain(">Add within 20<");
+    expect(html).toContain("Put the numbers together.");
+    expect(html).toContain("4 + 3 = ?");
+    expect(html).toContain("Show answer");
+    expect(html).toContain(">Start<");
+    expect(html).not.toContain(">7<");
+    expect(html).not.toContain("Answer:");
+    expect(html.toLowerCase()).not.toContain("skip");
+    expect(html).not.toContain("Practice starts in");
+    expect(html).not.toContain("Quick intro coming soon");
+    expect(html).not.toContain("coming soon");
     expect(html).not.toContain("9 + 1 = ?");
     expect(html).not.toContain(">Check<");
-    expect(html).not.toContain("Give me a hint");
     expect(html).not.toContain("hint-dock");
+  });
+});
+
+describe("question feedback card", () => {
+  const shared = {
+    questionId: "q1",
+    eyebrow: "Focus · Addition within 10",
+    prompt: "6 + 2 = ?",
+    responseHint: null,
+    shape: { kind: "single" as const, inputMode: "numeric" as const },
+    hint: "Start at 6 and count on 2.",
+    example: {
+      prompt: "4 + 3 = ?",
+      steps: ["Start at 4 and count on 3.", "4 + 3 = 7."],
+      answer: "7",
+    },
+    progress: { index: 1, total: 10 },
+    action: () => undefined,
+  };
+
+  it("keeps a first miss on the same question and shows the hint", () => {
+    const html = renderToStaticMarkup(
+      createElement(QuestionPractice, {
+        ...shared,
+        phase: "retry",
+        why: null,
+        steps: [],
+        expected: null,
+        draft: "5",
+      }),
+    );
+    expect(html).toContain("Not quite. Try again.");
+    expect(html).toContain("Start at 6 and count on 2.");
+    expect(html).toContain('value="5"');
+    expect(html).toContain(">Check<");
+    expect(html).not.toContain(">Next<");
+    expect(html).not.toContain("The answer is");
+    expect(html).not.toContain("Here's how.");
+  });
+
+  it("shows the worked steps after a second miss and waits for Next", () => {
+    const html = renderToStaticMarkup(
+      createElement(QuestionPractice, {
+        ...shared,
+        phase: "revealed",
+        why: null,
+        steps: ["Start at 6 and count on 2.", "6 + 2 = 8."],
+        expected: "8",
+      }),
+    );
+    expect(html).toContain("Here&#x27;s how.");
+    expect(html).toContain("The answer is");
+    expect(html).toContain(">8<");
+    expect(html).toContain(">Next<");
+    expect(html).not.toContain(">Check<");
+    expect(html).not.toContain("Show me how");
+  });
+
+  it("shows a calm correct line and a Next button", () => {
+    const html = renderToStaticMarkup(
+      createElement(QuestionPractice, {
+        ...shared,
+        phase: "correct",
+        why: "Start at 6 and count on 2.",
+        steps: [],
+        expected: null,
+        draft: "8",
+      }),
+    );
+    expect(html).toContain("That&#x27;s right.");
+    expect(html).toContain("Start at 6 and count on 2.");
+    expect(html).toContain(">Next<");
+    expect(html).not.toContain(">Check<");
+    expect(html).not.toContain("The answer is");
   });
 });

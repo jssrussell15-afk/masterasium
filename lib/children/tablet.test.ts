@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { readRememberedChildren, rememberChild, writeRememberedChildren } from "@/lib/children/tablet";
+import {
+  readRememberedChildren,
+  rememberChild,
+  withPinLength,
+  writeRememberedChildren,
+} from "@/lib/children/tablet";
 
 const SAM = { id: "4f3a0c2e-6b1d-4a8e-9c70-1d2e3f4a5b6c", firstName: "Sam" };
 const ALEX = { id: "8b1d4a2e-6b1d-4a8e-9c70-1d2e3f4a5b6d", firstName: "Alex" };
@@ -25,5 +30,13 @@ describe("tablet children", () => {
     const replaced = rememberChild([SAM, ALEX], JO);
     expect(replaced).toEqual([ALEX, JO]);
     expect(readRememberedChildren(writeRememberedChildren(replaced))).toEqual(replaced);
+  });
+
+  it("keeps a known PIN length and leaves an unsaved child alone", () => {
+    const marked = withPinLength([SAM], SAM.id, 4);
+    expect(marked).toEqual([{ ...SAM, pinLength: 4 }]);
+    expect(readRememberedChildren(writeRememberedChildren(marked))).toEqual(marked);
+    expect(withPinLength([SAM], JO.id, 4)).toEqual([SAM]);
+    expect(withPinLength([SAM], SAM.id, 3)).toEqual([SAM]);
   });
 });

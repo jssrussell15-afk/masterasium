@@ -54,6 +54,19 @@ export type LessonStep = {
   justCompleted: boolean;
 };
 
+/**
+ * The question card already explained a miss. Clear that pause without moving the step again.
+ */
+export function settleLessonFeedback(stepped: LessonStep): LessonStep {
+  if (!stepped.run.feedbackNote || stepped.run.feedbackNote.startsWith("hold:")) return stepped;
+  const cleared = reduceLesson(stepped.run, { type: "continue" });
+  return {
+    run: cleared.run,
+    review: stepped.review,
+    justCompleted: stepped.justCompleted,
+  };
+}
+
 const STAGES: LessonStage[] = [
   "intro",
   "worked",

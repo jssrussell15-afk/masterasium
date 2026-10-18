@@ -95,43 +95,45 @@ export function introContent(
   },
 ): { style: SkillIntro["style"]; beats: IntroBeat[] } {
   const style = introStyle(grade);
-  if (style === "visual") {
-    return {
-      style,
-      beats: [
-        {
-          caption: example.summary,
-          prompt: example.examplePrompt,
-          answer: example.exampleAnswer,
-        },
-      ],
-    };
+  const summary = example.summary.trim();
+  const beats: IntroBeat[] = [];
+  if (summary) beats.push({ caption: summary });
+  if (example.examplePrompt) {
+    beats.push({
+      caption: "Here is one example.",
+      prompt: example.examplePrompt,
+      steps: example.exampleSteps,
+      answer: example.exampleAnswer,
+    });
   }
-  if (style === "why") {
-    return {
-      style,
-      beats: [
-        { caption: example.summary },
-        {
-          caption: "Here is one example.",
-          prompt: example.examplePrompt,
-          steps: example.exampleSteps,
-          answer: example.exampleAnswer,
-        },
-      ],
-    };
+  return { style, beats };
+}
+
+const SKIP_CAPTION = new Set(["Here is one example.", "Follow the steps.", INTRO_PLACEHOLDER]);
+
+/** Kid-facing intro copy. Null means practice should start on the question. */
+export function introCardModel(
+  intro: SkillIntro,
+  livePrompt: string,
+): {
+  sentences: string[];
+  example: { prompt: string; steps: string[]; answer: string } | null;
+} | null {
+  const sentences: string[] = [];
+  for (const beat of intro.beats) {
+    const line = beat.caption?.trim() ?? "";
+    if (!line || SKIP_CAPTION.has(line) || /coming soon/i.test(line)) continue;
+    if (sentences.includes(line)) continue;
+    sentences.push(line);
+    if (sentences.length === 2) break;
   }
-  return {
-    style,
-    beats: [
-      { caption: example.examplePrompt, prompt: example.examplePrompt },
-      {
-        caption: "Follow the steps.",
-        steps: example.exampleSteps,
-        answer: example.exampleAnswer,
-      },
-    ],
-  };
+  if (sentences.length === 0) return null;
+  const beat = intro.beats.find((item) => item.prompt && item.prompt !== livePrompt);
+  const example =
+    beat?.prompt && beat.answer
+      ? { prompt: beat.prompt, steps: beat.steps ?? [], answer: beat.answer }
+      : null;
+  return { sentences, example };
 }
 
 export function buildSkillIntro(skill: Skill, cycle: SkillIntro["cycle"]): SkillIntro {

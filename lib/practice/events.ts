@@ -13,7 +13,7 @@ export type PracticeEvent = {
   detail: Record<string, string | number>;
 };
 
-const RUNG = new Set(["hint", "example", "give-up"]);
+const RUNG = new Set(["hint", "example", "give-up", "show-how"]);
 const CYCLE = new Set(["new", "relearn", "rollback"]);
 
 function skillId(value: unknown): string | null {

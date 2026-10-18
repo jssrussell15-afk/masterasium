@@ -5,6 +5,8 @@ import { friendlyDbError } from "@/lib/db-error";
 import { torontoDate } from "@/lib/digest/build";
 import type { SupportedGrade } from "@/lib/grades";
 import { assistFor } from "@/lib/practice/assist";
+import { buildWorkedExample } from "@/lib/practice/example";
+import { whyLine, type AttemptMark } from "@/lib/practice/feedback";
 import { hintLadder } from "@/lib/practice/hints";
 import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/intro";
 import type { SkillIntro } from "@/lib/practice/intro-view";
@@ -13,7 +15,7 @@ import { readLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
 import type { AttemptPoint } from "@/lib/practice/portrait";
 import { getItemSource } from "@/lib/practice/source";
-import { packStoredAnswer, readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import { packStoredAnswer, readAttemptMark, readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
 import {
   accuracyScheduler,
   emptyCard,
@@ -75,16 +77,17 @@ function presentQuestion(
   skill: Skill,
   prompt: string,
   expected: string,
-  firstStep: string | null,
+  steps: string[],
   kind: QuestionKind,
   cards: SkillCard[],
   intro: SkillIntro | null,
+  mark: AttemptMark | null,
 ): QuestionView {
   const shape = answerShape(prompt, expected);
   const assist = assistFor({
     attempted: cardFor(cards, skill.id).attempted,
     summary: skill.summary,
-    firstStep,
+    firstStep: steps[0] ?? null,
     expected,
     kind,
   });
@@ -99,12 +102,28 @@ function presentQuestion(
     assist,
     hints: hintLadder({
       summary: skill.summary,
-      firstStep: assist?.firstStep ?? firstStep,
+      firstStep: assist?.firstStep ?? steps[0] ?? null,
       examplePrompt: skill.examplePrompt,
       exampleAnswer: skill.exampleAnswer,
       expected,
       prompt,
     }),
+    example: buildWorkedExample({
+      skillId: skill.id,
+      livePrompt: prompt,
+      small: kind === "support",
+    }),
+    ...(mark
+      ? {
+          resume: {
+            phase: mark.phase,
+            why: mark.phase === "correct" ? whyLine(steps) : null,
+            steps: mark.phase === "revealed" ? steps : [],
+            expected: mark.phase === "revealed" ? expected : null,
+            draft: mark.given,
+          },
+        }
+      : {}),
     ...(intro ? { intro } : {}),
   };
 }
@@ -200,10 +219,11 @@ async function persistQuestion(
       skill,
       generated.prompt,
       generated.answer,
-      generated.steps[0] ?? null,
+      generated.steps,
       plan.kind,
       cards,
       intro,
+      null,
     ),
     error: null,
   };
@@ -267,7 +287,7 @@ export async function loadOrIssueQuestion(
       { kind, rollbackSkillId: stored.rollbackSkillId },
       today,
     );
-    if (intro) {
+    if (intro && !readAttemptMark(existing.answer)) {
       return persistQuestion(
         supabase,
         childId,
@@ -287,10 +307,11 @@ export async function loadOrIssueQuestion(
         skill,
         existing.prompt,
         unpacked.answer,
-        unpacked.steps[0] ?? null,
+        unpacked.steps,
         kind,
         cards,
         null,
+        readAttemptMark(existing.answer),
       ),
       error: null,
     };

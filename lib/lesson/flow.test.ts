@@ -11,6 +11,7 @@ import {
   reduceLesson,
   RETRY_NEW_COUNT,
   reviewPlanDates,
+  settleLessonFeedback,
   type LessonEvent,
   type LessonRun,
 } from "@/lib/lesson/flow";
@@ -104,6 +105,18 @@ describe("grade 3 lessons", () => {
     expect(run.stage).toBe("retry-worked");
     expect(run.feedbackNote).toBeTruthy();
     expect(run.masteryAsked).toBe(0);
+
+    const settled = settleLessonFeedback(last);
+    expect(settled.run.feedbackNote).toBeNull();
+    expect(settled.run.stage).toBe("retry-worked");
+    expect(settled.justCompleted).toBe(last.justCompleted);
+    expect(settled.review).toBe(last.review);
+    const held = settleLessonFeedback({
+      run: { ...freshRun("g3-div-rem"), feedbackNote: "hold:retry:0:0", feedbackExpected: "3" },
+      review: null,
+      justCompleted: false,
+    });
+    expect(held.run.feedbackNote).toBe("hold:retry:0:0");
 
     run = step(run, { type: "continue" });
     expect(run.feedbackNote).toBeNull();

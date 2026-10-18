@@ -1,6 +1,10 @@
 import type { LessonDef } from "@/lib/lesson/catalog";
-import type { LessonRun } from "@/lib/lesson/flow";
+import { FADED_COUNT, MASTERY_SIZE, PRACTICE_COUNT, RETRY_NEW_COUNT, type LessonRun } from "@/lib/lesson/flow";
+import { isHoldNote, readHold } from "@/lib/lesson/hold";
+import { buildWorkedExample, type WorkedExample } from "@/lib/practice/example";
+import { whyLine } from "@/lib/practice/feedback";
 import { generateQuestion } from "@/lib/practice/generate";
+import { hintLadder } from "@/lib/practice/hints";
 import { answerShape, type AnswerShape } from "@/lib/practice/parts";
 import type { Skill } from "@/lib/practice/skills";
 import type { Question } from "@/lib/practice/types";
@@ -32,6 +36,14 @@ export type LessonScreen =
       responseHint: string | null;
       shape: AnswerShape;
       taskKey: string;
+      progress: { index: number; total: number } | null;
+      example: WorkedExample | null;
+      guideSteps: string[];
+      hold: "retry" | "correct" | "revealed" | null;
+      why: string | null;
+      solutionSteps: string[];
+      solutionAnswer: string | null;
+      draft: string;
     }
   | {
       kind: "feedback";
@@ -50,12 +62,17 @@ export type LessonScreen =
 export type LessonTask = {
   prompt: string;
   answer: string;
+  /** Steps already on the page before the child answers. */
   steps: string[];
+  /** Full worked steps, shown only after the question is revealed. */
+  worked: string[];
   hint: string | null;
 };
 
 export function lessonTask(run: LessonRun, skill: Skill): LessonTask | null {
-  if (run.feedbackNote || run.stage === "intro" || run.stage === "complete") return null;
+  if ((run.feedbackNote && !isHoldNote(run.feedbackNote)) || run.stage === "intro" || run.stage === "complete") {
+    return null;
+  }
   if (run.stage === "worked" || run.stage === "retry-worked") return null;
   if (run.mode === "review" && run.reviewPhase === "worked") return null;
 
@@ -68,6 +85,7 @@ export function lessonTask(run: LessonRun, skill: Skill): LessonTask | null {
       prompt: skill.examplePrompt,
       answer: skill.exampleAnswer,
       steps: skill.exampleSteps.slice(0, -1),
+      worked: skill.exampleSteps,
       hint: skill.exampleSteps[0] ?? skill.summary,
     };
   }
@@ -92,7 +110,8 @@ export function buildLessonScreen(
   lesson: LessonDef,
   extra: { nextReview: string | null },
 ): LessonScreen {
-  if (run.feedbackNote) {
+  const hold = readHold(run.feedbackNote, run.feedbackExpected);
+  if (run.feedbackNote && !hold) {
     return {
       kind: "feedback",
       eyebrow: skill.title,
@@ -161,17 +180,45 @@ function questionScreen(
 ): LessonScreen {
   const prompt = task?.prompt ?? skill.examplePrompt;
   const answer = task?.answer ?? skill.exampleAnswer;
+  const worked = task?.worked ?? [];
+  const hold = readHold(run.feedbackNote, run.feedbackExpected);
+  const ladder = hintLadder({
+    summary: skill.summary,
+    firstStep: task?.hint ?? worked[0] ?? null,
+    examplePrompt: skill.examplePrompt,
+    exampleAnswer: skill.exampleAnswer,
+    expected: answer,
+    prompt,
+  });
+  const revealed = hold?.phase === "revealed";
   return {
     kind: "question",
     eyebrow,
     title: skill.title,
     prompt,
     steps: task?.steps ?? [],
-    hint: task?.hint ?? null,
+    hint: ladder.hint,
     responseHint: skill.responseHint,
     shape: answerShape(prompt, answer),
     taskKey: `${run.mode}:${run.stage}:${run.reviewPhase ?? ""}:${run.generation}:${run.stepIndex}:${run.masteryAsked}:${prompt}`,
+    progress: questionProgress(run),
+    example: buildWorkedExample({ skillId: skill.id, livePrompt: prompt }),
+    guideSteps: task?.steps ?? [],
+    hold: hold?.phase ?? null,
+    why: hold?.phase === "correct" ? whyLine(worked) : null,
+    solutionSteps: revealed ? worked : [],
+    solutionAnswer: revealed ? answer : null,
+    draft: hold?.given ?? "",
   };
+}
+
+function questionProgress(run: LessonRun): { index: number; total: number } | null {
+  if (run.mode === "review") return { index: 1, total: 1 };
+  if (run.stage === "faded") return { index: run.stepIndex + 1, total: FADED_COUNT };
+  if (run.stage === "practice") return { index: run.stepIndex + 1, total: PRACTICE_COUNT };
+  if (run.stage === "mastery") return { index: run.masteryAsked + 1, total: MASTERY_SIZE };
+  if (run.stage === "retry-new") return { index: run.stepIndex + 1, total: RETRY_NEW_COUNT };
+  return null;
 }
 
 function hideSteps(question: Question, showPriorSteps: boolean): LessonTask {
@@ -180,6 +227,7 @@ function hideSteps(question: Question, showPriorSteps: boolean): LessonTask {
     prompt: question.prompt,
     answer: question.answer,
     steps,
+    worked: question.steps,
     hint: showPriorSteps ? (question.steps[0] ?? null) : null,
   };
 }

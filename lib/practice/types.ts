@@ -1,5 +1,7 @@
 import type { SupportedGrade } from "@/lib/grades";
 import type { GradeAccess } from "@/lib/practice/grade-access";
+import type { WorkedExample } from "@/lib/practice/example";
+import type { FeedbackPhase } from "@/lib/practice/feedback";
 import type { HintLadder } from "@/lib/practice/hints";
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -37,6 +39,17 @@ export type QuestionView = {
   intro?: SkillIntro;
   /** Short bubble copy. The live answer is not included. */
   hints?: HintLadder;
+  /** A different worked example of this kind, or null when one cannot be checked. */
+  example?: WorkedExample | null;
+  /** Restored after a refresh so a retry does not become a new first try. */
+  resume?: {
+    phase: Exclude<FeedbackPhase, "answering">;
+    why: string | null;
+    steps: string[];
+    expected: string | null;
+    /** The first typed answer, so a refresh keeps it in the box. */
+    draft: string;
+  };
 };
 
 export type SkillStatus = "mastered" | "practicing" | "not-started" | "check";
@@ -78,6 +91,10 @@ export type PracticeState = {
   expected?: string;
   steps?: string[];
   note?: string;
+  /** Which question the feedback below belongs to. */
+  feedbackFor?: string;
+  phase?: Exclude<FeedbackPhase, "answering">;
+  why?: string | null;
   next?: QuestionView;
   attempted?: number;
   correctCount?: number;

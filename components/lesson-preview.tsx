@@ -30,12 +30,10 @@ export function LessonPreview() {
             <span className="btn btn-primary">Check</span>
           </div>
         </QuestionCard>
-        <div className="hint-dock">
-          <div className="hint-actions">
-            <span className="hint-target">Give me a hint</span>
-            <span className="hint-target">Show me an example</span>
-            <span className="hint-target">I give up</span>
-          </div>
+        <div className="help-row">
+          <span className="help-target">Hint</span>
+          <span className="help-target">Show me an example</span>
+          <span className="help-target">Show me how</span>
         </div>
       </div>
     </figure>

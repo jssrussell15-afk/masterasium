@@ -18,6 +18,8 @@
   --color-line-strong: #8ec3de;
   --color-good-bg: #e5f6ec;
   --color-bad-bg: #fdeceb;
+  --color-warm: #6b3f0a;
+  --color-warm-bg: #fbf6ec;
   --color-dialog: #f7fbfe;
   --color-track: #d7ebf6;
   --color-shadow-rgb: 33 84 117;
@@ -31,6 +33,8 @@
   --blue-deep: var(--color-blue-deep);
   --good: var(--color-good);
   --bad: var(--color-bad);
+  --warm: var(--color-warm);
+  --warm-bg: var(--color-warm-bg);
   --background: var(--color-paper);
   --foreground: var(--color-ink);
 

@@ -1,82 +1,80 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { introProgress, type SkillIntro } from "@/lib/practice/intro-view";
 
 export function IntroModal({
-  intro,
+  title,
+  sentences,
+  example,
   onFinished,
   onViewed,
 }: {
-  intro: SkillIntro;
+  title: string;
+  sentences: string[];
+  example: { prompt: string; steps: string[]; answer: string } | null;
   onFinished: () => void;
   onViewed: () => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
-  const [elapsed, setElapsed] = useState(0);
-  const finished = useRef(false);
+  const startRef = useRef<HTMLButtonElement>(null);
   const onFinishedRef = useRef(onFinished);
   const onViewedRef = useRef(onViewed);
+  const [showAnswer, setShowAnswer] = useState(false);
   onFinishedRef.current = onFinished;
   onViewedRef.current = onViewed;
 
   useEffect(() => {
     onViewedRef.current();
-  }, [intro.skillId, intro.cycle]);
+  }, [title]);
 
   useEffect(() => {
     const node = dialog.current;
     if (!node) return;
     if (!node.open) node.showModal();
-    const block = (event: Event) => event.preventDefault();
-    node.addEventListener("cancel", block);
+    startRef.current?.focus();
+    const close = () => onFinishedRef.current();
+    node.addEventListener("cancel", close);
     return () => {
-      node.removeEventListener("cancel", block);
+      node.removeEventListener("cancel", close);
       if (node.open) node.close();
     };
-  }, [intro.skillId, intro.cycle]);
-
-  useEffect(() => {
-    finished.current = false;
-    const started = Date.now();
-    const timer = window.setInterval(() => {
-      const nextElapsed = Date.now() - started;
-      setElapsed(nextElapsed);
-      if (nextElapsed < intro.seconds * 1000 || finished.current) return;
-      finished.current = true;
-      window.clearInterval(timer);
-      onFinishedRef.current();
-    }, 200);
-    return () => window.clearInterval(timer);
-  }, [intro.cycle, intro.seconds, intro.skillId]);
-
-  const progress = introProgress(elapsed, intro.seconds, intro.beats.length);
-  const beat = intro.beats[progress.beat];
-  const remaining = progress.remaining;
+  }, [title]);
 
   return (
-    <dialog ref={dialog} className="intro-dialog" aria-label="Topic introduction">
-      <section className={`intro-card intro-${intro.style}`}>
-        <p className="eyebrow">Topic introduction</p>
-        {intro.asset ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={intro.asset} alt="" className="intro-asset" />
-        ) : (
-          <p className="intro-placeholder">{intro.placeholder}</p>
-        )}
-        {beat?.prompt ? <p className="intro-example">{beat.prompt}</p> : null}
-        {beat?.caption && beat.caption !== beat.prompt ? <p className="mt-3">{beat.caption}</p> : null}
-        {beat?.steps && beat.steps.length > 0 ? (
-          <ol className="steps">
-            {beat.steps.map((step, index) => (
-              <li key={`${intro.skillId}-intro-${progress.beat}-${index}`}>{step}</li>
-            ))}
-          </ol>
+    <dialog ref={dialog} className="intro-dialog" aria-labelledby="intro-title">
+      <section className="intro-card">
+        <h1 id="intro-title" className="display">
+          {title}
+        </h1>
+        {sentences.map((sentence) => (
+          <p key={sentence} className="intro-sentence">
+            {sentence}
+          </p>
+        ))}
+        {example ? (
+          <div className="intro-example-block">
+            <p className="example-prompt">{example.prompt}</p>
+            {example.steps.length > 0 ? (
+              <ol className="guide-steps">
+                {example.steps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ol>
+            ) : null}
+            {showAnswer ? (
+              <p>
+                Answer: <strong>{example.answer}</strong>
+              </p>
+            ) : (
+              <button type="button" className="help-target" onClick={() => setShowAnswer(true)}>
+                Show answer
+              </button>
+            )}
+          </div>
         ) : null}
-        {beat?.answer ? <p className="mt-2">Answer: {beat.answer}</p> : null}
-        <p className="intro-timer" role="timer">
-          Practice starts in {remaining} {remaining === 1 ? "second" : "seconds"}.
-        </p>
+        <button ref={startRef} className="btn btn-primary question-submit" type="button" onClick={() => onFinished()}>
+          Start
+        </button>
       </section>
     </dialog>
   );

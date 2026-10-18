@@ -32,11 +32,11 @@ export function StudentDashboard({
   const [state, action, pending] = useActionState(startSkill, initial);
 
   return (
-    <div className="mt-4 grid gap-4">
+    <div className="practice-home mt-4 grid gap-4">
       <div>
         <h1 className="display text-4xl">{childName}</h1>
         <p className="hint mt-1">Grade {grade}</p>
-        <Link href="/practice/can-do" className="can-do-entry">
+        <Link href="/practice/can-do" className="can-do-entry home-link">
           Things I can do
         </Link>
       </div>

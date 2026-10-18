@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { answersMatch } from "@/lib/practice/answers";
+import { feedbackFromMark, markFromState, reduceFeedback, whyLine } from "@/lib/practice/feedback";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
 import { buildPracticeEvent, type PracticeEvent } from "@/lib/practice/events";
 import { applyLearning } from "@/lib/practice/learning";
@@ -14,13 +15,14 @@ import {
   issueQuestion,
   loadAttemptLog,
   loadCards,
+  loadOrIssueQuestion,
   totals,
 } from "@/lib/practice/session";
 import { isLessonSkill } from "@/lib/lesson/catalog";
 import { syncReviewRows } from "@/lib/lesson/store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
-import { readStoredPlan, unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import { readAttemptMark, readStoredPlan, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
 import type { PracticeState } from "@/lib/practice/types";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
@@ -116,7 +118,87 @@ async function ownedChild(childId: string): Promise<
   return { supabase: session.supabase, access };
 }
 
+async function loadPending(
+  supabase: SupabaseClient,
+  childId: string,
+  questionId: string,
+): Promise<{ question: PendingAnswer } | { error: string }> {
+  const { data: pending, error: pendingError } = await supabase
+    .from("pending_questions")
+    .select("id, child_id, skill_id, prompt, answer")
+    .eq("id", questionId)
+    .eq("child_id", childId)
+    .maybeSingle();
+  if (pendingError) return { error: friendlyDbError(pendingError) };
+  const question = pending as PendingAnswer | null;
+  if (!question) return { error: "That question expired. Refresh the page and try again." };
+  return { question };
+}
+
 export async function submitAnswer(
+  previous: PracticeState,
+  formData: FormData,
+): Promise<PracticeState> {
+  const intent = String(formData.get("intent") ?? "check");
+  if (intent === "next") return advancePractice(previous, formData);
+  if (intent === "show-how" || intent === "give-up") return markPractice(previous, formData, "show-how");
+  return markPractice(previous, formData, "check");
+}
+
+async function markPractice(
+  previous: PracticeState,
+  formData: FormData,
+  mode: "check" | "show-how",
+): Promise<PracticeState> {
+  const childId = String(formData.get("childId") ?? "");
+  const questionId = String(formData.get("questionId") ?? "");
+  if (!childId || !questionId) return { error: "That question could not be checked." };
+
+  const owned = await ownedChild(childId);
+  if ("error" in owned) return { error: owned.error };
+  const { supabase, access } = owned;
+  const loaded = await loadPending(supabase, childId, questionId);
+  if ("error" in loaded) return { error: loaded.error };
+  const question = loaded.question;
+  const unpacked = unpackStoredAnswer(question.answer);
+  const existing = readAttemptMark(question.answer);
+  const given =
+    mode === "show-how"
+      ? (existing?.given ?? "")
+      : givenAnswer(unpacked.answer, {
+          answer: String(formData.get("answer") ?? ""),
+          remainder: String(formData.get("remainder") ?? ""),
+        });
+  const correct = mode === "show-how" ? false : answersMatch(unpacked.answer, given);
+  const result = reduceFeedback(
+    feedbackFromMark(existing),
+    mode === "show-how" ? { type: "show-how" } : { type: "check", correct },
+  );
+  const mark = markFromState(result.state, existing, given, mode === "show-how");
+  if (!mark) return previous;
+
+  const { error: updateError } = await supabase
+    .from("pending_questions")
+    .update({ answer: withAttemptMark(question.answer, mark) })
+    .eq("id", question.id)
+    .eq("child_id", childId);
+  if (updateError) return { error: friendlyDbError(updateError) };
+
+  const { cards, error: cardError } = await loadCards(supabase, childId);
+  if (cardError) return { error: cardError };
+  const issued = await loadOrIssueQuestion(supabase, childId, access.working, cards);
+  if (!issued.question) return { error: issued.error ?? "Could not keep this question." };
+  return snapshot(supabase, childId, access, cards, {
+    feedbackFor: question.id,
+    phase: mark.phase,
+    why: mark.phase === "correct" ? whyLine(unpacked.steps) : null,
+    steps: mark.phase === "revealed" ? unpacked.steps : undefined,
+    expected: mark.phase === "revealed" ? unpacked.answer : undefined,
+    next: issued.question,
+  });
+}
+
+async function advancePractice(
   _previous: PracticeState,
   formData: FormData,
 ): Promise<PracticeState> {
@@ -127,28 +209,18 @@ export async function submitAnswer(
   const owned = await ownedChild(childId);
   if ("error" in owned) return { error: owned.error };
   const { supabase, access } = owned;
-
-  const { data: pending, error: pendingError } = await supabase
-    .from("pending_questions")
-    .select("id, child_id, skill_id, prompt, answer")
-    .eq("id", questionId)
-    .eq("child_id", childId)
-    .maybeSingle();
-
-  if (pendingError) return { error: friendlyDbError(pendingError) };
-  const question = pending as PendingAnswer | null;
-  if (!question) return { error: "That question expired. Refresh the page and try again." };
+  const loaded = await loadPending(supabase, childId, questionId);
+  if ("error" in loaded) return { error: loaded.error };
+  const question = loaded.question;
+  const mark = readAttemptMark(question.answer);
+  if (!mark || (mark.phase !== "correct" && mark.phase !== "revealed")) {
+    return { error: "Check your answer first." };
+  }
 
   const unpacked = unpackStoredAnswer(question.answer);
   const storedPlan = readStoredPlan(question.answer);
-  const giveUp = String(formData.get("intent") ?? "") === "give-up";
-  const given = giveUp
-    ? ""
-    : givenAnswer(unpacked.answer, {
-        answer: String(formData.get("answer") ?? ""),
-        remainder: String(formData.get("remainder") ?? ""),
-      });
-  const correct = giveUp ? false : answersMatch(unpacked.answer, given);
+  const given = mark.given;
+  const correct = mark.firstTryCorrect;
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
 
@@ -164,7 +236,7 @@ export async function submitAnswer(
   let nextCard = applied.card;
   let note: string | undefined;
   let coach = false;
-  if (!correct && !giveUp) {
+  if (!correct && !mark.showedHow) {
     const mistake = classifyMistake(question.prompt, unpacked.answer, given);
     const noted = noteMistake(nextCard, mistake.type);
     nextCard = noted.card;
@@ -209,11 +281,11 @@ export async function submitAnswer(
     skillId: question.skill_id,
     detail: { correct: correct ? 1 : 0 },
   });
-  if (giveUp) {
+  if (mark.showedHow) {
     await insertPracticeEvent(supabase, childId, {
       kind: "hint_rung",
       skillId: question.skill_id,
-      detail: { rung: "give-up" },
+      detail: { rung: "show-how" },
     });
   }
   const seconds = Number(formData.get("elapsedSeconds"));
@@ -244,9 +316,7 @@ export async function submitAnswer(
   if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
 
   return snapshot(supabase, childId, access, updatedCards, {
-    correct,
-    expected: correct ? undefined : unpacked.answer,
-    steps: correct ? undefined : unpacked.steps,
+    feedbackFor: issued.question.questionId,
     note,
     next: issued.question,
   });
