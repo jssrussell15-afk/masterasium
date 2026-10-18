@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyLearning } from "@/lib/practice/learning";
 import { addDays } from "@/lib/practice/dates";
-import { introCycleDue, introContent, nearTransfer, promptShape, buildSkillIntro } from "@/lib/practice/intro";
+import { introCycleDue, introContent, introCardModel, nearTransfer, promptShape, buildSkillIntro } from "@/lib/practice/intro";
 import { INTRO_PLACEHOLDER, INTRO_SECONDS, introProgress, introStyle } from "@/lib/practice/intro-view";
 import { readLearn, readMemory, writeLearn, writeMemory } from "@/lib/practice/memory";
 import { noteMistake } from "@/lib/practice/mistakes";
@@ -224,16 +224,19 @@ describe("topic intro", () => {
     expect(visual.asset).toBeNull();
     expect(visual.seconds).toBe(INTRO_SECONDS);
     expect(visual.style).toBe("visual");
-    expect(visual.beats).toHaveLength(1);
-    expect(visual.beats[0]?.answer).toBe(early.exampleAnswer);
+    expect(visual.beats[0]?.caption).toBe(early.summary);
+    expect(visual.beats[1]?.prompt).toBe(early.examplePrompt);
+    expect(visual.beats[1]?.answer).toBe(early.exampleAnswer);
+    expect(introCardModel(visual, "9 + 1 = ?")?.example?.prompt).toBe(early.examplePrompt);
+    expect(introCardModel(visual, early.examplePrompt)?.example).toBeNull();
 
     const later = skillById("g4-equiv");
     expect(later).toBeDefined();
     if (!later) return;
     const steps = buildSkillIntro(later, "relearn");
     expect(steps.style).toBe("steps");
-    expect(steps.beats).toHaveLength(2);
-    expect(steps.beats[0]?.prompt).toBe(later.examplePrompt);
+    expect(steps.beats[0]?.caption).toBe(later.summary);
+    expect(steps.beats[1]?.prompt).toBe(later.examplePrompt);
     expect(steps.beats[1]?.steps).toEqual(later.exampleSteps);
 
     const why = introContent(9, {
@@ -245,6 +248,20 @@ describe("topic intro", () => {
     expect(why.style).toBe("why");
     expect(why.beats[0]?.caption).toBe("Subtract the same amount from both sides.");
     expect(why.beats[1]?.steps).toEqual(["Subtract 3 from both sides.", "n = 7."]);
+  });
+
+  it("skips an intro that has no kid-facing sentence", () => {
+    const skill = skillById("g1-add-10");
+    expect(skill).toBeDefined();
+    if (!skill) return;
+    const intro = buildSkillIntro(skill, "new");
+    expect(
+      introCardModel(
+        { ...intro, beats: [{ caption: INTRO_PLACEHOLDER }] },
+        "9 + 1 = ?",
+      ),
+    ).toBeNull();
+    expect(introCardModel({ ...intro, beats: [] }, "9 + 1 = ?")).toBeNull();
   });
 
   it("finishes at 10 seconds and splits beats inside that same countdown", () => {

@@ -12,6 +12,13 @@ import {
   revokeStudentToken,
 } from "@/lib/auth/student";
 import { practicePathForChild } from "@/lib/children/signup-practice";
+import {
+  readRememberedChildren,
+  TABLET_CHILDREN_COOKIE,
+  TABLET_CHILDREN_MAX_AGE,
+  withPinLength,
+  writeRememberedChildren,
+} from "@/lib/children/tablet";
 import { friendlyDbError, STUDENT_LOGIN_SETUP_MESSAGE } from "@/lib/db-error";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
@@ -134,6 +141,17 @@ export async function signInStudent(
   const practicePath = practicePathForChild(childId);
 
   const store = await cookies();
+  if (childId) {
+    const remembered = readRememberedChildren(store.get(TABLET_CHILDREN_COOKIE)?.value);
+    const next = withPinLength(remembered, childId, pin.length);
+    if (next !== remembered) {
+      store.set(
+        TABLET_CHILDREN_COOKIE,
+        writeRememberedChildren(next),
+        studentCookieOptions(TABLET_CHILDREN_MAX_AGE),
+      );
+    }
+  }
   store.set(STUDENT_COOKIE, data, studentCookieOptions());
   redirect(practicePath ?? "/practice");
 }

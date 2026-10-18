@@ -12,6 +12,8 @@ const MAX_CHILDREN = 2;
 export type RememberedChild = {
   id: string;
   firstName: string;
+  /** Digit length of the PIN saved on this tablet, when a grown-up set it here. */
+  pinLength?: 4 | 5 | 6;
 };
 
 export function readRememberedChildren(value: string | null | undefined): RememberedChild[] {
@@ -32,7 +34,8 @@ export function readRememberedChildren(value: string | null | undefined): Rememb
     const firstName = typeof record.firstName === "string" ? normalizeFirstName(record.firstName) : "";
     if (!CHILD_ID.test(id) || !isValidFirstName(firstName)) continue;
     if (children.some((child) => child.id === id)) continue;
-    children.push({ id, firstName });
+    const pinLength = pinLengthOf(record.pinLength);
+    children.push(pinLength ? { id, firstName, pinLength } : { id, firstName });
     if (children.length === MAX_CHILDREN) break;
   }
   return children;
@@ -50,5 +53,31 @@ export function rememberChild(children: RememberedChild[], child: RememberedChil
 }
 
 export function writeRememberedChildren(children: RememberedChild[]): string {
-  return JSON.stringify(children.map((child) => ({ id: child.id, firstName: child.firstName })));
+  return JSON.stringify(
+    children.map((child) => ({
+      id: child.id,
+      firstName: child.firstName,
+      ...(child.pinLength ? { pinLength: child.pinLength } : {}),
+    })),
+  );
+}
+
+export function pinLengthOf(value: unknown): 4 | 5 | 6 | null {
+  if (value === 4 || value === 5 || value === 6) return value;
+  return null;
+}
+
+/** Updates the digit count for a child already saved on this tablet. */
+export function withPinLength(
+  children: RememberedChild[],
+  childId: string,
+  pinLength: number,
+): RememberedChild[] {
+  const length = pinLengthOf(pinLength);
+  if (!length) return children;
+  const index = children.findIndex((child) => child.id === childId);
+  if (index < 0) return children;
+  const next = children.slice();
+  next[index] = { ...next[index], pinLength: length };
+  return next;
 }

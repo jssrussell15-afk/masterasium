@@ -6,8 +6,10 @@ import { friendlyDbError } from "@/lib/db-error";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import { lessonById } from "@/lib/lesson/catalog";
-import { explainMiss, reduceLesson, reviewPlanDates } from "@/lib/lesson/flow";
+import { explainMiss, reduceLesson, reviewPlanDates, settleLessonFeedback } from "@/lib/lesson/flow";
+import { holdToMark, isHoldNote, packHold, readHold } from "@/lib/lesson/hold";
 import { buildLessonScreen, lessonTask, type LessonScreen } from "@/lib/lesson/screen";
+import { feedbackFromMark, markFromState, reduceFeedback } from "@/lib/practice/feedback";
 import {
   ensureRun,
   nextReviewDate,
@@ -76,35 +78,77 @@ export async function lessonAction(
   if (loaded.error) return { ...previous, error: loaded.error };
   let completedAt = loaded.completedAt;
   const before = loaded.run;
-  const hadFeedback = Boolean(before.feedbackNote);
-  const task = lessonTask(before, skill);
+  const today = torontoDate();
+  const hold = readHold(before.feedbackNote, before.feedbackExpected);
+  const openRun = hold ? { ...before, feedbackNote: null, feedbackExpected: null } : before;
+  const task = lessonTask(openRun, skill);
+
+  if (intent === "check" || intent === "show-how" || intent === "answer") {
+    if (!task) return { ...previous, error: "That question is not ready." };
+    const given = givenAnswer(task.answer, {
+      answer: String(formData.get("answer") ?? ""),
+      remainder: String(formData.get("remainder") ?? ""),
+    });
+    const correct = intent === "show-how" ? false : answersMatch(task.answer, given);
+    const result = reduceFeedback(
+      feedbackFromMark(holdToMark(hold)),
+      intent === "show-how" ? { type: "show-how" } : { type: "check", correct },
+    );
+    const mark = markFromState(result.state, holdToMark(hold), given, intent === "show-how");
+    if (!mark) {
+      return { screen: buildLessonScreen(before, skill, lesson, { nextReview: null }) };
+    }
+    const packed = packHold(mark);
+    const held = { ...before, feedbackNote: packed.note, feedbackExpected: packed.expected };
+    const savedHold = await saveRun(supabase, childId, held, completedAt);
+    if (savedHold) return { ...previous, error: savedHold };
+    const { cards } = await loadCards(supabase, childId);
+    return {
+      screen: buildLessonScreen(held, skill, lesson, {
+        nextReview: nextReviewDate(readLearn(cardFor(cards, skillId).fsrs)),
+      }),
+    };
+  }
 
   let event: Parameters<typeof reduceLesson>[1];
   let correct = false;
   let prompt = "";
   let expected = "";
   let given = "";
-  if (intent === "answer" && task && !hadFeedback) {
+  let graded = false;
+
+  if (intent === "next") {
+    if (!hold || (hold.phase !== "correct" && hold.phase !== "revealed") || !task) {
+      return {
+        ...previous,
+        error: "Check your answer first.",
+        screen: buildLessonScreen(before, skill, lesson, { nextReview: null }),
+      };
+    }
     prompt = task.prompt;
     expected = task.answer;
-    given = givenAnswer(expected, {
-      answer: String(formData.get("answer") ?? ""),
-      remainder: String(formData.get("remainder") ?? ""),
-    });
-    correct = answersMatch(expected, given);
+    given = hold.given;
+    correct = hold.firstTryCorrect;
     event = {
       type: "answer",
       correct,
       note: correct ? null : explainMiss(prompt, expected, given),
       expected,
     };
+    graded = true;
+  } else if (isHoldNote(before.feedbackNote)) {
+    const { cards } = await loadCards(supabase, childId);
+    return {
+      screen: buildLessonScreen(before, skill, lesson, {
+        nextReview: nextReviewDate(readLearn(cardFor(cards, skillId).fsrs)),
+      }),
+    };
   } else {
     event = { type: "continue" };
   }
 
-  const stepped = reduceLesson(before, event);
-  const today = torontoDate();
-  const graded = event.type === "answer" && !hadFeedback && Boolean(task);
+  const cleared = hold ? { ...before, feedbackNote: null, feedbackExpected: null } : before;
+  const stepped = settleLessonFeedback(reduceLesson(cleared, event));
 
   if (graded) {
     const { cards, error: cardError } = await loadCards(supabase, childId);

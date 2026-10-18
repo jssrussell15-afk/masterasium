@@ -44,9 +44,14 @@ describe("Set PIN", () => {
     expect(html).not.toContain("streak");
     expect(html).not.toContain("points");
     expect(html).toContain('aria-live="polite"');
-    expect(html).toContain("0 of 6 digits entered");
-    expect(pinDigitAnnouncement(2)).toBe("2 of 6 digits entered");
-    expect(pinDigitAnnouncement(4)).toBe("4 of 6 digits entered");
+    expect(html).toContain("0 digits entered");
+    expect(html).not.toContain("0 of 6 digits entered");
+    expect(pinDigitAnnouncement(0)).toBe("0 digits entered");
+    expect(pinDigitAnnouncement(1)).toBe("1 digit entered");
+    expect(pinDigitAnnouncement(2)).toBe("2 digits entered");
+    expect(pinDigitAnnouncement(0, 4)).toBe("0 of 4 digits entered");
+    expect(pinDigitAnnouncement(4, 4)).toBe("4 of 4 digits entered");
+    expect(pinDigitAnnouncement(2, 6)).toBe("2 of 6 digits entered");
   });
 
   it("asks for a first name and PIN when the tablet has no saved student", () => {

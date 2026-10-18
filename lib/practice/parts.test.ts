@@ -4,8 +4,8 @@ import { answerShape, givenAnswer } from "@/lib/practice/parts";
 
 describe("multi-part answers", () => {
   it("uses one field for an ordinary answer", () => {
-    expect(answerShape("4 + 3 = ?", "7")).toEqual({ kind: "single" });
-    expect(answerShape("What fraction is shaded?", "3/8")).toEqual({ kind: "single" });
+    expect(answerShape("4 + 3 = ?", "7")).toEqual({ kind: "single", inputMode: "numeric" });
+    expect(answerShape("What fraction is shaded?", "3/8")).toEqual({ kind: "single", inputMode: "text" });
     expect(givenAnswer("7", { answer: "7", remainder: "1" })).toBe("7");
   });
 

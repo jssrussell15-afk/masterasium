@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { AnswerFields } from "@/components/answer-fields";
+import { QuestionPractice } from "@/components/question-practice";
 import { lessonAction, type LessonClientState } from "@/lib/lesson/actions";
 import type { LessonScreen } from "@/lib/lesson/screen";
 
@@ -45,10 +45,13 @@ export function LessonView({
   skillId?: string;
   sampleHref?: string;
 }) {
+  const questionLayout = screen.kind === "question";
   return (
-    <div className="lesson-screen">
+    <div className={questionLayout ? "question-screen" : "lesson-screen"}>
       <p className="question-back">
-        <Link href="/practice">All skills</Link>
+        <Link className="home-link" href="/practice">
+          All skills
+        </Link>
       </p>
       {error ? (
         <p className="feedback bad" role="alert">
@@ -98,37 +101,32 @@ export function LessonView({
         </section>
       ) : null}
       {screen.kind === "question" ? (
-        <section className="card grid gap-4" aria-label="Question">
-          <p className="eyebrow">{screen.eyebrow}</p>
-          <h1 className={numeralClass(screen.prompt)}>{screen.prompt}</h1>
-          {screen.steps.length > 0 ? (
-            <ol className="lesson-steps">
-              {screen.steps.map((step) => (
-                <li key={step}>{step}</li>
-              ))}
-            </ol>
-          ) : null}
-          {screen.responseHint ? <p className="hint">{screen.responseHint}</p> : null}
-          {screen.hint ? (
-            <details className="lesson-hint">
-              <summary>Hint</summary>
-              <p>{screen.hint}</p>
-            </details>
-          ) : null}
-          {action && childId && skillId ? (
-            <form action={action} className="grid gap-3">
-              <input type="hidden" name="childId" value={childId} />
-              <input type="hidden" name="skillId" value={skillId} />
-              <input type="hidden" name="intent" value="answer" />
-              <AnswerFields key={screen.taskKey} shape={screen.shape} />
-              <button className="btn btn-primary lesson-tap" type="submit" disabled={pending}>
-                {pending ? "Checking…" : "Check"}
-              </button>
-            </form>
-          ) : (
-            <p className="hint">The answer box is here on a real lesson.</p>
-          )}
-        </section>
+        <QuestionPractice
+          questionId={screen.taskKey}
+          eyebrow={`${screen.eyebrow} · ${screen.title}`}
+          prompt={screen.prompt}
+          responseHint={screen.responseHint}
+          shape={screen.shape}
+          hint={screen.hint}
+          example={screen.example}
+          progress={screen.progress}
+          phase={screen.hold ?? "answering"}
+          why={screen.why}
+          steps={screen.solutionSteps}
+          expected={screen.solutionAnswer}
+          draft={screen.draft}
+          pending={pending}
+          guideSteps={screen.guideSteps}
+          action={action}
+          fields={
+            childId && skillId
+              ? [
+                  { name: "childId", value: childId },
+                  { name: "skillId", value: skillId },
+                ]
+              : []
+          }
+        />
       ) : null}
       {screen.kind === "feedback" ? (
         <section className="card grid gap-4" aria-label="What to look at" role="status">

@@ -16,12 +16,17 @@ import { isValidFirstName, isValidPin, normalizeFirstName } from "@/lib/validati
 const initial: AuthState = {};
 const FIELD_ORDER = ["firstName", "pin"] as const;
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
-const PIN_DOTS = 6;
+const PIN_MAX = 6;
 
-/** Count only. The spoken text never includes the digits themselves. */
-export function pinDigitAnnouncement(count: number): string {
-  const entered = Math.max(0, Math.min(count, PIN_DOTS));
-  return `${entered} of ${PIN_DOTS} digits entered`;
+/**
+ * Count only. The spoken text never includes the digits themselves.
+ * A known PIN uses that length. An unknown PIN has no maximum in the sentence.
+ */
+export function pinDigitAnnouncement(count: number, length?: number | null): string {
+  const known = length === 4 || length === 5 || length === 6 ? length : null;
+  const entered = Math.max(0, known ? Math.min(count, known) : count);
+  if (known) return `${entered} of ${known} digits entered`;
+  return `${entered} ${entered === 1 ? "digit" : "digits"} entered`;
 }
 
 export function StudentLoginForm({
@@ -40,6 +45,8 @@ export function StudentLoginForm({
   const pendingRef = useRef(false);
 
   const selected = students.find((student) => student.id === selectedId) ?? null;
+  const pinLength = selected?.pinLength ?? null;
+  const pinMax = pinLength ?? PIN_MAX;
   const server = !useClient && state.error ? placeAuthError(state.error) : null;
   const fields = useClient ? clientErrors : (server?.fields ?? {});
   const summary = useClient ? clientSummary(clientErrors) : (server?.summary ?? null);
@@ -83,7 +90,7 @@ export function StudentLoginForm({
   }, [selectedId]);
 
   function addDigit(digit: string) {
-    setPin((current) => (current.length >= 6 ? current : current + digit));
+    setPin((current) => (current.length >= pinMax ? current : current + digit));
     setClientErrors({});
     setUseClient(true);
   }
@@ -193,12 +200,12 @@ export function StudentLoginForm({
               aria-invalid={pinError ? true : undefined}
               aria-describedby={fieldDescribedBy("student-pin-error", pinError)}
             >
-              {Array.from({ length: PIN_DOTS }, (_, index) => (
+              {Array.from({ length: pinLength ?? pin.length }, (_, index) => (
                 <span key={index} data-filled={index < pin.length ? "true" : "false"} aria-hidden="true" />
               ))}
             </p>
-            <p className="visually-hidden" aria-live="polite" aria-atomic="true">
-              {pinDigitAnnouncement(pin.length)}
+            <p className="pin-count" aria-live="polite" aria-atomic="true">
+              {pinDigitAnnouncement(pin.length, pinLength)}
             </p>
             <div className="pin-pad" role="group" aria-label="PIN">
               {DIGITS.map((digit) => (

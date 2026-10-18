@@ -1,3 +1,4 @@
+import type { AttemptMark } from "@/lib/practice/feedback";
 import type { QuestionKind } from "@/lib/practice/types";
 
 export type StoredPlan = {
@@ -49,4 +50,35 @@ export function readStoredPlan(stored: string): StoredPlan {
     // Plain answers have no plan.
   }
   return { kind: null, rollbackSkillId: null };
+}
+
+export function readAttemptMark(stored: string): AttemptMark | null {
+  try {
+    const parsed = JSON.parse(stored) as { v?: number; mark?: unknown };
+    if (parsed?.v !== 1 || !parsed.mark || typeof parsed.mark !== "object") return null;
+    const mark = parsed.mark as Partial<AttemptMark>;
+    if (mark.phase !== "retry" && mark.phase !== "correct" && mark.phase !== "revealed") return null;
+    if (typeof mark.firstTryCorrect !== "boolean") return null;
+    return {
+      phase: mark.phase,
+      firstTryCorrect: mark.firstTryCorrect,
+      given: typeof mark.given === "string" ? mark.given : "",
+      showedHow: mark.showedHow === true,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function withAttemptMark(stored: string, mark: AttemptMark): string {
+  const { answer, steps } = unpackStoredAnswer(stored);
+  const plan = readStoredPlan(stored);
+  return JSON.stringify({
+    v: 1,
+    answer,
+    steps,
+    ...(plan.kind ? { kind: plan.kind } : {}),
+    ...(plan.rollbackSkillId ? { rollbackSkillId: plan.rollbackSkillId } : {}),
+    mark,
+  });
 }

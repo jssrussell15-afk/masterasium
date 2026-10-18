@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
-import { AnswerFields } from "@/components/answer-fields";
-import { HintBubbles, type HintRung } from "@/components/hint-bubbles";
 import { IntroModal } from "@/components/intro-modal";
-import { QuestionCard } from "@/components/question-card";
+import { QuestionPractice } from "@/components/question-practice";
 import { Scratchpad } from "@/components/scratchpad";
 import { logPracticeEvent, markIntroSeen, practiceAction } from "@/lib/practice/actions";
-import type { HintLadder } from "@/lib/practice/hints";
+import { PRACTICE_SET_SIZE } from "@/lib/practice/feedback";
+import { introCardModel } from "@/lib/practice/intro";
 import { allowsScratchpad } from "@/lib/practice/surface";
 import type { PracticeState, PracticeView, QuestionKind } from "@/lib/practice/types";
+import type { FeedbackPhase } from "@/lib/practice/feedback";
 
 function kindLabel(kind: QuestionKind): string {
   if (kind === "review") return "Review";
@@ -21,26 +21,36 @@ function kindLabel(kind: QuestionKind): string {
 }
 
 const initial: PracticeState = {};
-const HINT_FALLBACK: HintLadder = {
-  hint: "Name what the question is asking, then do the first step.",
-  example: "Use the same steps as the worked example, with this question's numbers.",
-};
 
 export function PracticeSession({ view }: { view: PracticeView }) {
   const [state, action, pending] = useActionState(practiceAction, initial);
   const question = state.next ?? view.question;
-  const intro = question.intro ?? null;
-  const introToken = intro ? `${question.questionId}:${intro.skillId}:${intro.cycle}` : "";
+  const card = question.intro ? introCardModel(question.intro, question.prompt) : null;
+  const introToken = question.intro && card ? `${question.questionId}:${question.intro.skillId}:${question.intro.cycle}` : "";
   const [finishedIntro, setFinishedIntro] = useState("");
-  const showingIntro = intro != null && finishedIntro !== introToken;
-  const [rung, setRung] = useState<HintRung | null>(null);
+  const showingIntro = card != null && question.intro != null && finishedIntro !== introToken;
   const startedAt = useRef<number | null>(null);
   const submitted = useRef(false);
+  const seenQuestion = useRef(question.questionId);
+  const [completed, setCompleted] = useState(0);
   const grade = state.workingGrade ?? view.grade;
-  const hints = question.hints ?? HINT_FALLBACK;
+  const phase: FeedbackPhase =
+    state.feedbackFor === question.questionId && state.phase
+      ? state.phase
+      : (question.resume?.phase ?? "answering");
+  const why =
+    state.feedbackFor === question.questionId ? (state.why ?? null) : (question.resume?.why ?? null);
+  const steps =
+    state.feedbackFor === question.questionId ? (state.steps ?? []) : (question.resume?.steps ?? []);
+  const expected =
+    state.feedbackFor === question.questionId
+      ? (state.expected ?? null)
+      : (question.resume?.expected ?? null);
 
   useEffect(() => {
-    setRung(null);
+    if (seenQuestion.current === question.questionId) return;
+    seenQuestion.current = question.questionId;
+    setCompleted((count) => count + 1);
   }, [question.questionId]);
 
   useEffect(() => {
@@ -57,42 +67,45 @@ export function PracticeSession({ view }: { view: PracticeView }) {
     };
   }, [question.questionId, question.skillId, showingIntro, view.childId]);
 
-  function stampElapsed(event: FormEvent<HTMLFormElement>) {
-    submitted.current = true;
-    const input = event.currentTarget.elements.namedItem("elapsedSeconds");
+  function stampElapsed(form: HTMLFormElement) {
+    const intent = String(new FormData(form).get("intent") ?? "");
+    if (intent === "next") submitted.current = true;
+    const input = form.elements.namedItem("elapsedSeconds");
     if (!(input instanceof HTMLInputElement) || startedAt.current == null) return;
     input.value = String(Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)));
   }
 
-  function chooseRung(next: HintRung) {
-    setRung(next);
-    void logPracticeEvent(view.childId, "hint_rung", question.skillId, { rung: next }).catch(
-      () => undefined,
-    );
-  }
-
-  const bubble = rung === "hint" ? hints.hint : rung === "example" ? hints.example : null;
+  const intro = question.intro;
+  const fields = [
+    { name: "childId", value: view.childId },
+    { name: "questionId", value: question.questionId },
+    { name: "elapsedSeconds", value: "0" },
+    ...(intro
+      ? [
+          { name: "introSkillId", value: intro.skillId },
+          { name: "introCycle", value: intro.cycle },
+        ]
+      : []),
+  ];
 
   return (
     <div className="question-screen">
       <p className="question-back">
-        <Link href="/practice">All skills</Link>
+        <Link className="home-link" href="/practice">
+          All skills
+        </Link>
       </p>
-      {state.correct != null ? (
-        <p className={state.correct ? "feedback good" : "feedback bad"} role="status">
-          {state.correct ? "That's right." : `The answer is ${state.expected}.`}
-        </p>
-      ) : null}
       {state.error ? (
         <p className="feedback bad" role="alert">
           {state.error}
         </p>
       ) : null}
-
-      {showingIntro && intro ? (
+      {showingIntro && intro && card ? (
         <IntroModal
           key={introToken}
-          intro={intro}
+          title={question.skillTitle}
+          sentences={card.sentences}
+          example={card.example}
           onViewed={() => {
             void logPracticeEvent(view.childId, "intro_viewed", intro.skillId, {
               cycle: intro.cycle,
@@ -104,53 +117,26 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           }}
         />
       ) : (
-        <QuestionCard
+        <QuestionPractice
+          questionId={question.questionId}
           eyebrow={`${kindLabel(question.kind)} · ${question.skillTitle}`}
           prompt={question.prompt}
           responseHint={question.responseHint}
-          aside={allowsScratchpad(grade) ? <Scratchpad /> : undefined}
-        >
-          <form action={action} className="question-form" onSubmit={stampElapsed}>
-            <input type="hidden" name="intent" value="answer" />
-            <input type="hidden" name="childId" value={view.childId} />
-            <input type="hidden" name="questionId" value={question.questionId} />
-            <input type="hidden" name="elapsedSeconds" defaultValue="0" />
-            {intro ? (
-              <>
-                <input type="hidden" name="introSkillId" value={intro.skillId} />
-                <input type="hidden" name="introCycle" value={intro.cycle} />
-              </>
-            ) : null}
-            <AnswerFields shape={question.shape} />
-            <button className="btn btn-primary" type="submit" disabled={pending}>
-              {pending ? "Checking…" : "Check"}
-            </button>
-          </form>
-        </QuestionCard>
-      )}
-
-      {showingIntro ? null : (
-        <HintBubbles
-          message={bubble}
+          shape={question.shape}
+          hint={question.hints?.hint ?? null}
+          example={question.example ?? null}
+          progress={{ index: (completed % PRACTICE_SET_SIZE) + 1, total: PRACTICE_SET_SIZE }}
+          phase={phase}
+          why={why}
+          steps={steps}
+          expected={expected}
+          draft={question.resume?.draft ?? ""}
           pending={pending}
-          onRung={chooseRung}
-          giveUp={
-            <form action={action} onSubmit={stampElapsed}>
-              <input type="hidden" name="intent" value="give-up" />
-              <input type="hidden" name="childId" value={view.childId} />
-              <input type="hidden" name="questionId" value={question.questionId} />
-              <input type="hidden" name="elapsedSeconds" defaultValue="0" />
-              {intro ? (
-                <>
-                  <input type="hidden" name="introSkillId" value={intro.skillId} />
-                  <input type="hidden" name="introCycle" value={intro.cycle} />
-                </>
-              ) : null}
-              <button className="hint-target" type="submit" disabled={pending}>
-                I give up
-              </button>
-            </form>
-          }
+          assist={question.assist}
+          aside={allowsScratchpad(grade) ? <Scratchpad /> : undefined}
+          action={action}
+          fields={fields}
+          onElapsed={stampElapsed}
         />
       )}
     </div>

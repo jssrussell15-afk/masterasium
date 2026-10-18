@@ -40,7 +40,7 @@ export function TopicPicker({
     <>
       <button
         type="button"
-        className="btn btn-secondary w-fit"
+        className="btn btn-secondary home-link w-fit"
         aria-haspopup="dialog"
         disabled={pending}
         onClick={() => setOpen(true)}

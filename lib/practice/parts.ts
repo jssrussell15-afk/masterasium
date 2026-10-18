@@ -14,7 +14,7 @@ export type PartField = {
 };
 
 export type AnswerShape =
-  | { kind: "single" }
+  | { kind: "single"; inputMode?: "numeric" | "decimal" | "text" }
   | { kind: "parts"; id: "remainder"; parts: PartField[] };
 
 const REMAINDER = /^(\d+)\s*r\s*(\d+)$/i;
@@ -38,7 +38,14 @@ export function answerShape(prompt: string, expected: string): AnswerShape {
       ],
     };
   }
-  return { kind: "single" };
+  return { kind: "single", inputMode: entryMode(expected) };
+}
+
+function entryMode(expected: string): "numeric" | "decimal" | "text" {
+  const value = expected.trim();
+  if (/^-?\d+$/.test(value)) return "numeric";
+  if (/^-?\d+\.\d+$/.test(value)) return "decimal";
+  return "text";
 }
 
 export function joinParts(id: AnswerShape extends { id: infer Id } ? Id : string, values: Record<string, string>): string {

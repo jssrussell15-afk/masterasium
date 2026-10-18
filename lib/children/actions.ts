@@ -24,6 +24,7 @@ import {
   rememberChild,
   TABLET_CHILDREN_COOKIE,
   TABLET_CHILDREN_MAX_AGE,
+  withPinLength,
   writeRememberedChildren,
 } from "@/lib/children/tablet";
 import { storedUsername } from "@/lib/children/username";
@@ -277,6 +278,7 @@ export async function setChildPin(
     if (saved !== "saved") return saved;
   }
 
+  await rememberPinLength(childId, pin);
   redirect(returnTo === "dashboard" ? "/dashboard?notice=pin" : "/settings?notice=pin");
 }
 
@@ -301,6 +303,7 @@ export async function setStudentLogin(
     p_pin: pin.pin,
   });
   if (error) return { error: friendlyDbError(error) };
+  await rememberPinLength(childId, pin.pin);
   redirect("/settings?notice=login");
 }
 
@@ -320,7 +323,17 @@ export async function resetStudentPin(
     p_pin: pin.pin,
   });
   if (error) return { error: friendlyDbError(error) };
+  await rememberPinLength(childId, pin.pin);
   redirect("/settings?notice=pin");
+}
+
+async function rememberPinLength(childId: string, pin: string): Promise<void> {
+  if (pin.length < 4 || pin.length > 6) return;
+  const store = await cookies();
+  const current = readRememberedChildren(store.get(TABLET_CHILDREN_COOKIE)?.value);
+  const next = withPinLength(current, childId, pin.length);
+  if (next === current) return;
+  store.set(TABLET_CHILDREN_COOKIE, writeRememberedChildren(next), studentCookieOptions(TABLET_CHILDREN_MAX_AGE));
 }
 
 export async function setNextGradeUnlock(
