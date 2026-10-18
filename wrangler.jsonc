@@ -27,6 +27,9 @@
       "persist": true
     }
   },
+  // Non-production branches run `npx wrangler preview`, which refuses to
+  // start without this block. Assets and compatibility stay at the top level.
+  "previews": {},
   "build": {
     "command": "node scripts/patch-opennext-preview-props.mjs && npx opennextjs-cloudflare build",
     "watch_dir": ["app", "components", "lib", "public"]

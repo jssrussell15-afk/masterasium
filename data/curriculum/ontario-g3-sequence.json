@@ -1,0 +1,17 @@
+{
+ "jurisdiction":"ON","grade":3,"label":"Suggested by Masterasium","basis":"Adapted from the Simcoe County DSB Grade 3 Course of Study (Aug 2020) unit order and the Dufferin-Peel CDSB Grade 3 long-range plan (monthly unifying questions). Not prescribed by the Ontario Ministry of Education.",
+ "spiral_every_block":[{"code":"B2.3","title":"Mental math: add and subtract within 1,000 (daily warm-up)"},{"code":"A1","title":"SEL skills and mathematical processes (throughout)"}],
+ "spiral_from_block":{"block":4,"code":"B2.2","title":"Facts of 2, 5 and 10 and related division facts (short daily practice)"},
+ "blocks":[
+  {"position":1,"title":"Numbers to 1,000","approx_weeks":4,"codes":["B1.1","B1.2","B1.4","B1.5","D1.2"]},
+  {"position":2,"title":"Rounding, adding and subtracting within 1,000","approx_weeks":4,"codes":["B1.3","B2.1","B2.4","B2.5","C2.3"]},
+  {"position":3,"title":"Patterns, variables and equality","approx_weeks":3,"codes":["C1.1","C1.2","C1.3","C1.4","C2.1","C2.2"]},
+  {"position":4,"title":"Multiplication and division concepts; money","approx_weeks":4,"codes":["B2.2","B2.6","B2.7","F1.1"]},
+  {"position":5,"title":"3D objects and perimeter","approx_weeks":3,"codes":["E1.1","E1.2","E1.3","E2.1","E2.2","E2.5"]},
+  {"position":6,"title":"Fractions and scaling","approx_weeks":4,"codes":["B1.6","B1.7","B2.8","B2.9"]},
+  {"position":7,"title":"Coding, location and movement","approx_weeks":3,"codes":["C3.1","C3.2","E1.4"]},
+  {"position":8,"title":"Data and probability","approx_weeks":3,"codes":["D1.1","D1.3","D1.4","D1.5","D2.1","D2.2"]},
+  {"position":9,"title":"Capacity, mass, area and time","approx_weeks":4,"codes":["E2.3","E2.4","E2.6","E2.7","E2.8","E2.9"]},
+  {"position":10,"title":"Consolidation: multiplication, division and money problems","approx_weeks":3,"codes":["B2.5","B2.6","B2.7","B2.9","F1.1"]}
+ ]
+}

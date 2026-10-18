@@ -1,0 +1,59 @@
+skill_slug,skill_title,jurisdiction,grade,standard_code,strength,note
+g3-place-value-1000,Place value to 1000,ON,3,B1.1,primary,
+g3-place-value-1000,Place value to 1000,ON,3,B1.5,primary,
+g3-place-value-1000,Place value to 1000,BC,3,BC-MA-G3-C01,primary,
+g3-place-value-1000,Place value to 1000,AB,3,AB-G3-NUM-1,partial,Alberta Grade 3 goes to 100 000
+g3-place-value-1000,Place value to 1000,SK,3,N3.1,primary,
+g3-place-value-1000,Place value to 1000,MB,3,3.N.5,primary,
+g3-place-value-1000,Place value to 1000,NS,3,N05,primary,
+g3-place-value-1000,Place value to 1000,PE,3,3.N4,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,ON,3,B2.4,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,ON,3,B2.5,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,BC,3,BC-MA-G3-C03,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,AB,3,AB-G3-NUM-2,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,SK,3,N3.2,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,MB,3,3.N.9,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,NS,3,N09,primary,
+g3-add-sub-1000,Addition and subtraction within 1000,PE,3,3.N8,primary,
+g3-fractions-equal-parts,Fractions as equal parts,ON,3,B1.6,primary,
+g3-fractions-equal-parts,Fractions as equal parts,ON,3,B1.7,primary,
+g3-fractions-equal-parts,Fractions as equal parts,BC,3,BC-MA-G3-C02,primary,
+g3-fractions-equal-parts,Fractions as equal parts,AB,3,AB-G3-NUM-4,primary,
+g3-fractions-equal-parts,Fractions as equal parts,SK,3,N3.4,primary,
+g3-fractions-equal-parts,Fractions as equal parts,MB,3,3.N.13,primary,
+g3-fractions-equal-parts,Fractions as equal parts,NS,3,N13,primary,
+g3-fractions-equal-parts,Fractions as equal parts,PE,3,3.N12,primary,
+g3-multiplication-concepts,Multiplication and division concepts,ON,3,B2.6,primary,ON represents to 10 x 10 but recalls only 2 5 10 facts (B2.2)
+g3-multiplication-concepts,Multiplication and division concepts,BC,3,BC-MA-G3-C05,primary,
+g3-multiplication-concepts,Multiplication and division concepts,AB,3,AB-G3-NUM-3,primary,within 100
+g3-multiplication-concepts,Multiplication and division concepts,SK,3,N3.3,partial,to 5 x 5; facts not memorized
+g3-multiplication-concepts,Multiplication and division concepts,MB,3,3.N.11,partial,to 5 x 5
+g3-multiplication-concepts,Multiplication and division concepts,MB,3,3.N.12,partial,division
+g3-multiplication-concepts,Multiplication and division concepts,NS,3,N11,partial,to 5 x 5
+g3-multiplication-concepts,Multiplication and division concepts,NS,3,N12,partial,division
+g3-multiplication-concepts,Multiplication and division concepts,PE,3,3.N10,partial,products to 36
+g3-multiplication-concepts,Multiplication and division concepts,PE,3,3.N11,partial,division
+g3-perimeter,Perimeter,ON,3,E2.1,primary,
+g3-perimeter,Perimeter,SK,3,SS3.3,primary,
+g3-perimeter,Perimeter,MB,3,3.SS.5,primary,
+g3-perimeter,Perimeter,NS,3,M05,primary,
+g3-perimeter,Perimeter,PE,3,3.SS5,primary,
+g3-perimeter,Perimeter,BC,3,BC-MA-G3-C09,partial,linear measurement with standard units; perimeter not named
+g3-perimeter,Perimeter,AB,3,AB-G3-MEA-1,partial,length; perimeter not named in the outcome statement
+g3-time,Telling time,ON,3,E2.6,primary,
+g3-time,Telling time,BC,3,BC-MA-G3-C10,primary,
+g3-time,Telling time,AB,3,AB-G3-TIM-1,primary,
+g3-time,Telling time,SK,3,SS3.1,primary,
+g3-time,Telling time,MB,3,3.SS.1,primary,
+g3-time,Telling time,MB,3,3.SS.2,primary,
+g3-time,Telling time,NS,3,M01,primary,
+g3-time,Telling time,NS,3,M02,primary,
+g3-time,Telling time,PE,3,3.SS1,primary,
+g3-time,Telling time,PE,3,3.SS2,primary,
+g3-bar-graphs,Pictographs and bar graphs,ON,3,D1.3,primary,
+g3-bar-graphs,Pictographs and bar graphs,BC,3,BC-MA-G3-C12,primary,
+g3-bar-graphs,Pictographs and bar graphs,AB,3,AB-G3-STA-1,primary,
+g3-bar-graphs,Pictographs and bar graphs,SK,3,SP3.1,primary,
+g3-bar-graphs,Pictographs and bar graphs,MB,3,3.SP.2,primary,
+g3-bar-graphs,Pictographs and bar graphs,NS,3,SP02,primary,
+g3-bar-graphs,Pictographs and bar graphs,PE,3,3.SP1,partial,collect and organize data; bar graphs not named
