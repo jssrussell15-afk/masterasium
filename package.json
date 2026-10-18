@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "check:why": "node scripts/check-why-templates.mjs",
     "preview": "node scripts/patch-opennext-preview-props.mjs && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "postinstall": "node scripts/patch-opennext-preview-props.mjs",
     "deploy": "node scripts/patch-opennext-preview-props.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
