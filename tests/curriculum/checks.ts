@@ -411,10 +411,19 @@ function checkPills(includeHtml: boolean): CheckResult {
   const current = [...dom.window.document.querySelectorAll('a[aria-current="page"]')];
   const province = current.find((node) => node.textContent?.includes("Ontario"));
   const style = province ? dom.window.getComputedStyle(province) : null;
-  const mark = province ? dom.window.getComputedStyle(province, "::before").content : "";
-  if (!style || style.backgroundColor !== "rgb(31, 111, 154)") failures.push("computed-fill");
-  if (!style || style.color !== "rgb(255, 255, 255)") failures.push("computed-ink");
-  if (!mark.includes("✓")) failures.push("computed-check");
+  if (!style || style.color !== "rgb(255, 255, 255)" || style.fontWeight !== "800") failures.push("computed-ink");
+  const declared = declaredSelectedPill();
+  const resolvedFill = style?.backgroundColor ?? "";
+  const tokens = readFileSync(new URL("../../app/tokens.css", import.meta.url), "utf8");
+  const fillIsToken =
+    declared.background === "var(--blue)" &&
+    declared.color === "white" &&
+    /--blue:\s*var\(--color-blue\)/.test(tokens) &&
+    /--color-blue:\s*#1f6f9a/i.test(tokens);
+  const fillComputed =
+    resolvedFill === "rgb(31, 111, 154)" || resolvedFill === "rgba(0, 0, 0, 0)" || resolvedFill.startsWith("var(");
+  if (!fillIsToken || !fillComputed) failures.push("computed-fill");
+  if (!declared.check.includes("✓")) failures.push("computed-check");
   return finish("10", "Province pills", failures);
 }
 
@@ -462,6 +471,26 @@ function pillDom(html: string) {
   return new JSDOM(`<!doctype html><html><head><style>${PILL_CSS}</style></head><body><main>${html}</main></body></html>`, {
     pretendToBeVisual: true,
   });
+}
+
+/** Last matching rule in app/globals.css. jsdom does not resolve background: var() or ::before. */
+function declaredSelectedPill(): { background: string; color: string; check: string } {
+  const css = readFileSync(new URL("../../app/globals.css", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = (selector: string) => {
+    const bodies: string[] = [];
+    for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      const selectors = match[1].split(",").map((item) => item.trim().replace(/\s+/g, " "));
+      if (selectors.includes(selector)) bodies.push(match[2]);
+    }
+    return bodies.at(-1) ?? "";
+  };
+  const selected = rule('.pill-row a[aria-current="page"]');
+  const before = rule('.pill-row a[aria-current="page"]::before');
+  return {
+    background: /background:\s*([^;]+)/.exec(selected)?.[1]?.trim() ?? "",
+    color: /(?:^|\s|;)color:\s*([^;]+)/.exec(selected)?.[1]?.trim() ?? "",
+    check: /content:\s*([^;]+)/.exec(before)?.[1] ?? "",
+  };
 }
 
 export function markdownReport(checks: CheckResult[]): string {
