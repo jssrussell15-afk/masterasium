@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { isValidPin, isValidUsername, normalizeUsername } from "@/lib/validation";
+import {
+  childFirstNameError,
+  childNameFieldMessage,
+  isValidPin,
+  isValidUsername,
+  normalizeUsername,
+} from "@/lib/validation";
 
 describe("student login fields", () => {
   it("stores usernames in lowercase letters and numbers", () => {
@@ -9,6 +15,18 @@ describe("student login fields", () => {
     expect(isValidUsername("has space")).toBe(false);
     expect(isValidUsername("user_name")).toBe(false);
     expect(isValidUsername("a".repeat(21))).toBe(false);
+  });
+
+  it("limits a child first name to 30 characters", () => {
+    expect(childFirstNameError("Sam")).toBeNull();
+    expect(childFirstNameError("A".repeat(30))).toBeNull();
+    expect(childFirstNameError("A".repeat(31))).toBe("Use a first name, up to 30 letters.");
+    expect(childFirstNameError("A".repeat(40))).toBe("Use a first name, up to 30 letters.");
+    expect(childFirstNameError("")).toBe("Use a first name, up to 30 letters.");
+    expect(childNameFieldMessage("Use a first name, up to 30 letters.")).toBe(
+      "Use a first name, up to 30 letters.",
+    );
+    expect(childNameFieldMessage("Choose a grade from 1 to 8.")).toBeUndefined();
   });
 
   it("accepts a PIN of 4 to 6 digits", () => {

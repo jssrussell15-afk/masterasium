@@ -16,6 +16,13 @@ import { isValidPin } from "@/lib/validation";
 const initial: AuthState = {};
 const FIELD_ORDER = ["firstName", "pin"] as const;
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
+const PIN_DOTS = 6;
+
+/** Count only. The spoken text never includes the digits themselves. */
+export function pinDigitAnnouncement(count: number): string {
+  const entered = Math.max(0, Math.min(count, PIN_DOTS));
+  return `${entered} of ${PIN_DOTS} digits entered`;
+}
 
 export function StudentLoginForm({
   before,
@@ -153,15 +160,16 @@ export function StudentLoginForm({
                 id="student-pin"
                 className="pin-dots"
                 tabIndex={-1}
+                aria-label="PIN"
                 aria-invalid={pinError ? true : undefined}
                 aria-describedby={fieldDescribedBy("student-pin-error", pinError)}
               >
-                <span className="visually-hidden">
-                  {pin.length === 0 ? "No digits yet" : `${pin.length} ${pin.length === 1 ? "digit" : "digits"}`}
-                </span>
-                {Array.from({ length: 6 }, (_, index) => (
+                {Array.from({ length: PIN_DOTS }, (_, index) => (
                   <span key={index} data-filled={index < pin.length ? "true" : "false"} aria-hidden="true" />
                 ))}
+              </p>
+              <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+                {pinDigitAnnouncement(pin.length)}
               </p>
               <div className="pin-pad" role="group" aria-label="PIN">
                 {DIGITS.map((digit) => (

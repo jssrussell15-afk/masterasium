@@ -3,6 +3,7 @@
 import { useActionState, useState, type KeyboardEvent } from "react";
 import { addSignupChild, type ChildState } from "@/lib/children/actions";
 import { isSupportedGrade, type SupportedGrade } from "@/lib/grades";
+import { CHILD_FIRST_NAME_MAX, childNameFieldMessage } from "@/lib/validation";
 
 const initial: ChildState = {};
 const grades: SupportedGrade[] = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -10,6 +11,8 @@ const grades: SupportedGrade[] = [1, 2, 3, 4, 5, 6, 7, 8];
 export function SignupChildForm() {
   const [grade, setGrade] = useState<SupportedGrade>(1);
   const [state, action, pending] = useActionState(addSignupChild, initial);
+  const nameError = childNameFieldMessage(state.error);
+  const formError = nameError ? undefined : state.error;
 
   function moveGrade(event: KeyboardEvent<HTMLDivElement>) {
     const forward = event.key === "ArrowRight" || event.key === "ArrowDown";
@@ -28,17 +31,24 @@ export function SignupChildForm() {
         <p className="step-kicker">Step 2 of 2</p>
         <h1 className="display text-4xl">Add your child</h1>
       </div>
-      <label className="field" htmlFor="child-first-name">
-        Child's first name
+      <div className="field">
+        <label htmlFor="child-first-name">Child's first name</label>
         <input
           id="child-first-name"
           name="firstName"
           autoComplete="off"
           autoCapitalize="words"
-          maxLength={30}
+          maxLength={CHILD_FIRST_NAME_MAX}
           required
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? "child-first-name-error" : undefined}
         />
-      </label>
+        {nameError ? (
+          <p id="child-first-name-error" className="field-error">
+            {nameError}
+          </p>
+        ) : null}
+      </div>
       <div
         className="pill-row grade-picks"
         role="radiogroup"
@@ -56,7 +66,12 @@ export function SignupChildForm() {
             tabIndex={grade === item ? 0 : -1}
             onClick={() => setGrade(item)}
           >
-            {item}
+            <span className="grade-pick-num">{item}</span>
+            {grade === item ? (
+              <span className="grade-pick-check" aria-hidden="true">
+                ✓
+              </span>
+            ) : null}
           </button>
         ))}
       </div>
@@ -65,9 +80,9 @@ export function SignupChildForm() {
       <button className="btn btn-primary" type="submit" disabled={pending}>
         {pending ? "Saving…" : "Add child"}
       </button>
-      {state.error ? (
+      {formError ? (
         <p className="feedback bad" role="alert">
-          {state.error}
+          {formError}
         </p>
       ) : null}
     </form>

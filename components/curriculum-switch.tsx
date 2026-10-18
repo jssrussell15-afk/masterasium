@@ -10,30 +10,25 @@ export function CurriculumSwitch({
   province: string;
   grade: SupportedGrade;
 }) {
+  const available = PROVINCES.filter((item) => item.ready && item.slug !== "quebec");
+  const moreComing = PROVINCES.some((item) => !item.ready && item.slug !== "quebec");
+
   return (
     <div className="switch-bar">
-      <div className="pill-row" role="group" aria-label="Province">
-        {PROVINCES.map((item) =>
-          item.ready ? (
+      <div className="province-pick">
+        <div className="pill-row" role="group" aria-label="Province">
+          {available.map((item) => (
             <Link
               key={item.slug}
               href={curriculumPath(item.slug, grade)}
               aria-pressed={item.slug === province}
               aria-label={item.name}
-              title={item.name}
             >
-              {item.short}
+              {item.name}
             </Link>
-          ) : (
-            <span
-              key={item.slug}
-              aria-disabled="true"
-              title={`The ${item.name} skill list is not published yet.`}
-            >
-              {item.short}
-            </span>
-          ),
-        )}
+          ))}
+        </div>
+        {moreComing ? <p className="province-soon">More provinces coming soon.</p> : null}
       </div>
       <div className="pill-row" role="group" aria-label="Grade">
         {([1, 2, 3, 4, 5, 6, 7, 8] as SupportedGrade[]).map((item) => (

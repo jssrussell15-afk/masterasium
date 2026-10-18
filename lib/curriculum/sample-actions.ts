@@ -18,10 +18,9 @@ export async function requestSample(
   const email = normalizeEmail(String(formData.get("email") ?? ""));
   const province = String(formData.get("province") ?? "").trim();
   const grade = Number(formData.get("grade") ?? "");
-  const consent = String(formData.get("consent") ?? "") === "yes";
+  const marketing = String(formData.get("marketing") ?? "") === "yes";
 
   if (!isValidEmail(email)) return { error: "Enter a valid email address." };
-  if (!consent) return { error: "Check the box to agree before the samples open." };
   if (!province || !Number.isInteger(grade) || grade < 1 || grade > 8) {
     return { error: "Choose a grade page and try again." };
   }
@@ -39,7 +38,9 @@ export async function requestSample(
     email,
     province,
     grade,
+    // Asking for the sheet is the request itself. Product email is a separate, optional field.
     consent: true,
+    marketing_opt_in: marketing,
   });
 
   if (error) {

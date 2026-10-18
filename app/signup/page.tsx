@@ -26,6 +26,7 @@ export default function SignUpPage() {
               <p className="step-kicker">Step 1 of 2</p>
               <h1 className="display text-4xl">Create a parent account</h1>
               <p className="hint mt-2">Email and a password. Next, you'll add your child.</p>
+              <p className="hint mt-2">Practice is free while we test.</p>
             </div>
           }
         />

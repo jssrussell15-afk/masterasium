@@ -3,11 +3,14 @@
 import { useActionState } from "react";
 import { GRADES } from "@/lib/grades";
 import { addChild, type ChildState } from "@/lib/children/actions";
+import { CHILD_FIRST_NAME_MAX, childNameFieldMessage } from "@/lib/validation";
 
 const initial: ChildState = {};
 
 export function AddChildForm() {
   const [state, action, pending] = useActionState(addChild, initial);
+  const nameError = childNameFieldMessage(state.error);
+  const formError = nameError ? undefined : state.error;
 
   return (
     <form action={action} className="card grid gap-3">
@@ -18,10 +21,23 @@ export function AddChildForm() {
           and PIN. You can change the PIN on their profile.
         </p>
       </div>
-      <label className="field">
-        First name
-        <input name="firstName" autoComplete="off" required maxLength={40} />
-      </label>
+      <div className="field">
+        <label htmlFor="add-child-first-name">First name</label>
+        <input
+          id="add-child-first-name"
+          name="firstName"
+          autoComplete="off"
+          required
+          maxLength={CHILD_FIRST_NAME_MAX}
+          aria-invalid={nameError ? true : undefined}
+          aria-describedby={nameError ? "add-child-first-name-error" : undefined}
+        />
+        {nameError ? (
+          <p id="add-child-first-name-error" className="field-error">
+            {nameError}
+          </p>
+        ) : null}
+      </div>
       <label className="field">
         Grade
         <select name="grade" defaultValue="1">
@@ -62,9 +78,9 @@ export function AddChildForm() {
       <button className="btn btn-primary" type="submit" disabled={pending}>
         {pending ? "Saving…" : "Add child"}
       </button>
-      {state.error ? (
+      {formError ? (
         <p className="feedback bad" role="alert">
-          {state.error}
+          {formError}
         </p>
       ) : null}
     </form>

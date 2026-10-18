@@ -27,6 +27,7 @@ import {
 } from "@/lib/children/tablet";
 import { storedUsername } from "@/lib/children/username";
 import {
+  childFirstNameError,
   isValidFirstName,
   isValidPin,
   isValidUsername,
@@ -73,9 +74,8 @@ export async function addChild(_previous: ChildState, formData: FormData): Promi
   const grade = Number(formData.get("grade"));
   const pin = pinFields(formData);
 
-  if (!isValidFirstName(firstName)) {
-    return { error: "Use a first name, up to 40 letters." };
-  }
+  const nameError = childFirstNameError(firstName);
+  if (nameError) return { error: nameError };
   if (!isSupportedGrade(grade)) {
     return { error: "Choose a grade from 1 to 8." };
   }
@@ -112,9 +112,8 @@ export async function addSignupChild(
   const firstName = normalizeFirstName(String(formData.get("firstName") ?? ""));
   const grade = Number(formData.get("grade"));
 
-  if (!isValidFirstName(firstName) || firstName.length > 30) {
-    return { error: "Use a first name, up to 30 letters." };
-  }
+  const nameError = childFirstNameError(firstName);
+  if (nameError) return { error: nameError };
   if (!isSupportedGrade(grade)) {
     return { error: "Choose a grade from 1 to 8." };
   }

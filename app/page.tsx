@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { DashboardMock } from "@/components/dashboard-mock";
 import { PracticeShot } from "@/components/practice-shot";
 import { Shell } from "@/components/site-header";
-import { PRICING } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Masterasium",
@@ -26,10 +25,10 @@ export default function HomePage() {
             Adaptive math practice for Grades 1–8, aligned to your province&apos;s curriculum.
           </h1>
           <p className="lede mt-5 max-w-xl">
-            Practice covers every province except Quebec.
+            Practice covers every province except Quebec. Practice is free while we test.
           </p>
           <Link href="/signup" className="btn btn-primary mt-8">
-            Start free trial
+            Create a parent account
           </Link>
         </div>
         <DashboardMock />
@@ -63,9 +62,8 @@ export default function HomePage() {
           <h2 className="text-xl font-semibold">For parents</h2>
           <p className="hint mt-2">
             The desk shows what your child is working on and how that skill is moving. Grades 1–3
-            stay to a streak, whether they practiced today, and one line on the current skill.
-            Grade 4 and up adds the skill list, four weeks of accuracy, and what is due for a later
-            review.
+            stay with whether they practiced today, and one line on the current skill. Grade 4 and
+            up adds the skill list, four weeks of accuracy, and what is due for a later review.
           </p>
         </article>
         <article className="card">
@@ -81,25 +79,10 @@ export default function HomePage() {
       </section>
 
       <section className="mt-14">
-        <h2 className="display text-3xl">Pricing</h2>
-        <p className="lede mt-3">Every plan starts with a free trial. Signup does not ask for a card.</p>
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <article className="card">
-            <h3 className="font-semibold">Monthly</h3>
-            <p className="display mt-2 text-4xl">${PRICING.monthlyCad}</p>
-            <p className="hint mt-1">per month after the trial</p>
-          </article>
-          <article className="card">
-            <h3 className="font-semibold">Annual</h3>
-            <p className="display mt-2 text-4xl">${PRICING.annualCad}</p>
-            <p className="hint mt-1">per year after the trial</p>
-          </article>
-        </div>
-      </section>
-
-      <section className="mt-14">
-        <Link href="/signup" className="btn btn-primary">
-          Start free trial
+        <h2 className="display text-3xl">Practice is free while we test</h2>
+        <p className="lede mt-3">Create a parent account when you are ready.</p>
+        <Link href="/signup" className="btn btn-primary mt-6">
+          Create a parent account
         </Link>
       </section>
     </Shell>

@@ -15,17 +15,26 @@ describe("signup step 1", () => {
     expect(html).toContain('autoComplete="new-password"');
     expect(html).toContain('type="button"');
     expect(html).toContain('aria-pressed="false"');
-    expect(html).toContain(">Show<");
+    expect(html).toContain('aria-label="Show password"');
     expect(html).toContain('class="password-toggle"');
+    expect(html).toContain("<svg");
+    expect(html).not.toContain(">Show<");
+    expect(html).not.toContain(">Hide<");
     expect(html).not.toContain('name="confirm"');
     expect(html).not.toContain("Confirm password");
+    expect(html.match(/name="password"/g)).toHaveLength(1);
   });
 
   it("leaves the parent sign-in form without the signup hint", () => {
     const html = renderToStaticMarkup(createElement(AuthForm, { mode: "sign-in" }));
     expect(html).toContain('autoComplete="current-password"');
+    expect(html).toContain('aria-label="Show password"');
+    expect(html).toContain('class="password-toggle"');
+    expect(html).toContain("<svg");
     expect(html).not.toContain("At least 8 characters");
-    expect(html).not.toContain("password-toggle");
+    expect(html).not.toContain('autoComplete="new-password"');
     expect(html).not.toContain('name="confirm"');
+    expect(html).not.toContain("Confirm password");
+    expect(html.match(/name="password"/g)).toHaveLength(1);
   });
 });

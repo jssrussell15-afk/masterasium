@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { SetPinForm } from "@/components/student-access-forms";
-import { StudentLoginForm } from "@/components/student-login-form";
+import { pinDigitAnnouncement, StudentLoginForm } from "@/components/student-login-form";
 
 describe("Set PIN", () => {
   it("asks for a numeric PIN and does not ask for a username", () => {
@@ -42,5 +42,9 @@ describe("Set PIN", () => {
     expect(html).not.toContain(">First name<");
     expect(html).not.toContain("streak");
     expect(html).not.toContain("points");
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("0 of 6 digits entered");
+    expect(pinDigitAnnouncement(2)).toBe("2 of 6 digits entered");
+    expect(pinDigitAnnouncement(4)).toBe("4 of 6 digits entered");
   });
 });

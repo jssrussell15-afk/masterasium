@@ -66,11 +66,9 @@ async function LoginBody({
       homeHref="/"
       slimLink={{ href: "/signup", label: "Create account" }}
       action={
-        mode === "parent" ? (
-          <Link href="/signup" className="btn btn-secondary">
-            Create account
-          </Link>
-        ) : null
+        <Link href="/signup" className="btn btn-secondary">
+          Create account
+        </Link>
       }
     >
     <section className="card mt-8 grid gap-4">

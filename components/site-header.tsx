@@ -25,6 +25,11 @@ export function SiteHeader({
             {link.label}
           </Link>
         ))}
+        {role === "public" ? (
+          <Link href="/login?as=student" className="student-entry">
+            Student sign in
+          </Link>
+        ) : null}
         {action === undefined ? (
           <Link href="/login" className="btn btn-primary">
             Sign in
@@ -68,6 +73,9 @@ export function Shell({
       >
         {children}
       </main>
+      <footer className="site-footer">
+        <p>Practice is free while we test.</p>
+      </footer>
     </>
   );
   if (!slimLink) return screen;

@@ -72,7 +72,7 @@ export default async function CurriculumPage({ params }: { params: Promise<Route
             skills={skills}
           />
           <Link href="/signup" className="btn btn-primary">
-            Start free trial
+            Create a parent account
           </Link>
         </div>
       </div>
