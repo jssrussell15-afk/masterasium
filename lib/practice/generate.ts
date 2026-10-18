@@ -1,5 +1,6 @@
 import { CATALOG } from "@/lib/practice/bank";
 import type { Question } from "@/lib/practice/types";
+import { walkForSkill } from "@/lib/practice/walk";
 
 const BLUEPRINTS = new Map(CATALOG.map((blueprint) => [blueprint.id, blueprint]));
 
@@ -19,5 +20,6 @@ export function generateQuestion(
     answer: worked.answer,
     steps: worked.steps,
     responseHint: blueprint.responseHint,
+    walk: worked.walk ?? walkForSkill(skillId, worked.prompt, worked.answer),
   };
 }

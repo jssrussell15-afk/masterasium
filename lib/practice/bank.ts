@@ -1,9 +1,13 @@
 import type { SupportedGrade } from "@/lib/grades";
 
+import type { Walkthrough } from "@/lib/practice/walk";
+
 export type Worked = {
   prompt: string;
   answer: string;
   steps: string[];
+  /** Set by the Grade 3 generators that can point at the prompt. */
+  walk?: Walkthrough | null;
 };
 
 export type SkillBlueprint = {
@@ -560,17 +564,21 @@ export const CATALOG: SkillBlueprint[] = [
     "Fractions as equal parts",
     "The denominator counts the equal parts in the whole. The numerator counts how many of those parts are being used.",
     "Write a fraction such as 3/8.",
-    worked("A shape is divided into 8 equal parts and 3 are shaded. What fraction is shaded?", "3/8", [
-      "There are 8 equal parts in the whole.",
-      "3 are shaded, so the fraction is 3/8.",
-    ]),
+    worked(
+      "The line is split into 8 equal parts. What fraction is 3 parts from zero?",
+      "3/8",
+      ["The line is split into 8 equal parts.", "3 parts from zero is the fraction 3/8."],
+    ),
     (rng, small) => {
       const parts = span(rng, 2, 12, 2, 6, small);
       const shaded = intBetween(rng, 1, parts);
       return worked(
-        `A shape is divided into ${parts} equal parts and ${shaded} are shaded. What fraction is shaded?`,
+        `The line is split into ${parts} equal parts. What fraction is ${shaded} parts from zero?`,
         `${shaded}/${parts}`,
-        [`The whole has ${parts} equal parts.`, `${shaded} are shaded, so the fraction is ${shaded}/${parts}.`],
+        [
+          `The line is split into ${parts} equal parts.`,
+          `${shaded} parts from zero is the fraction ${shaded}/${parts}.`,
+        ],
       );
     },
   ),

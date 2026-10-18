@@ -13,6 +13,7 @@ import { givenAnswer } from "@/lib/practice/parts";
 import { buildPortrait } from "@/lib/practice/portrait";
 import {
   cardFor,
+  issueFollowUp,
   issueQuestion,
   loadAttemptLog,
   loadCards,
@@ -23,7 +24,8 @@ import { isLessonSkill } from "@/lib/lesson/catalog";
 import { syncReviewRows } from "@/lib/lesson/store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
-import { readAttemptMark, readStoredPlan, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
+import { readAttemptMark, readStoredPlan, readStoredWalk, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
+import { walkForSkill } from "@/lib/practice/walk";
 import type { PracticeState } from "@/lib/practice/types";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
@@ -141,7 +143,9 @@ export async function submitAnswer(
   formData: FormData,
 ): Promise<PracticeState> {
   const intent = String(formData.get("intent") ?? "check");
+  if (intent === "your-turn") return advancePractice(previous, formData, { sameSkill: true });
   if (intent === "next") return advancePractice(previous, formData);
+  if (intent === "show-me") return markPractice(previous, formData, "show-me");
   if (intent === "show-how" || intent === "give-up") return markPractice(previous, formData, "show-how");
   return markPractice(previous, formData, "check");
 }
@@ -149,7 +153,7 @@ export async function submitAnswer(
 async function markPractice(
   previous: PracticeState,
   formData: FormData,
-  mode: "check" | "show-how",
+  mode: "check" | "show-how" | "show-me",
 ): Promise<PracticeState> {
   const childId = String(formData.get("childId") ?? "");
   const questionId = String(formData.get("questionId") ?? "");
@@ -179,19 +183,23 @@ async function markPractice(
       next: issued.question,
     });
   }
-  const given =
-    mode === "show-how"
-      ? (existing?.given ?? "")
-      : givenAnswer(unpacked.answer, {
-          answer: String(formData.get("answer") ?? ""),
-          remainder: String(formData.get("remainder") ?? ""),
-        });
-  const correct = mode === "show-how" ? false : answersMatch(unpacked.answer, given);
+  const showed = mode === "show-how" || mode === "show-me";
+  const given = showed
+    ? (existing?.given ?? "")
+    : givenAnswer(unpacked.answer, {
+        answer: String(formData.get("answer") ?? ""),
+        remainder: String(formData.get("remainder") ?? ""),
+      });
+  const correct = showed ? false : answersMatch(unpacked.answer, given);
+  const hasWalk = Boolean(
+    readStoredWalk(question.answer) ?? walkForSkill(question.skill_id, question.prompt, unpacked.answer),
+  );
   const result = reduceFeedback(
     feedbackFromMark(existing),
-    mode === "show-how" ? { type: "show-how" } : { type: "check", correct },
+    showed ? { type: mode === "show-me" ? "show-me" : "show-how" } : { type: "check", correct },
   );
-  const marked = markFromState(result.state, existing, given, mode === "show-how");
+  const openingWalk = hasWalk && (mode === "show-me" || (mode === "check" && result.state.phase === "revealed"));
+  const marked = markFromState(result.state, existing, given, showed || openingWalk);
   if (!marked) return previous;
   const mark = isAttemptId(checkId) ? { ...marked, clientCheckId: checkId } : marked;
 
@@ -201,6 +209,13 @@ async function markPractice(
     .eq("id", question.id)
     .eq("child_id", childId);
   if (updateError) return { error: friendlyDbError(updateError) };
+  if (openingWalk && !existing?.showedHow) {
+    await insertPracticeEvent(supabase, childId, {
+      kind: "hint_rung",
+      skillId: question.skill_id,
+      detail: { rung: "show-me" },
+    });
+  }
 
   const { cards, error: cardError } = await loadCards(supabase, childId);
   if (cardError) return { error: cardError };
@@ -219,6 +234,7 @@ async function markPractice(
 async function advancePractice(
   _previous: PracticeState,
   formData: FormData,
+  options?: { sameSkill?: boolean },
 ): Promise<PracticeState> {
   const childId = String(formData.get("childId") ?? "");
   const questionId = String(formData.get("questionId") ?? "");
@@ -332,7 +348,8 @@ async function advancePractice(
     skillId: question.skill_id,
     detail: { correct: correct ? 1 : 0 },
   });
-  if (mark.showedHow) {
+  const walked = Boolean(readStoredWalk(question.answer) ?? walkForSkill(question.skill_id, question.prompt, unpacked.answer));
+  if (mark.showedHow && !walked) {
     await insertPracticeEvent(supabase, childId, {
       kind: "hint_rung",
       skillId: question.skill_id,
@@ -357,13 +374,19 @@ async function advancePractice(
     coach && questionSkill && isSupportedGrade(questionSkill.grade)
       ? questionSkill.grade
       : access.working;
-  const issued = await issueQuestion(
-    supabase,
-    childId,
-    scheduleGrade,
-    updatedCards,
-    coach ? { skillId: question.skill_id, small: true } : undefined,
-  );
+  const issued = options?.sameSkill
+    ? await issueFollowUp(supabase, childId, question.skill_id, updatedCards, question.prompt, {
+        kind: storedPlan.kind ?? "focus",
+        small: storedPlan.kind === "support",
+        ...(storedPlan.rollbackSkillId ? { rollbackSkillId: storedPlan.rollbackSkillId } : {}),
+      })
+    : await issueQuestion(
+        supabase,
+        childId,
+        scheduleGrade,
+        updatedCards,
+        coach ? { skillId: question.skill_id, small: true } : undefined,
+      );
   if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
 
   return snapshot(supabase, childId, access, updatedCards, {

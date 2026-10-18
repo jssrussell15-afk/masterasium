@@ -1481,6 +1481,13 @@ html:has(.question-screen) main {
   min-width: 0;
 }
 
+.question-screen .question-card {
+  border: 1px solid var(--line);
+  border-radius: 1.1rem;
+  background: #f3f9fc;
+  padding: 0.9rem 1rem 1rem;
+}
+
 .question-screen .topic-label,
 .question-progress {
   margin: 0;
@@ -1499,6 +1506,10 @@ html:has(.question-screen) main {
   margin: 0.2rem 0 0;
   font-size: 1.75rem;
   line-height: 1.2;
+}
+
+.question-screen .prompt:has(.walk-spot) {
+  padding-bottom: 1.7rem;
 }
 
 .question-screen .prompt-long {
@@ -1535,6 +1546,22 @@ html:has(.question-screen) main {
   border-radius: 1rem;
   background: white;
   padding: 0.85rem 1rem;
+}
+
+.question-screen .inline-help {
+  display: flex;
+  gap: 0.65rem;
+  align-items: flex-start;
+  border-color: #e4d3b4;
+  background: var(--color-warm-bg);
+  color: var(--color-warm);
+}
+
+.hint-bulb {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+  margin-top: 0.05rem;
 }
 
 .worked-reveal,
@@ -1649,6 +1676,225 @@ html:has(.question-screen) main {
 
 .number-pad button[data-key="delete"] {
   font-size: 1rem;
+}
+
+.walk-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: rgb(23 52 76 / 22%);
+}
+
+.walk-raised {
+  position: relative;
+  z-index: 31;
+}
+
+.walk-spot {
+  position: relative;
+  display: inline-block;
+}
+
+.walk-ring {
+  border-radius: 0.4rem;
+  padding: 0 0.12rem;
+  animation: walk-pulse 1.4s ease-in-out infinite;
+}
+
+.walk-arrow {
+  position: absolute;
+  top: 100%;
+  left: 10%;
+  width: 3.2rem;
+  height: 1.8rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.walk-arrow path {
+  fill: none;
+  stroke: #1f5c38;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.walk-arrow-line {
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: walk-draw 250ms ease-out forwards;
+}
+
+.walk-arrow-head {
+  stroke-dasharray: 24;
+  stroke-dashoffset: 24;
+  animation: walk-draw 250ms ease-out 80ms forwards;
+}
+
+.show-me {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+  border: 1px solid #8fb89a;
+  border-radius: 1rem;
+  background: #e5f2e8;
+  color: #143324;
+  padding: 0.9rem 1rem 1rem;
+}
+
+.show-me-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.show-me-path {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  color: #1f5c38;
+}
+
+.show-me-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.show-me-count {
+  margin-left: auto;
+  color: #1d4a32;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.show-me-caption {
+  margin: 0;
+  min-height: 1.6rem;
+  font-size: 1.25rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.show-me-stage {
+  display: grid;
+  gap: 0.65rem;
+  align-content: center;
+  min-height: 8.5rem;
+}
+
+.show-me-answer .answer-input {
+  background: white;
+}
+
+.show-me-miss {
+  margin: 0;
+  color: #6b3f0a;
+  font-size: 1.05rem;
+}
+
+.show-me-next {
+  width: 100%;
+  min-height: 48px;
+  position: sticky;
+  bottom: 0.5rem;
+  background: #1f5c38;
+  color: white;
+}
+
+.show-me-next:hover,
+.show-me-next:focus-visible {
+  background: #17462b;
+}
+
+.walk-visual {
+  width: 100%;
+  height: 7.5rem;
+}
+
+.walk-visual .block {
+  fill: #2f6b45;
+}
+
+.walk-visual .block.dim {
+  opacity: 0.35;
+}
+
+.walk-visual .trade-arrow,
+.walk-visual .line-hop {
+  fill: none;
+  stroke: #1f5c38;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  animation: walk-draw 250ms ease-out forwards;
+}
+
+.walk-visual .dot,
+.walk-visual .line-point,
+.walk-visual .clock-pin {
+  fill: #1f5c38;
+}
+
+.walk-visual .group-ring,
+.walk-visual .clock-face {
+  fill: white;
+  stroke: #1f5c38;
+  stroke-width: 2;
+}
+
+.walk-visual .group-count {
+  fill: #143324;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.walk-visual .line-axis,
+.walk-visual .line-tick,
+.walk-visual .clock-tick,
+.walk-visual .clock-hand {
+  stroke: #143324;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.walk-visual .clock-hand.focus {
+  stroke: #1f5c38;
+  stroke-width: 3.5;
+}
+
+@keyframes walk-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px #2f6b45;
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgb(47 107 69 / 28%);
+  }
+}
+
+@keyframes walk-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .walk-ring,
+  .walk-arrow-line,
+  .walk-arrow-head,
+  .walk-visual .trade-arrow,
+  .walk-visual .line-hop {
+    animation: none;
+  }
+
+  .walk-arrow-line,
+  .walk-arrow-head,
+  .walk-visual .trade-arrow,
+  .walk-visual .line-hop {
+    stroke-dashoffset: 0;
+  }
 }
 
 @media (min-width: 768px) {
