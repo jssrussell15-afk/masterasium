@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { scrubError } from "@/lib/log/scrub";
 import "./globals.css";
 
 export default function GlobalError({
@@ -11,7 +12,7 @@ export default function GlobalError({
   retry: () => void;
 }) {
   useEffect(() => {
-    console.error(error);
+    console.error(scrubError(error));
   }, [error]);
 
   return (
