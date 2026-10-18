@@ -163,6 +163,9 @@ export function LessonView({
           <Link className="btn btn-primary lesson-tap" href="/practice">
             Back to skills
           </Link>
+          <Link className="can-do-entry" href="/practice/can-do">
+            Things I can do
+          </Link>
         </section>
       ) : null}
     </div>
