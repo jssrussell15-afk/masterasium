@@ -180,7 +180,7 @@ describe("topic intro", () => {
     });
     expect(readLearn(answered.card.fsrs).introCycle).toBe("new");
     expect(readLearn(answered.card.fsrs).introSeenAt).toBe("2026-10-01");
-    expect(readLearn(answered.card.fsrs).missStreak).toBe(1);
+    expect(readLearn(answered.card.fsrs).consecutiveMisses).toBe(1);
 
     const dropped = readLearn({
       fsrs: { due: "later" },

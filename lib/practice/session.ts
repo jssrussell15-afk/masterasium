@@ -28,7 +28,7 @@ type SkillStateRow = {
   skill_id: string;
   attempted: number;
   correct: number;
-  streak: number;
+  consecutive_correct: number;
   fsrs: unknown;
 };
 
@@ -54,7 +54,7 @@ export async function loadCards(
 ): Promise<{ cards: SkillCard[]; error: string | null }> {
   const { data, error } = await supabase
     .from("skill_states")
-    .select("skill_id, attempted, correct, streak, fsrs")
+    .select("skill_id, attempted, correct, consecutive_correct, fsrs")
     .eq("child_id", childId);
 
   if (error) return { cards: [], error: friendlyDbError(error) };
@@ -65,7 +65,7 @@ export async function loadCards(
       skillId: row.skill_id,
       attempted: row.attempted,
       correct: row.correct,
-      streak: row.streak,
+      consecutiveCorrect: row.consecutive_correct,
       fsrs: row.fsrs ?? null,
     })),
     error: null,

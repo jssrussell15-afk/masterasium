@@ -20,7 +20,8 @@ export type LearnState = {
   reviewDueAt?: string;
   needsReview?: boolean;
   reviewHits?: number;
-  missStreak?: number;
+  /** Consecutive misses on this skill. Drives a step back to an easier question. Not shown. */
+  consecutiveMisses?: number;
   supportLeft?: number;
   introSeenAt?: string;
   introCycle?: IntroCycle;
@@ -73,7 +74,7 @@ export function readLearnFields(raw: Record<string, unknown>): LearnState {
     reviewDueAt: dateString(raw.reviewDueAt),
     needsReview: raw.needsReview === true ? true : undefined,
     reviewHits: positive(raw.reviewHits),
-    missStreak: positive(raw.missStreak),
+    consecutiveMisses: positive(raw.consecutiveMisses ?? raw.missStreak),
     supportLeft: positive(raw.supportLeft),
     introSeenAt: dateString(raw.introSeenAt),
     introCycle: introCycle(raw.introCycle),
@@ -98,7 +99,7 @@ export function cleanLearn(learn: LearnState): LearnState {
   if (learn.reviewDueAt) next.reviewDueAt = learn.reviewDueAt;
   if (learn.needsReview) next.needsReview = true;
   if (learn.reviewHits) next.reviewHits = learn.reviewHits;
-  if (learn.missStreak) next.missStreak = learn.missStreak;
+  if (learn.consecutiveMisses) next.consecutiveMisses = learn.consecutiveMisses;
   if (learn.supportLeft) next.supportLeft = learn.supportLeft;
   if (learn.introSeenAt) next.introSeenAt = learn.introSeenAt;
   if (learn.introCycle) next.introCycle = learn.introCycle;

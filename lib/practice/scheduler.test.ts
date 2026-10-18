@@ -9,7 +9,7 @@ import {
 import { skillsForGrade } from "@/lib/practice/skills";
 
 function mastered(skillId: string): SkillCard {
-  return { skillId, attempted: 10, correct: 8, streak: 4, fsrs: null };
+  return { skillId, attempted: 10, correct: 8, consecutiveCorrect: 4, fsrs: null };
 }
 
 describe("AccuracyScheduler", () => {
@@ -57,7 +57,7 @@ describe("AccuracyScheduler", () => {
       skillId: skill.id,
       attempted: 10,
       correct: index === 2 ? 8 : 10,
-      streak: 4,
+      consecutiveCorrect: 4,
       fsrs: { stability: 1 },
     }));
     const skill = accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 0 });
@@ -68,11 +68,11 @@ describe("AccuracyScheduler", () => {
     const next = recordAttempt({ ...emptyCard("g1-count"), fsrs: { due: "later" } }, true);
     expect(next.attempted).toBe(1);
     expect(next.correct).toBe(1);
-    expect(next.streak).toBe(1);
+    expect(next.consecutiveCorrect).toBe(1);
     expect(next.fsrs).toEqual({ due: "later" });
 
     const missed = recordAttempt(next, false);
-    expect(missed.streak).toBe(0);
+    expect(missed.consecutiveCorrect).toBe(0);
     expect(missed.correct).toBe(1);
   });
 });

@@ -8,13 +8,12 @@ import { noteMistake } from "@/lib/practice/mistakes";
 import { buildPortrait } from "@/lib/practice/portrait";
 import { accuracyScheduler, emptyCard, isConfirmed, type SkillCard } from "@/lib/practice/scheduler";
 import { skillsForGrade } from "@/lib/practice/skills";
-import { sessionStreak } from "@/lib/practice/streak";
 import { sessionRecap } from "@/lib/practice/summary";
 
 const today = "2026-10-13";
 
 function mastered(skillId: string, fsrs: unknown = null): SkillCard {
-  return { skillId, attempted: 10, correct: 8, streak: 4, fsrs };
+  return { skillId, attempted: 10, correct: 8, consecutiveCorrect: 4, fsrs };
 }
 
 describe("assisted first questions", () => {
@@ -72,7 +71,7 @@ describe("assisted first questions", () => {
 describe("lesson check", () => {
   it("holds the next skill until the check is passed", () => {
     const crossing = applyLearning({
-      card: { skillId: "g1-count", attempted: 9, correct: 8, streak: 2, fsrs: null },
+      card: { skillId: "g1-count", attempted: 9, correct: 8, consecutiveCorrect: 2, fsrs: null },
       correct: true,
       kind: "focus",
       today,
@@ -141,7 +140,7 @@ describe("spaced review", () => {
 describe("adaptive rollback", () => {
   it("steps back to the previous skill after three misses, then returns", () => {
     const [first, second] = skillsForGrade(1);
-    let struggling: SkillCard = { ...emptyCard(second.id), attempted: 2, correct: 0, streak: 0 };
+    let struggling: SkillCard = { ...emptyCard(second.id), attempted: 2, correct: 0, consecutiveCorrect: 0 };
     for (let miss = 0; miss < 3; miss += 1) {
       struggling = applyLearning({ card: struggling, correct: false, kind: "focus", today }).card;
     }
@@ -174,26 +173,14 @@ describe("adaptive rollback", () => {
       parent = applied.extra ?? parent;
     }
     expect(readLearn(parent.fsrs).supportLeft).toBeUndefined();
-    expect(readLearn(parent.fsrs).missStreak).toBeUndefined();
+    expect(readLearn(parent.fsrs).consecutiveMisses).toBeUndefined();
     expect(
       planNextQuestion({ grade: 1, cards: [ready, parent], sessionCount: 16, today }).kind,
     ).not.toBe("support");
   });
 });
 
-describe("streaks, summaries, and badges", () => {
-  it("counts calendar days, not questions", () => {
-    expect(sessionStreak(["2026-10-13", "2026-10-13", "2026-10-12", "2026-10-11"], today)).toEqual({
-      days: 3,
-      includesToday: true,
-      milestone: 3,
-    });
-    expect(sessionStreak(["2026-10-12", "2026-10-11", "2026-10-10"], today).milestone).toBeNull();
-    expect(sessionStreak(["2026-10-12", "2026-10-11", "2026-10-10"], today).days).toBe(3);
-    expect(sessionStreak(["2026-10-13", "2026-10-11"], today).days).toBe(1);
-    expect(sessionStreak(["2026-10-01"], today).days).toBe(0);
-  });
-
+describe("summaries and badges", () => {
   it("writes a one or two line recap from today's work", () => {
     expect(
       sessionRecap({
@@ -239,12 +226,12 @@ describe("streaks, summaries, and badges", () => {
   it("keeps mistake counts beside the new learn state", () => {
     const card = {
       ...emptyCard("g1-count"),
-      fsrs: writeLearn({ due: "later" }, { missStreak: 2 }),
+      fsrs: writeLearn({ due: "later" }, { consecutiveMisses: 2 }),
     };
     const noted = noteMistake(card, "off-by-one");
     expect(readMemory(noted.card.fsrs).payload).toEqual({ due: "later" });
     expect(readMemory(noted.card.fsrs).mistakes).toEqual({ "off-by-one": 1 });
-    expect(readLearn(noted.card.fsrs).missStreak).toBe(2);
+    expect(readLearn(noted.card.fsrs).consecutiveMisses).toBe(2);
   });
 
   it("builds the same portrait the dashboard and digest share", () => {
@@ -271,8 +258,6 @@ describe("streaks, summaries, and badges", () => {
       ],
       today,
     });
-    expect(portrait.streakDays).toBe(3);
-    expect(portrait.streakMilestone).toBe(3);
     expect(portrait.badges.map((badge) => badge.piece)).toEqual(["helmet"]);
     expect(portrait.recap).toMatch(/^You got 4 of 4 today/);
     expect(portrait.needsReview).toEqual([]);

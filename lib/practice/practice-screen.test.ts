@@ -28,8 +28,6 @@ function view(grade: 2 | 4 = 2): PracticeView {
     correct: 0,
     focusTitle: "Add within 20",
     skills: [],
-    streakDays: 3,
-    streakMilestone: 3,
     recap: "You practiced adding.",
     requestedGrade: null,
     today: "2026-10-14",

@@ -44,9 +44,9 @@ export default async function ForParentsPage() {
           week, and again after 1 month. The review is the same kind of question, not a new prize.
         </p>
 
-        <h2 className="display">Why there are no rewards or streaks</h2>
+        <h2 className="display">Why there are no rewards</h2>
         <p>
-          Points, badges, and streaks pull attention toward the prize. We leave them out so the math
+          Points and badges pull attention toward the prize. We leave them out so the math
           is the thing your child is working on. A weekly note tells you what to ask about, instead
           of a scoreboard.
         </p>

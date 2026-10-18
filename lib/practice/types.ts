@@ -5,8 +5,6 @@ import type { FeedbackPhase } from "@/lib/practice/feedback";
 import type { HintLadder } from "@/lib/practice/hints";
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import type { AnswerShape } from "@/lib/practice/parts";
-import type { StreakMilestone } from "@/lib/practice/streak";
-
 /**
  * A question is the same shape whether it was generated or, later,
  * built from a worksheet the parent uploaded.
@@ -78,8 +76,6 @@ export type PracticeView = {
   correct: number;
   focusTitle: string;
   skills: SkillProgress[];
-  streakDays: number;
-  streakMilestone: StreakMilestone | null;
   recap: string | null;
   requestedGrade: SupportedGrade | null;
   today: string;
@@ -100,8 +96,6 @@ export type PracticeState = {
   correctCount?: number;
   focusTitle?: string;
   skills?: SkillProgress[];
-  streakDays?: number;
-  streakMilestone?: StreakMilestone | null;
   recap?: string | null;
   requestNote?: string;
   requestedGrade?: SupportedGrade | null;
