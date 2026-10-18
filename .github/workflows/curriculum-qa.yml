@@ -1,0 +1,49 @@
+name: Curriculum QA
+
+on:
+  pull_request:
+  schedule:
+    - cron: "15 7 * * *"
+
+jobs:
+  curriculum-qa:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: masterasium_curriculum_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      PGHOST: localhost
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: masterasium_curriculum_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Apply migrations
+        run: bash scripts/apply-curriculum-db.sh
+      - run: npm test
+      - name: SQL integrity checks
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/curriculum_checks.sql
+      - name: SQL negative check
+        run: psql -v ON_ERROR_STOP=1 -f supabase/tests/curriculum_checks_negative.sql
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qa-report
+          path: qa-report.md
+          if-no-files-found: warn
