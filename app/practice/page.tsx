@@ -3,6 +3,8 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { StudentDashboard } from "@/components/student-dashboard";
 import { requireStudent } from "@/lib/auth/student";
+import { loadCreateFlags } from "@/lib/create/access";
+import { createGradeOk } from "@/lib/create/types";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { studentHome } from "@/lib/practice/home";
@@ -49,6 +51,7 @@ async function StudentHomeLoader() {
     today: torontoDate(),
   });
 
+  const flags = await loadCreateFlags(supabase, child.id);
   return (
     <StudentDashboard
       childId={child.id}
@@ -58,6 +61,7 @@ async function StudentHomeLoader() {
       skills={describeCatalog(access, cards)}
       access={access}
       requestedGrade={access.requested}
+      createEnabled={flags.enabled && createGradeOk(access.working)}
     />
   );
 }

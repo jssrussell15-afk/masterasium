@@ -1,9 +1,12 @@
 import { Suspense } from "react";
+import { CreateSettingsForm } from "@/components/create/settings-form";
 import { GradeSettings } from "@/components/grade-settings";
 import { SetPinForm } from "@/components/student-access-forms";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
+import { saveCreateSettings } from "@/lib/create/actions";
+import { loadCreateFlags } from "@/lib/create/access";
 import { loadRoster } from "@/lib/children/roster";
 import { friendlyDbError } from "@/lib/db-error";
 
@@ -35,6 +38,7 @@ async function Settings({
     return <p className="feedback bad mt-8">{roster.error}</p>;
   }
   const children = roster.children;
+  const createFlags = await Promise.all(children.map((child) => loadCreateFlags(supabase, child.id)));
 
   return (
     <div className="mt-6 grid gap-6">
@@ -84,7 +88,7 @@ async function Settings({
         </p>
       ) : null}
 
-      {children.map((child) => (
+      {children.map((child, index) => (
         <section key={child.id} className="card grid gap-4">
           <div>
             <h2 className="text-2xl font-semibold">{child.first_name}</h2>
@@ -103,6 +107,13 @@ async function Settings({
               requestedGrade={child.requestedGrade}
             />
           )}
+          <CreateSettingsForm
+            childId={child.id}
+            childName={child.first_name}
+            initial={createFlags[index]}
+            consentHref={`/settings/create-consent?child=${child.id}`}
+            save={saveCreateSettings}
+          />
           <div className="grid gap-3">
             <h3 className="text-xl font-semibold">Student sign-in</h3>
             <SetPinForm
