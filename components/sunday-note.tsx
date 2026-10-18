@@ -31,6 +31,17 @@ export function SundayNote({ digest }: { digest: SundayDigest }) {
           ))}
         </ul>
       </section>
+      {digest.weeklyTitle && digest.weeklyHref ? (
+        <section>
+          <h2>This week&apos;s puzzle</h2>
+          <p className="mt-2">{digest.weeklyTitle}</p>
+          <p>
+            <Link className="nav-link lesson-tap" href={digest.weeklyHref}>
+              Open the puzzle
+            </Link>
+          </p>
+        </section>
+      ) : null}
       <p>
         <Link className="nav-link lesson-tap" href={digest.settingsHref}>
           Change what this note includes

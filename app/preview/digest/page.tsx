@@ -1,6 +1,7 @@
 import { SundayNote } from "@/components/sunday-note";
 import { Shell } from "@/components/site-header";
 import { buildSundayDigest } from "@/lib/digest/sunday";
+import { weeklyForDate } from "@/lib/content/phase1/weekly";
 import { buildParentProgress } from "@/lib/lesson/parent";
 
 export const metadata = {
@@ -42,9 +43,14 @@ export default function DigestSamplePage() {
       answer: "42",
     },
   });
-  const digest = buildSundayDigest("Sam", progress);
+  const weekly = weeklyForDate("2026-10-18");
+  const digest = {
+    ...buildSundayDigest("Sam", progress),
+    weeklyTitle: weekly.title,
+    weeklyHref: `/weekly?week=${weekly.week}`,
+  };
   // TODO: sendSundayDigest(digest) belongs here once an email provider exists.
-  // This page only renders the note.
+  // This page only renders the note. Nothing is emailed.
 
   return (
     <Shell role="parent" action={null}>

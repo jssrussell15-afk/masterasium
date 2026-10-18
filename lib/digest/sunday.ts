@@ -7,6 +7,8 @@ export type SundayDigest = {
   ask: string[];
   comingUp: string[];
   settingsHref: string;
+  weeklyTitle?: string;
+  weeklyHref?: string;
 };
 
 export function buildSundayDigest(childName: string, progress: ParentProgress): SundayDigest {
@@ -39,7 +41,7 @@ export function buildSundayDigest(childName: string, progress: ParentProgress): 
 }
 
 export function renderSundayDigestText(digest: SundayDigest): string {
-  return [
+  const lines = [
     digest.subject,
     "",
     "What they learned",
@@ -50,9 +52,12 @@ export function renderSundayDigestText(digest: SundayDigest): string {
     "",
     "Coming up next",
     ...digest.comingUp,
-    "",
-    `Change what this note includes: ${digest.settingsHref}`,
-  ].join("\n");
+  ];
+  if (digest.weeklyTitle && digest.weeklyHref) {
+    lines.push("", "This week's puzzle", digest.weeklyTitle, digest.weeklyHref);
+  }
+  lines.push("", `Change what this note includes: ${digest.settingsHref}`);
+  return lines.join("\n");
 }
 
 /**
