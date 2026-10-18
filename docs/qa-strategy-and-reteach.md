@@ -34,7 +34,7 @@ On the strategy draft, also open `/preview/strategy?scene=pattern`, `mixed`, and
 
 - Does the step back feel like a punishment, or like a relief?
 - Do they understand “Let's go back to where we were.”?
-- Can they use each tool on a tablet with a finger? Targets should be easy to hit. Nothing should bounce or chime.
+- Can they use each tool on a tablet with a finger? Targets should be easy to hit. Nothing should bounce or chime. Speak should read the question in the device voice.
 - Does the strategy tag match what you saw them do?
 
 Founder: for 10 questions, write the inferred tag next to your own note of what the child did. Say where they differ.

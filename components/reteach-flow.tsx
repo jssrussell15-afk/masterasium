@@ -1,4 +1,5 @@
 import { BaseTenBlocks, FractionBars, NumberLine } from "@/components/manipulatives";
+import { ReadAloud } from "@/components/read-aloud";
 import { needsReviewLine, returnedLine } from "@/lib/reteach/copy";
 import { guidedFor } from "@/lib/reteach/catalog";
 import { plainSkill } from "@/lib/reteach/prereq";
@@ -24,11 +25,23 @@ function InCard() {
   const step = example?.steps[0] ?? "";
   return (
     <section className="card reteach-card" data-scene="in">
-      <p className="hint">{ENTER_LINE}</p>
+      <div className="speak-row">
+        <p className="hint">{ENTER_LINE}</p>
+        <ReadAloud text={ENTER_LINE} label="Speak the introduction" />
+      </div>
       <p className="topic-label">Show me</p>
-      <p className="prompt">{example?.prompt}</p>
-      <p className="show-style-caption">{step}</p>
+      <div className="speak-row">
+        <p className="prompt">{example?.prompt}</p>
+        <ReadAloud text={example?.prompt ?? ""} label="Speak the question" />
+      </div>
+      <div className="speak-row">
+        <p className="show-style-caption">{step}</p>
+        <ReadAloud text={step} label="Speak the step" />
+      </div>
       <p className="hint">Step 1 of {example?.steps.length ?? 1}</p>
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {ENTER_LINE} {example?.prompt} {step}
+      </p>
     </section>
   );
 }
@@ -36,9 +49,18 @@ function InCard() {
 function OutCard() {
   return (
     <section className="card reteach-card" data-scene="out">
-      <p className="hint">{RETURN_LINE}</p>
+      <div className="speak-row">
+        <p className="hint">{RETURN_LINE}</p>
+        <ReadAloud text={RETURN_LINE} label="Speak the introduction" />
+      </div>
       <p className="topic-label">Adding within 1,000</p>
-      <p className="prompt">250 + 175 = ?</p>
+      <div className="speak-row">
+        <p className="prompt">250 + 175 = ?</p>
+        <ReadAloud text="250 + 175 = ?" label="Speak the question" />
+      </div>
+      <p className="visually-hidden" role="status" aria-live="polite">
+        {RETURN_LINE} 250 + 175 = ?
+      </p>
       <label className="show-style-entry">
         <span className="hint">Your answer</span>
         <input className="reteach-answer" inputMode="numeric" defaultValue="" />

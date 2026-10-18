@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ReadAloud } from "@/components/read-aloud";
 import { emptyReteachTrace, noteBlock, noteJump, packReteachTrace, type ReteachTrace } from "@/lib/reteach/trace";
 
 export function BaseTenBlocks() {
@@ -28,7 +29,10 @@ export function BaseTenBlocks() {
   return (
     <section className="manipulative card" data-tool="base-ten" aria-label="Base ten blocks">
       <p className="manipulative-title">Base ten blocks</p>
-      <p className="prompt">Group 10 ones.</p>
+      <div className="speak-row">
+        <p className="prompt">Group 10 ones.</p>
+        <ReadAloud text="Group 10 ones." label="Speak the question" />
+      </div>
       <p className="manipulative-count">
         {tens} {tens === 1 ? "ten" : "tens"} and {ones} ones
       </p>
@@ -44,7 +48,7 @@ export function BaseTenBlocks() {
         <button type="button" onClick={ungroup} disabled={tens < 1}>
           Ungroup a ten
         </button>
-        <ReadAloud text={spoken} />
+        <ReadAloud text={spoken} label="Speak this" />
       </div>
       <TraceField value={packReteachTrace(trace)} />
       <Live text={spoken} />
@@ -85,7 +89,10 @@ export function NumberLine() {
       }}
     >
       <p className="manipulative-title">Number line</p>
-      <p className="prompt">Tap to jump.</p>
+      <div className="speak-row">
+        <p className="prompt">Tap to jump.</p>
+        <ReadAloud text="Tap to jump." label="Speak the question" />
+      </div>
       <div className="line-row" role="group" aria-label="Number line marks">
         {marks.map((mark) => (
           <button
@@ -121,7 +128,7 @@ export function NumberLine() {
         <button type="button" onClick={() => jump()}>
           Jump
         </button>
-        <ReadAloud text={spoken} />
+        <ReadAloud text={spoken} label="Speak this" />
       </div>
       <p className="hint">You are on {spot}.</p>
       <TraceField value={packReteachTrace(trace)} />
@@ -149,7 +156,10 @@ export function FractionBars() {
   return (
     <section className="manipulative card" data-tool="fraction-bars" aria-label="Fraction bars">
       <p className="manipulative-title">Fraction bars</p>
-      <p className="prompt">Tap a part to shade it.</p>
+      <div className="speak-row">
+        <p className="prompt">Tap a part to shade it.</p>
+        <ReadAloud text="Tap a part to shade it." label="Speak the question" />
+      </div>
       <div className="bar-row" role="group" aria-label={`${parts} equal parts`}>
         {Array.from({ length: parts }, (_, index) => {
           const on = shaded.includes(index);
@@ -172,23 +182,11 @@ export function FractionBars() {
         <button type="button" onClick={() => split(4)}>
           Split into 4
         </button>
-        <ReadAloud text={spoken} />
+        <ReadAloud text={spoken} label="Speak this" />
       </div>
       <p className="hint">{shaded.length} shaded.</p>
       <Live text={spoken} />
     </section>
-  );
-}
-
-function ReadAloud({ text }: { text: string }) {
-  const [shown, setShown] = useState(false);
-  return (
-    <>
-      <button type="button" onClick={() => setShown(true)}>
-        Read this
-      </button>
-      {shown ? <p className="read-aloud">{text}</p> : null}
-    </>
   );
 }
 
