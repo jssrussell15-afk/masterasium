@@ -1,5 +1,5 @@
 -- Alberta K-6 and legacy grades 7-8.
--- Not applied to the hosted Supabase project. Apply after review, after 20261018022500.
+-- Not applied to the hosted Supabase project. Apply after review, after 20261018040000.
 
 insert into public.strand (doc_id, code, code_type, name, display_order)
 values

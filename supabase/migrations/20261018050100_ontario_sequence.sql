@@ -1,5 +1,5 @@
 -- Ontario Grade 3 suggested teaching sequence.
--- Not applied to the hosted Supabase project. Apply after review, after 20261018022500.
+-- Not applied to the hosted Supabase project. Apply after review, after 20261018040000.
 
 insert into public.sequence (jurisdiction_code, grade, doc_id, label, basis, version, effective_from, effective_to, is_published)
 values (

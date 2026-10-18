@@ -100,7 +100,7 @@ ${itemValues};
 }
 
 function header(purpose: string): string {
-  return `-- ${purpose}\n-- Not applied to the hosted Supabase project. Apply after review, after 20261018022500.\n\n`;
+  return `-- ${purpose}\n-- Not applied to the hosted Supabase project. Apply after review, after 20261018040000.\n\n`;
 }
 
 function publish(codes: string[]): string {
@@ -123,7 +123,7 @@ const ontarioOveralls = standardsByDoc("ON-MATH-2020").filter((standard) => stan
 const ontarioSpecifics = standardsByDoc("ON-MATH-2020").filter((standard) => standard.level === "specific");
 
 writeFileSync(
-  join(root, "20261018030000_ontario_curriculum.sql"),
+  join(root, "20261018050000_ontario_curriculum.sql"),
   header("Ontario 2020 expectations, corrected skills, and alignments.") +
     insertStrands(strandsByDoc("ON-MATH-2020")) +
     "\n" +
@@ -137,7 +137,7 @@ writeFileSync(
 );
 
 writeFileSync(
-  join(root, "20261018030100_ontario_sequence.sql"),
+  join(root, "20261018050100_ontario_sequence.sql"),
   header("Ontario Grade 3 suggested teaching sequence.") + insertSequence(catalog.sequences[0], catalog.sequenceItems),
 );
 
@@ -168,9 +168,9 @@ function provinceFile(name: string, file: string, docKeys: string[], publishCode
   );
 }
 
-provinceFile("British Columbia and Yukon standards. NWT stays coming soon.", "20261018030200_bc_yukon.sql", ["BC-MATH-K9-2016"], ["BC", "YT"]);
-provinceFile("Alberta K-6 and legacy grades 7-8.", "20261018030300_alberta.sql", ["AB-MATH-K6-2022", "AB-MATH-K9-2016"], ["AB"]);
-provinceFile("Saskatchewan and Manitoba outcomes.", "20261018030400_saskatchewan_manitoba.sql", ["SK-MATH-1-8", "MB-MATH-K8-2013"], ["SK", "MB"]);
-provinceFile("Nova Scotia and Prince Edward Island outcomes. NL, NB, and Nunavut stay coming soon.", "20261018030500_nova_scotia_pei.sql", ["NS-MATH-2022", "PE-MATH-2024"], ["NS", "PE"]);
+provinceFile("British Columbia and Yukon standards. NWT stays coming soon.", "20261018050200_bc_yukon.sql", ["BC-MATH-K9-2016"], ["BC", "YT"]);
+provinceFile("Alberta K-6 and legacy grades 7-8.", "20261018050300_alberta.sql", ["AB-MATH-K6-2022", "AB-MATH-K9-2016"], ["AB"]);
+provinceFile("Saskatchewan and Manitoba outcomes.", "20261018050400_saskatchewan_manitoba.sql", ["SK-MATH-1-8", "MB-MATH-K8-2013"], ["SK", "MB"]);
+provinceFile("Nova Scotia and Prince Edward Island outcomes. NL, NB, and Nunavut stay coming soon.", "20261018050500_nova_scotia_pei.sql", ["NS-MATH-2022", "PE-MATH-2024"], ["NS", "PE"]);
 
 console.log("wrote migrations");
