@@ -29,6 +29,7 @@ import type { TrendWeek } from "@/lib/practice/trend";
 import { buildParentProgress } from "@/lib/lesson/parent";
 import { loadParentBundle } from "@/lib/lesson/store";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
+import { ReteachDesk } from "@/components/reteach-desk";
 
 export default function DashboardPage(props: PageProps<"/dashboard">) {
   return (
@@ -174,6 +175,7 @@ async function ChildCard({
         saved={pinSaved}
       />
       <LearningStatus practicedToday={log.attempts.some((attempt) => attempt.date === today)} />
+      <ReteachDesk supabase={supabase} childId={child.id} />
       <MoveAheadSetting childId={child.id} enabled={child.moveAhead} />
       <SetLengthSetting childId={child.id} minutes={child.setLengthMinutes} />
       <ChildCanDo

@@ -2442,3 +2442,67 @@ html:has(.question-screen) .site-footer {
     grid-template-columns: minmax(0, 1.25fr) minmax(18rem, 0.85fr);
   }
 }
+
+.manipulative,
+.reteach-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.manipulative button,
+.reteach-card button,
+.reteach-answer {
+  min-width: 44px;
+  min-height: 48px;
+  border: 2px solid var(--line);
+  border-radius: 0.8rem;
+  background: white;
+  color: var(--ink);
+  font-size: 1rem;
+  padding: 0.4rem 0.8rem;
+  transition: none;
+  animation: none;
+}
+
+.manipulative-actions,
+.line-row,
+.bar-row,
+.manipulative-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.one-block {
+  width: 18px;
+  height: 48px;
+  border: 2px solid var(--line);
+  border-radius: 0.25rem;
+  background: white;
+}
+
+.line-mark,
+.bar-part {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.bar-part {
+  flex: 1;
+  background: white;
+}
+
+.bar-part.is-shaded,
+.line-mark.is-here {
+  background: var(--color-mist);
+}
+
+.reteach-answer {
+  width: 8rem;
+  font-size: 1.5rem;
+}
+
+.read-aloud {
+  flex-basis: 100%;
+  margin: 0;
+}
