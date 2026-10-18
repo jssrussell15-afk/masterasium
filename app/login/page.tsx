@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { Suspense } from "react";
 import { AuthForm } from "@/components/auth-form";
+import { CalmState } from "@/components/calm-state";
 import { StudentLoginForm } from "@/components/student-login-form";
 import { Shell } from "@/components/site-header";
 import { readRememberedChildren, TABLET_CHILDREN_COOKIE } from "@/lib/children/tablet";
@@ -25,7 +26,9 @@ export default function LoginPage(props: PageProps<"/login">) {
     <Suspense
       fallback={
         <Shell narrow slimLink={{ href: "/signup", label: "Create account" }}>
-          <p className="status">Loading…</p>
+          <CalmState kind="loading" title="Opening sign in">
+            This will only take a moment.
+          </CalmState>
         </Shell>
       }
     >
@@ -37,10 +40,10 @@ export default function LoginPage(props: PageProps<"/login">) {
 function SignInSwitch({ mode }: { mode: "parent" | "student" }) {
   return (
     <div className="segmented" role="group" aria-label="Who is signing in">
-      <Link href="/login" aria-pressed={mode === "parent"}>
+      <Link href="/login" aria-current={mode === "parent" ? "page" : undefined}>
         Parent
       </Link>
-      <Link href="/login?as=student" aria-pressed={mode === "student"}>
+      <Link href="/login?as=student" aria-current={mode === "student" ? "page" : undefined}>
         Student
       </Link>
     </div>

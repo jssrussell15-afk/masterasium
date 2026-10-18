@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { SiteFooter } from "@/components/site-footer";
 import { homeFor, navFor, type Role } from "@/lib/auth/roles";
 
 export function SiteHeader({
@@ -15,9 +16,9 @@ export function SiteHeader({
 }) {
   const links = navFor(role);
   return (
-      <header
-        className={`mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between ${role === "parent" ? "parent-page" : ""}`}
-      >
+    <header
+      className={`mx-auto flex w-full max-w-5xl flex-col gap-3 px-6 py-5 sm:flex-row sm:items-center sm:justify-between ${role === "parent" ? "parent-page" : ""}`}
+    >
       <Link href={homeHref ?? homeFor(role)} className="wordmark">
         Masterasium
       </Link>
@@ -73,16 +74,32 @@ export function Shell({
 }) {
   const screen = (
     <>
-      {banner ? <img src="/banner.png" alt="" className="page-banner" /> : null}
+      <a className="skip-link" href="#content">
+        Skip to content
+      </a>
+      {banner ? (
+        <picture>
+          <source srcSet="/banner.avif" type="image/avif" />
+          <source srcSet="/banner.webp" type="image/webp" />
+          <img
+            src="/banner.webp"
+            alt=""
+            width={1600}
+            height={900}
+            className="page-banner"
+            loading="lazy"
+            decoding="async"
+          />
+        </picture>
+      ) : null}
       <SiteHeader action={action} role={role} homeHref={homeHref} slimLink={slimLink} />
       <main
+        id="content"
         className={`mx-auto flex w-full flex-1 flex-col px-6 pb-16 ${narrow ? "max-w-xl" : "max-w-5xl"} ${role === "parent" ? "parent-page" : ""}`}
       >
         {children}
       </main>
-      <footer className="site-footer">
-        <p>Practice is free while we test.</p>
-      </footer>
+      <SiteFooter />
     </>
   );
   if (!slimLink) return screen;

@@ -1,85 +1,78 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { DashboardMock } from "@/components/dashboard-mock";
 import { sessionChrome } from "@/components/header-auth";
-import { PracticeShot } from "@/components/practice-shot";
+import { LessonPreview } from "@/components/lesson-preview";
 import { Shell } from "@/components/site-header";
 
 export const metadata: Metadata = {
   title: "Masterasium",
   description:
-    "Adaptive math practice for Grades 1–8, aligned to your province's curriculum. Every province except Quebec.",
+    "Calm, self-paced math that follows your province's curriculum. Watch, try with help, then practise until it sticks. Practice is free while we test.",
 };
 
 export default async function HomePage() {
   const chrome = await sessionChrome("btn btn-secondary");
   return (
     <Shell {...chrome}>
-      <section className="mt-8 grid items-center gap-10 md:mt-14 md:grid-cols-[1.05fr_0.95fr]">
+      <section className="hero">
         <div>
-          <h1 className="display text-4xl md:text-5xl">
-            Adaptive math practice for Grades 1–8, aligned to your province&apos;s curriculum.
+          <h1 className="display hero-title">
+            Calm, self-paced math that follows your province&apos;s curriculum.
           </h1>
-          <p className="lede mt-5 max-w-xl">
-            Practice covers every province except Quebec. Practice is free while we test.
+          <p className="lede mt-5">
+            Watch a short lesson, try a question with help, then practise until it sticks.
           </p>
-          <Link href="/signup" className="btn btn-primary mt-8">
-            Create a parent account
-          </Link>
+          <p className="trust-line">
+            Practice is free while we test. Ontario lessons are open. Quebec is not included.
+          </p>
+          <div className="cta-row">
+            <Link href="/signup" className="btn btn-primary">
+              Try a free lesson
+            </Link>
+            <Link href="/login" className="btn btn-quiet">
+              Sign in
+            </Link>
+          </div>
         </div>
-        <DashboardMock />
+        <LessonPreview />
       </section>
 
-      <p className="trust-line">Built with teachers and parents in Ontario.</p>
-
-      <section className="mt-14 grid items-start gap-8 md:grid-cols-[0.9fr_1.1fr]">
-        <div>
-          <h2 className="display text-3xl">How it works</h2>
-          <ol className="step-list mt-4">
-            <li>
-              <strong>Pick a skill.</strong> Choose what the class is working on, or stay with the
-              next skill in the grade.
-            </li>
-            <li>
-              <strong>Practice with hints.</strong> The first questions show a starting step. Later
-              questions stand on their own.
-            </li>
-            <li>
-              <strong>See progress.</strong> The parent desk follows the grade: a short note for
-              Grades 1–3, and a skill breakdown from Grade 4 up.
-            </li>
-          </ol>
-        </div>
-        <PracticeShot />
+      <section className="section-block" aria-labelledby="how-heading">
+        <h2 id="how-heading" className="display">
+          How it works
+        </h2>
+        <ol className="step-list mt-4">
+          <li>
+            <span>
+              <strong>Watch.</strong> A short lesson introduces the skill.
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Try with help.</strong> The first questions show a starting step.
+            </span>
+          </li>
+          <li>
+            <span>
+              <strong>Practise until it sticks.</strong> Keep going until the skill is steady, then
+              it comes back later.
+            </span>
+          </li>
+        </ol>
       </section>
 
-      <section className="mt-14 grid gap-4 md:grid-cols-2">
-        <article className="card">
-          <h2 className="text-xl font-semibold">For parents</h2>
+      <section className="section-block" aria-labelledby="parents-heading">
+        <h2 id="parents-heading" className="display">
+          For parents
+        </h2>
+        <article className="card weekly-note mt-4">
+          <p className="eyebrow">This week</p>
+          <h3 className="display">Ask your child about…</h3>
+          <p className="mt-2">counting equal groups.</p>
           <p className="hint mt-2">
-            The desk shows what your child is working on and how that skill is moving. Grades 1–3
-            stay with whether they practiced today, and one line on the current skill. Grade 4 and
-            up adds the skill list, four weeks of accuracy, and what is due for a later review.
+            Multiplication facts to 10×10. A short note like this arrives once a week.
           </p>
         </article>
-        <article className="card">
-          <h2 className="text-xl font-semibold">For teachers</h2>
-          <p className="hint mt-2">
-            Teachers get a free tool: upload a worksheet page, generate a new sheet, and share a
-            class link.
-          </p>
-          <Link href="/worksheets" className="nav-link mt-3 inline-block">
-            Open the teacher tool
-          </Link>
-        </article>
-      </section>
-
-      <section className="mt-14">
-        <h2 className="display text-3xl">Practice is free while we test</h2>
-        <p className="lede mt-3">Create a parent account when you are ready.</p>
-        <Link href="/signup" className="btn btn-primary mt-6">
-          Create a parent account
-        </Link>
       </section>
     </Shell>
   );

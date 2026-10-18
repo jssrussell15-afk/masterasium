@@ -30,6 +30,6 @@ describe("header auth", () => {
     const html = renderToStaticMarkup(await NotFound());
     expect(html).toContain(">Sign in<");
     expect(html).toContain('class="wordmark"');
-    expect(html).toContain("That page is not here");
+    expect(html).toContain("That page isn&#x27;t here");
   });
 });

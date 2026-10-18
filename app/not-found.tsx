@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalmState } from "@/components/calm-state";
 import { sessionChrome } from "@/components/header-auth";
 import { Shell } from "@/components/site-header";
 
@@ -6,12 +7,17 @@ export default async function NotFound() {
   const chrome = await sessionChrome();
   return (
     <Shell narrow {...chrome}>
-      <section className="card mt-8">
-        <h1 className="display text-4xl">That page is not here</h1>
-        <Link href="/" className="btn btn-primary mt-5">
-          Back home
-        </Link>
-      </section>
+      <CalmState
+        kind="error"
+        title="That page isn't here"
+        action={
+          <Link href="/" className="btn btn-primary">
+            Back home
+          </Link>
+        }
+      >
+        The link may be old. Let&apos;s go back home.
+      </CalmState>
     </Shell>
   );
 }

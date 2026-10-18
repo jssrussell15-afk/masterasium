@@ -10,7 +10,7 @@ describe("province selector", () => {
       createElement(CurriculumSwitch, { province: "ontario", grade: 3 }),
     );
     expect(html).toContain("Ontario");
-    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('aria-current="page"');
     expect(html).toContain("More provinces coming soon.");
     expect(html).not.toContain("Quebec");
     expect(html).not.toContain("aria-disabled");
