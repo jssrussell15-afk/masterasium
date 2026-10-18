@@ -6,6 +6,7 @@ import { AssistedPrompt } from "@/components/assisted-prompt";
 import { NumberKeypad } from "@/components/number-keypad";
 import { HighlightedPrompt, LightbulbIcon, ShowMePanel } from "@/components/show-me";
 import { answersMatch } from "@/lib/practice/answers";
+import { whyPromptsEnabled } from "@/lib/practice/why-flag";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -223,6 +224,7 @@ export function QuestionPractice({
             {announcement}
           </p>
           {phase === "correct" && why ? <p className="why-line">{why}</p> : null}
+          {whyPromptsEnabled() ? <p className="why-prompt-slot" hidden /> : null}
           {phase === "retry" && !walking ? <p className="feedback warm">Not quite. Try again.</p> : null}
           {phase === "correct" ? <p className="feedback good">That's right.</p> : null}
           {showTextReveal ? (
