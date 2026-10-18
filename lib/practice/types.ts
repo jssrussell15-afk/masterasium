@@ -41,6 +41,8 @@ export type QuestionView = {
   hints?: HintLadder;
   /** A different worked example of this kind, or null when one cannot be checked. */
   example?: WorkedExample | null;
+  /** Set when the question came from a published content item. */
+  contentItemId?: string | null;
   /** Restored after a refresh so a retry does not become a new first try. */
   resume?: {
     phase: Exclude<FeedbackPhase, "answering">;
@@ -83,6 +85,8 @@ export type PracticeView = {
   recap: string | null;
   requestedGrade: SupportedGrade | null;
   today: string;
+  /** Minutes in a sitting before "Good place to stop." Defaults to 15. */
+  setLengthMinutes?: number;
 };
 
 export type PracticeState = {

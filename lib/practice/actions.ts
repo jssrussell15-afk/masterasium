@@ -22,7 +22,13 @@ import { isLessonSkill } from "@/lib/lesson/catalog";
 import { syncReviewRows } from "@/lib/lesson/store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
-import { readAttemptMark, readStoredPlan, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
+import {
+  readAttemptMark,
+  readStoredContent,
+  readStoredPlan,
+  unpackStoredAnswer,
+  withAttemptMark,
+} from "@/lib/practice/stored-answer";
 import type { PracticeState } from "@/lib/practice/types";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
@@ -265,14 +271,37 @@ async function advancePractice(
     if (extraError) return { error: extraError };
   }
 
-  const { error: attemptError } = await supabase.from("attempts").insert({
+  const content = readStoredContent(question.answer);
+  const attemptRow = {
     child_id: childId,
     skill_id: question.skill_id,
     prompt: question.prompt,
     expected: unpacked.answer,
     given,
     correct,
-  });
+    ...(content
+      ? {
+          lane: content.lane,
+          difficulty: content.difficulty,
+          content_item_id: content.itemId,
+          answer: { ...content.answer, given },
+        }
+      : {}),
+  };
+  let { error: attemptError } = await supabase.from("attempts").insert(attemptRow);
+  if (attemptError && content) {
+    const message = attemptError.message.toLowerCase();
+    if (message.includes("lane") || message.includes("content_item_id") || message.includes("answer")) {
+      ({ error: attemptError } = await supabase.from("attempts").insert({
+        child_id: childId,
+        skill_id: question.skill_id,
+        prompt: question.prompt,
+        expected: unpacked.answer,
+        given,
+        correct,
+      }));
+    }
+  }
   if (attemptError) return { error: friendlyDbError(attemptError) };
   if (isLessonSkill(question.skill_id)) {
     await syncReviewRows(supabase, childId, question.skill_id, readLearn(nextCard.fsrs), today);

@@ -25,6 +25,7 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
 
 const PATH_PERMISSIONS: { prefix: string; permission: Permission }[] = [
   { prefix: "/dashboard", permission: "desk" },
+  { prefix: "/admin", permission: "desk" },
   { prefix: "/settings", permission: "settings" },
   { prefix: "/worksheets", permission: "worksheets" },
   { prefix: "/practice", permission: "practice" },

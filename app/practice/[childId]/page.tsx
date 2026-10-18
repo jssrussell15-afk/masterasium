@@ -7,6 +7,7 @@ import { requireStudent } from "@/lib/auth/student";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { nextUpFor } from "@/lib/practice/move-ahead-load";
+import { readSetLength } from "@/lib/practice/set-length-load";
 import { loadCards, loadOrIssueQuestion } from "@/lib/practice/session";
 import { skillById } from "@/lib/practice/skills";
 
@@ -47,6 +48,7 @@ async function PracticeLoader({
   if (cardError) return <p className="feedback bad mt-8">{cardError}</p>;
 
   const nextUp = await nextUpFor(supabase, data.id, access.working, cards);
+  const setLengthMinutes = await readSetLength(supabase, data.id);
   const pending = await supabase
     .from("pending_questions")
     .select("skill_id")
@@ -79,6 +81,7 @@ async function PracticeLoader({
         recap: null,
         requestedGrade: access.requested,
         today: torontoDate(),
+        setLengthMinutes,
       }}
     />
   );
