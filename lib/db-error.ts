@@ -4,10 +4,10 @@ type DbError = {
 };
 
 export const STUDENT_LOGIN_SETUP_MESSAGE =
-  "Student login is not set up in the database yet. A parent can open Account settings and paste the student login statements into the Supabase SQL editor.";
+  "Student sign-in is not ready yet. Practice can start once the database is updated.";
 
 export const GRADE_PROGRESS_SETUP_MESSAGE =
-  "Grade progress is not set up in the database yet. A parent can open Account settings and paste the grade progress statements into the Supabase SQL editor.";
+  "Grade progress is not ready yet. Practice can start once the database is updated.";
 
 export function isGradeProgressMissing(error: DbError): boolean {
   const message = error.message.toLowerCase();
@@ -74,7 +74,7 @@ export function friendlyDbError(error: DbError): string {
     !message.includes("p_username") &&
     !message.includes("p_pin")
   ) {
-    return "A child cannot be saved yet. Open Account settings and paste the child profile statements into the Supabase SQL editor.";
+    return "A child cannot be saved yet. The child profile is not ready in the database.";
   }
   if (isGradeProgressMissing(error)) {
     return GRADE_PROGRESS_SETUP_MESSAGE;

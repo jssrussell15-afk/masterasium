@@ -3,7 +3,7 @@
 :root {
   --paper: #e7f4fb;
   --ink: #17344c;
-  --muted: #4e6d84;
+  --muted: #234056;
   --line: #c5dfed;
   --blue: #1f6f9a;
   --blue-deep: #164e6e;
@@ -24,12 +24,21 @@
   --font-serif: var(--font-fraunces);
 }
 
-body {
-  background:
+html {
+  min-height: 100%;
+  background-color: #d5eef8;
+  background-image:
     radial-gradient(900px 420px at 0% -10%, #f8fcff 0%, transparent 60%),
     linear-gradient(180deg, #f5fbfe 0%, var(--paper) 42%, #d5eef8 100%);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+body {
+  background: transparent;
   color: var(--ink);
   font-family: var(--font-source), "Source Sans 3", sans-serif;
+  min-height: 100%;
 }
 
 a {
@@ -718,6 +727,24 @@ a {
 .hint,
 .status {
   color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+.parent-page {
+  font-size: 1rem;
+}
+
+.parent-page .hint,
+.parent-page .status,
+.parent-page .eyebrow,
+.parent-page .field,
+.parent-page .field-error,
+.parent-page .text-sm,
+.parent-page pre,
+.parent-page nav {
+  font-size: 1rem;
+  line-height: 1.5;
 }
 
 .nav-link {
@@ -1489,6 +1516,115 @@ html:has(.question-screen) main {
   background: rgb(23 52 76 / 28%);
 }
 
+.lesson-screen {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.lesson-screen .question-back a,
+.lesson-tap,
+.lesson-screen .btn,
+.lesson-hint summary {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.lesson-screen .btn {
+  width: 100%;
+}
+
+.lesson-numeral {
+  margin: 0;
+  font-size: clamp(2.4rem, 8vw, 3.4rem);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+}
+
+.lesson-prompt {
+  margin: 0;
+  font-size: clamp(1.35rem, 4.5vw, 1.8rem);
+  line-height: 1.35;
+}
+
+.lesson-steps {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 1.15rem;
+}
+
+.lesson-learned {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-left: 3px solid var(--blue);
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+.lesson-hint summary {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--blue);
+  font-weight: 650;
+}
+
+.lesson-hint p {
+  margin: 0.4rem 0 0;
+}
+
+.video-slot {
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+  min-height: 11rem;
+  padding: 1.25rem;
+  border: 1.5px dashed var(--line);
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.parent-progress {
+  display: grid;
+  gap: 1rem;
+}
+
+.ask-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+}
+
+.digest-sheet {
+  display: grid;
+  gap: 1rem;
+  max-width: 40rem;
+  margin-top: 0.5rem;
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 1.25rem;
+  background: white;
+}
+
+.digest-sheet h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+@media (max-width: 420px) {
+  .digest-sheet,
+  .ask-card,
+  .lesson-screen .card {
+    padding: 0.9rem;
+  }
+}
+
 @media print {
   header,
   .no-print,
@@ -1497,6 +1633,7 @@ html:has(.question-screen) main {
     display: none !important;
   }
 
+  html,
   body {
     background: white;
   }

@@ -56,7 +56,9 @@ export function isMastered(card: SkillCard | undefined): boolean {
  */
 export function isConfirmed(card: SkillCard | undefined): boolean {
   if (!card) return false;
-  const check = readLearn(card.fsrs).lessonCheck;
+  const learn = readLearn(card.fsrs);
+  const check = learn.lessonCheck;
+  if (learn.lessonHold && check !== "passed") return false;
   if (check === "passed") return true;
   if (check) return false;
   return isMastered(card);

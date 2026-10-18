@@ -30,7 +30,7 @@ export function GradeSettings({
     <div className="grid gap-3">
       <div>
         <h3 className="font-semibold">Grade</h3>
-        <p className="hint mt-1 text-sm">
+        <p className="hint mt-1">
           Enrolled in Grade {enrolled}. Working in Grade {workingGrade}. Questions and review follow
           the working grade. Every grade stays visible in the skill selector.
         </p>
@@ -39,7 +39,7 @@ export function GradeSettings({
         <form action={unlockAction} className="grid gap-2">
           <input type="hidden" name="childId" value={childId} />
           <input type="hidden" name="unlocked" value={nextUnlocked ? "0" : "1"} />
-          <p className="hint text-sm">
+          <p className="hint">
             {nextUnlocked
               ? `Grade ${next} is unlocked. Choosing a topic there moves practice early.`
               : `Unlock Grade ${next} early, before this grade is finished.`}
@@ -54,12 +54,12 @@ export function GradeSettings({
           ) : null}
         </form>
       ) : (
-        <p className="hint text-sm">Grade 8 is the last grade.</p>
+        <p className="hint">Grade 8 is the last grade.</p>
       )}
       {requestedGrade ? (
         <form action={requestAction} className="grid gap-2">
           <input type="hidden" name="childId" value={childId} />
-          <p className="hint text-sm">
+          <p className="hint">
             {firstName} asked to work in Grade {requestedGrade}.
           </p>
           <div className="flex flex-wrap gap-2">

@@ -5,11 +5,9 @@ import { StartPracticeButton } from "@/components/start-practice-button";
 import { SetPinForm } from "@/components/student-access-forms";
 import { DigestPanel } from "@/components/digest-panel";
 import { SignOutButton } from "@/components/sign-out-button";
-import { StreakMark } from "@/components/streak-mark";
 import { Shell } from "@/components/site-header";
-import { GradeSetupSql } from "@/components/grade-setup-sql";
 import { MasteryMark } from "@/components/mastery-mark";
-import { StudentSetupSql } from "@/components/student-setup-sql";
+import { ParentProgressView } from "@/components/parent-progress";
 import { loadRoster, type RosterChild } from "@/lib/children/roster";
 import { friendlyDbError } from "@/lib/db-error";
 import { renderDigestText, torontoDate, type DigestSummary } from "@/lib/digest/build";
@@ -24,6 +22,8 @@ import { buildPortrait } from "@/lib/practice/portrait";
 import { accuracyScheduler, describeSkills, type SkillCard } from "@/lib/practice/scheduler";
 import type { SkillProgress } from "@/lib/practice/types";
 import type { TrendWeek } from "@/lib/practice/trend";
+import { buildParentProgress } from "@/lib/lesson/parent";
+import { loadParentBundle } from "@/lib/lesson/store";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
 export default function DashboardPage(props: PageProps<"/dashboard">) {
@@ -59,11 +59,6 @@ async function Desk({
         <p className="eyebrow">Parent desk</p>
         <h1 className="display mt-2 text-4xl">Your children</h1>
         <p className="hint mt-2">{user.email}</p>
-        {notice === "pin" ? (
-          <p className="feedback good mt-3" role="status">
-            PIN saved. They sign in with their first name and this PIN.
-          </p>
-        ) : null}
         <p className="hint mt-2">
           Progress here is scores and skill names. Question text stays on the student login.{" "}
           <Link href="/settings" className="nav-link">
@@ -73,20 +68,14 @@ async function Desk({
       </div>
 
       {roster.studentSetup ? (
-        <div className="grid gap-3">
-          <p className="feedback bad" role="alert">
-            {roster.studentSetup}
-          </p>
-          <StudentSetupSql open />
-        </div>
+        <p className="feedback bad" role="alert">
+          {roster.studentSetup}
+        </p>
       ) : null}
       {roster.gradeSetup ? (
-        <div className="grid gap-3">
-          <p className="feedback bad" role="alert">
-            {roster.gradeSetup}
-          </p>
-          <GradeSetupSql open />
-        </div>
+        <p className="feedback bad" role="alert">
+          {roster.gradeSetup}
+        </p>
       ) : null}
 
       {children.length === 0 ? (
@@ -168,7 +157,7 @@ async function ChildCard({
         </p>
       </div>
       {child.requestedGrade ? (
-        <p className="hint text-sm">
+        <p className="hint">
           Asked to work in Grade {child.requestedGrade}. Approve it in account settings.
         </p>
       ) : null}
@@ -180,13 +169,13 @@ async function ChildCard({
         returnTo="dashboard"
         saved={pinSaved}
       />
-      {isSimpleDesk(working) ? (
-        <SimpleProgress
-          days={portrait.streakDays}
-          practicedToday={log.attempts.some((attempt) => attempt.date === today)}
-          focusTitle={focus.title}
-        />
-      ) : (
+      <LearningStatus
+        practicedToday={log.attempts.some((attempt) => attempt.date === today)}
+        focusTitle={focus.title}
+      />
+      {working === 3 ? (
+        <GradeThreeProgress childId={child.id} supabase={supabase} today={today} />
+      ) : isSimpleDesk(working) ? null : (
         <FullProgress
           skills={skills}
           cards={cards}
@@ -199,18 +188,42 @@ async function ChildCard({
   );
 }
 
-function SimpleProgress({
-  days,
+async function GradeThreeProgress({
+  childId,
+  supabase,
+  today,
+}: {
+  childId: string;
+  supabase: SupabaseClient;
+  today: string;
+}) {
+  const bundle = await loadParentBundle(supabase, childId);
+  const progress = buildParentProgress({
+    today,
+    lessons: bundle.lessons,
+    reviews: bundle.reviews,
+    attempts: bundle.attempts,
+    solved: bundle.solved,
+    repaired: bundle.repaired,
+  });
+  return (
+    <ParentProgressView
+      progress={progress}
+      digestHref={`/dashboard/digest/${childId}`}
+      missing={bundle.missing}
+    />
+  );
+}
+
+function LearningStatus({
   practicedToday,
   focusTitle,
 }: {
-  days: number;
   practicedToday: boolean;
   focusTitle: string;
 }) {
   return (
-    <div className="grid gap-2">
-      <StreakMark days={days} />
+    <div className="grid gap-1">
       <p>{practicedToday ? "Practiced today." : "Not yet today."}</p>
       <p>Working on {focusTitle}.</p>
     </div>
@@ -256,7 +269,7 @@ function FullProgress({
       <div>
         <h3 className="font-semibold">Accuracy, last four weeks</h3>
         {quiet ? (
-          <p className="hint mt-2 text-sm">No practice in the last four weeks.</p>
+          <p className="hint mt-2">No practice in the last four weeks.</p>
         ) : (
           <ul className="trend mt-2">
             {weeks.map((week) => (
@@ -278,7 +291,7 @@ function FullProgress({
       <div>
         <h3 className="font-semibold">Spaced review</h3>
         {review.length === 0 ? (
-          <p className="hint mt-2 text-sm">Nothing is waiting for a later review.</p>
+          <p className="hint mt-2">Nothing is waiting for a later review.</p>
         ) : (
           <ul className="strand-list mt-2">
             {review.map((item) => (
@@ -286,7 +299,7 @@ function FullProgress({
             ))}
           </ul>
         )}
-        <p className="hint mt-2 text-sm">
+        <p className="hint mt-2">
           Skill names only. The student opens the questions from their own login.
         </p>
       </div>

@@ -12,12 +12,12 @@ export function DigestPanel({ childId, savedText }: { childId: string; savedText
   return (
     <form action={action} className="grid gap-3">
       <input type="hidden" name="childId" value={childId} />
-      <p className="hint text-sm">
-        Nothing is emailed. Saving a draft stores today&apos;s attempts, accuracy, focus skill,
-        streak, and session summary so a daily email can be switched on later.
+      <p className="hint">
+        Nothing is emailed. This stores today&apos;s attempts, accuracy, and the skill they are working
+        on, so a daily note can be switched on later.
       </p>
       <button className="btn btn-secondary w-fit" type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Save today's draft"}
+        {pending ? "Saving…" : "Save today's summary"}
       </button>
       {state.message ? (
         <p className="feedback good" role="status">
@@ -29,7 +29,7 @@ export function DigestPanel({ childId, savedText }: { childId: string; savedText
           {state.error}
         </p>
       ) : null}
-      {text ? <pre className="overflow-x-auto text-sm whitespace-pre-wrap">{text}</pre> : null}
+      {text ? <pre className="overflow-x-auto whitespace-pre-wrap">{text}</pre> : null}
     </form>
   );
 }

@@ -132,7 +132,7 @@ export async function addSignupChild(
   if (!practice) {
     return {
       error:
-        "A child cannot be saved yet. Open Account settings and paste the child profile statements into the Supabase SQL editor.",
+        "A child cannot be saved yet. The child profile is not ready in the database.",
     };
   }
 
@@ -277,7 +277,7 @@ export async function setChildPin(
     if (saved !== "saved") return saved;
   }
 
-  redirect(returnTo === "settings" ? "/settings?notice=pin" : "/dashboard?notice=pin");
+  redirect(returnTo === "dashboard" ? "/dashboard?notice=pin" : "/settings?notice=pin");
 }
 
 export async function setStudentLogin(

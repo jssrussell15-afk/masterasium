@@ -1,6 +1,7 @@
 import type { SupportedGrade } from "@/lib/grades";
 import { readLearn } from "@/lib/practice/memory";
 import type { AttemptPoint } from "@/lib/practice/portrait";
+import { isReviewDue } from "@/lib/practice/review";
 import { accuracyOf, accuracyScheduler, type SkillCard } from "@/lib/practice/scheduler";
 import { skillById, skillsForGrade, type Skill } from "@/lib/practice/skills";
 
@@ -53,7 +54,7 @@ export function studentHome(input: {
     today: input.today,
   });
   const review = skills.filter((skill) =>
-    readLearn(input.cards.find((card) => card.skillId === skill.id)?.fsrs).needsReview,
+    isReviewDue(readLearn(input.cards.find((card) => card.skillId === skill.id)?.fsrs), input.today),
   );
   const assignedIds = unique([focus.id, ...review.map((skill) => skill.id)]).slice(0, LIST_LIMIT);
   const assignedSet = new Set(assignedIds);
@@ -85,12 +86,16 @@ export function studentHome(input: {
     assigned: assignedIds.flatMap((id) => {
       const skill = skills.find((item) => item.id === id) ?? skillById(id);
       if (!skill) return [];
+      const learn = readLearn(input.cards.find((card) => card.skillId === skill.id)?.fsrs);
+      const due = isReviewDue(learn, input.today);
       const note =
         skill.id === focus.id
           ? "Next in this grade"
-          : readLearn(input.cards.find((card) => card.skillId === skill.id)?.fsrs).needsReview
-            ? "Assigned for another look"
-            : "Next in this grade";
+          : due && !learn.needsReview
+            ? "Review today"
+            : due
+              ? "Assigned for another look"
+              : "Next in this grade";
       return [asHome(skill, note)];
     }),
     recommended: recommendedIds.flatMap((id) => {
