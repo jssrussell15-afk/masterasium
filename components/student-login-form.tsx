@@ -11,7 +11,7 @@ import {
   type FieldErrors,
 } from "@/lib/auth/field-errors";
 import type { RememberedChild } from "@/lib/children/tablet";
-import { isValidPin } from "@/lib/validation";
+import { isValidFirstName, isValidPin, normalizeFirstName } from "@/lib/validation";
 
 const initial: AuthState = {};
 const FIELD_ORDER = ["firstName", "pin"] as const;
@@ -95,14 +95,21 @@ export function StudentLoginForm({
   }
 
   function onSubmit(event: FormEvent<HTMLFormElement>) {
-    if (!selected) {
+    if (students.length > 0 && !selected) {
       event.preventDefault();
       return;
     }
+    const errors: FieldErrors = {};
+    if (!selected) {
+      const typed = normalizeFirstName(String(new FormData(event.currentTarget).get("firstName") ?? ""));
+      if (!typed) errors.firstName = "Enter a first name.";
+      else if (!isValidFirstName(typed)) errors.firstName = "Use a first name, up to 40 letters.";
+    }
     const message = pinProblem(pin);
-    if (message) {
+    if (message) errors.pin = message;
+    if (Object.keys(errors).length > 0) {
       event.preventDefault();
-      setClientErrors({ pin: message });
+      setClientErrors(errors);
       setUseClient(true);
       setClientTick((tick) => tick + 1);
       return;
@@ -119,10 +126,27 @@ export function StudentLoginForm({
         </p>
       ) : null}
       {before}
-      {students.length === 0 ? (
-        <p className="hint">No student is saved on this tablet yet.</p>
-      ) : (
-        <form action={formAction} className="student-sign-in grid gap-3" onSubmit={onSubmit}>
+      <form action={formAction} className="student-sign-in grid gap-3" noValidate onSubmit={onSubmit}>
+        {students.length === 0 ? (
+          <>
+            <p className="hint">
+              First time on this tablet? Ask a grown-up to sign in and tap Start practice.
+            </p>
+            <label className="field" htmlFor="student-name">
+              First name
+              <input
+                id="student-name"
+                name="firstName"
+                type="text"
+                autoComplete="given-name"
+                autoCapitalize="words"
+                maxLength={40}
+                aria-invalid={nameError ? true : undefined}
+                aria-describedby={fieldDescribedBy("student-name-error", nameDetail)}
+              />
+            </label>
+          </>
+        ) : (
           <div className="profile-picks" role="group" aria-label="Students" hidden={selected != null}>
             {students.map((student, index) => (
               <button
@@ -135,11 +159,15 @@ export function StudentLoginForm({
               </button>
             ))}
           </div>
-          <FieldError id="student-name-error" message={nameDetail} />
+        )}
+        <FieldError id="student-name-error" message={nameDetail} />
+        {students.length > 0 ? (
           <input type="hidden" name="firstName" value={selected?.firstName ?? ""} />
-          <input type="hidden" name="pin" value={pin} />
-          <div className="pin-entry" hidden={selected == null}>
-            <div className="grid gap-3">
+        ) : null}
+        <input type="hidden" name="pin" value={pin} />
+        <div className="pin-entry" hidden={students.length > 0 && selected == null}>
+          <div className="grid gap-3">
+            {students.length > 0 ? (
               <div className="pin-who">
                 <p
                   id={selected ? "student-name" : undefined}
@@ -156,43 +184,43 @@ export function StudentLoginForm({
                   </button>
                 ) : null}
               </div>
-              <p
-                id="student-pin"
-                className="pin-dots"
-                tabIndex={-1}
-                aria-label="PIN"
-                aria-invalid={pinError ? true : undefined}
-                aria-describedby={fieldDescribedBy("student-pin-error", pinError)}
-              >
-                {Array.from({ length: PIN_DOTS }, (_, index) => (
-                  <span key={index} data-filled={index < pin.length ? "true" : "false"} aria-hidden="true" />
-                ))}
-              </p>
-              <p className="visually-hidden" aria-live="polite" aria-atomic="true">
-                {pinDigitAnnouncement(pin.length)}
-              </p>
-              <div className="pin-pad" role="group" aria-label="PIN">
-                {DIGITS.map((digit) => (
-                  <button key={digit} type="button" onClick={() => addDigit(digit)}>
-                    {digit}
-                  </button>
-                ))}
-                <span aria-hidden="true" />
-                <button type="button" onClick={() => addDigit("0")}>
-                  0
+            ) : null}
+            <p
+              id="student-pin"
+              className="pin-dots"
+              tabIndex={-1}
+              aria-label="PIN"
+              aria-invalid={pinError ? true : undefined}
+              aria-describedby={fieldDescribedBy("student-pin-error", pinError)}
+            >
+              {Array.from({ length: PIN_DOTS }, (_, index) => (
+                <span key={index} data-filled={index < pin.length ? "true" : "false"} aria-hidden="true" />
+              ))}
+            </p>
+            <p className="visually-hidden" aria-live="polite" aria-atomic="true">
+              {pinDigitAnnouncement(pin.length)}
+            </p>
+            <div className="pin-pad" role="group" aria-label="PIN">
+              {DIGITS.map((digit) => (
+                <button key={digit} type="button" onClick={() => addDigit(digit)}>
+                  {digit}
                 </button>
-                <button type="button" data-key="delete" aria-label="Delete" onClick={deleteDigit}>
-                  Delete
-                </button>
-              </div>
-              <FieldError id="student-pin-error" message={pinError} />
-              <button className="btn btn-primary" type="submit" disabled={pending}>
-                {pending ? "Please wait…" : "Start practice"}
+              ))}
+              <span aria-hidden="true" />
+              <button type="button" onClick={() => addDigit("0")}>
+                0
+              </button>
+              <button type="button" data-key="delete" aria-label="Delete" onClick={deleteDigit}>
+                Delete
               </button>
             </div>
+            <FieldError id="student-pin-error" message={pinError} />
+            <button className="btn btn-primary" type="submit" disabled={pending}>
+              {pending ? "Please wait…" : "Start practice"}
+            </button>
           </div>
-        </form>
-      )}
+        </div>
+      </form>
     </>
   );
 }

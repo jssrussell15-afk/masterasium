@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { DashboardMock } from "@/components/dashboard-mock";
+import { sessionChrome } from "@/components/header-auth";
 import { PracticeShot } from "@/components/practice-shot";
 import { Shell } from "@/components/site-header";
 
@@ -10,15 +11,10 @@ export const metadata: Metadata = {
     "Adaptive math practice for Grades 1–8, aligned to your province's curriculum. Every province except Quebec.",
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const chrome = await sessionChrome("btn btn-secondary");
   return (
-    <Shell
-      action={
-        <Link href="/login" className="btn btn-secondary">
-          Sign in
-        </Link>
-      }
-    >
+    <Shell {...chrome}>
       <section className="mt-8 grid items-center gap-10 md:mt-14 md:grid-cols-[1.05fr_0.95fr]">
         <div>
           <h1 className="display text-4xl md:text-5xl">

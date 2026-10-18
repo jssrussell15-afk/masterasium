@@ -123,6 +123,7 @@ async function Settings({
             firstName={child.first_name}
             hasLogin={Boolean(child.username)}
             returnTo="settings"
+            saved={notice === "pin"}
           />
         </section>
       ))}

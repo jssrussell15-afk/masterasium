@@ -109,7 +109,11 @@ async function LoginBody({
               <SignInSwitch mode={mode} />
               <div>
                 <h1 className="display text-4xl">Student sign in</h1>
-                <p className="hint mt-2">Tap your name. Ask a grown-up if you forget your PIN.</p>
+                <p className="hint mt-2">
+                  {students.length === 0
+                    ? "Enter your first name and PIN."
+                    : "Tap your name. Ask a grown-up if you forget your PIN."}
+                </p>
               </div>
             </>
           }

@@ -10,11 +10,13 @@ export function SetPinForm({
   firstName,
   hasLogin,
   returnTo,
+  saved = false,
 }: {
   childId: string;
   firstName: string;
   hasLogin: boolean;
   returnTo: "dashboard" | "settings";
+  saved?: boolean;
 }) {
   const [state, action, pending] = useActionState(setChildPin, initial);
   const pinId = `child-pin-${childId}`;
@@ -45,6 +47,11 @@ export function SetPinForm({
       <button className="btn btn-secondary w-fit" type="submit" disabled={pending}>
         {pending ? "Saving…" : "Set PIN"}
       </button>
+      {saved ? (
+        <p className="feedback good" role="status">
+          PIN saved
+        </p>
+      ) : null}
       {state.error ? (
         <p className="feedback bad" role="alert">
           {state.error}

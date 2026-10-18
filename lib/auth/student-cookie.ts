@@ -12,5 +12,7 @@ export function studentCookieOptions(maxAge = FOURTEEN_DAYS) {
     path: "/",
     secure: process.env.NODE_ENV === "production",
     maxAge,
+    // maxAge 0 is ignored by some cookie serializers when computing Expires.
+    ...(maxAge === 0 ? { expires: new Date(0) } : {}),
   };
 }

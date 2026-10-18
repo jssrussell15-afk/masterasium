@@ -24,6 +24,12 @@ export function signupPracticePath(childId: string): string {
   return `/practice/${childId}`;
 }
 
+/** Practice question route for a real child id. Null when the id is not a child id. */
+export function practicePathForChild(childId: string): string | null {
+  if (!CHILD_ID.test(childId)) return null;
+  return signupPracticePath(childId);
+}
+
 export function signupReadyPath(childId: string): string {
   return `/signup/child/ready/${childId}`;
 }

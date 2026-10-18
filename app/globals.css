@@ -742,6 +742,23 @@ a {
   display: none;
 }
 
+.header-home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.5rem 0.35rem;
+  color: var(--ink);
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.header-home:hover {
+  color: var(--blue);
+}
+
 .student-entry {
   display: inline-flex;
   align-items: center;

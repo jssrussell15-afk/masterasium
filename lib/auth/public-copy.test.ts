@@ -7,8 +7,8 @@ import { DashboardMock } from "@/components/dashboard-mock";
 import { StreakMark } from "@/components/streak-mark";
 
 describe("public copy", () => {
-  it("says practice is free while we test and does not publish a price or trial", () => {
-    const home = renderToStaticMarkup(createElement(HomePage));
+  it("says practice is free while we test and does not publish a price or trial", async () => {
+    const home = renderToStaticMarkup(await HomePage());
     const signup = renderToStaticMarkup(createElement(SignUpPage));
     for (const html of [home, signup]) {
       expect(html).toContain("Practice is free while we test.");
