@@ -59,6 +59,7 @@ export function renderSundayDigestText(digest: SundayDigest): string {
  * TODO: hand `digest` to the email provider.
  * The preview route must not call this. Nothing is sent from here.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- argument stays so the send call shape is stable until an email provider exists
 export function sendSundayDigest(_digest: SundayDigest): void {
   return;
 }

@@ -135,10 +135,10 @@ export function QuestionPractice({
         </p>
         {phase === "correct" && why ? <p className="why-line">{why}</p> : null}
         {phase === "retry" ? <p className="feedback warm">Not quite. Try again.</p> : null}
-        {phase === "correct" ? <p className="feedback good">That's right.</p> : null}
+        {phase === "correct" ? <p className="feedback good">That&apos;s right.</p> : null}
         {phase === "revealed" ? (
           <div className="feedback warm worked-reveal">
-            <p>Here's how.</p>
+            <p>Here&apos;s how.</p>
             {steps.length > 0 ? (
               <ol className="guide-steps">
                 {steps.map((step) => (
