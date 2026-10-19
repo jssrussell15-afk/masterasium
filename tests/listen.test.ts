@@ -123,8 +123,32 @@ describe("Listen button", () => {
       await new Promise((resolve) => setTimeout(resolve, 320));
     });
     const marked = [...window.document.querySelectorAll(".listen-word")].map((node) => node.textContent);
-    expect(marked).toEqual(["Add", "the", "ones"]);
+    expect(marked).toEqual([]);
     expect(window.document.querySelector("button.listen")?.textContent).toContain("Stop");
+    await act(async () => root.unmount());
+  });
+
+  it("marks only the word currently being spoken", async () => {
+    const { window, root, speech } = await render(
+      createElement(ListenPassage, { parts: [{ text: "Add the ones first.", as: "p" }] }),
+    );
+    let utterance: Utterance | null = null;
+    speech.speak = (next: Utterance) => {
+      utterance = next;
+    };
+    await act(async () => {
+      window.document.querySelector("button.listen")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    const spoken = utterance as Utterance | null;
+    expect(spoken?.text).toBe("Add the ones first.");
+    const words = ["Add", "the", "ones", "first."];
+    for (const word of words) {
+      await act(async () => {
+        spoken?.onboundary?.({ name: "word", charIndex: spoken.text.indexOf(word) });
+      });
+      const marked = [...window.document.querySelectorAll(".listen-word")].map((node) => node.textContent);
+      expect(marked).toEqual([word]);
+    }
     await act(async () => root.unmount());
   });
 });

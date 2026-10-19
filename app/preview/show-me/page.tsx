@@ -1,6 +1,7 @@
 import { QuestionPractice } from "@/components/question-practice";
 import { Shell } from "@/components/site-header";
 import { generateQuestion } from "@/lib/practice/generate";
+import { focusEyebrow } from "@/lib/practice/skills";
 import type { Question } from "@/lib/practice/types";
 import type { Walkthrough } from "@/lib/practice/walk";
 
@@ -26,7 +27,7 @@ export default async function ShowMeSamplePage({
       <div className="question-screen">
       <QuestionPractice
         questionId={`${scene}-${frame.question.prompt}`}
-        eyebrow={`Focus · ${frame.question.skillId}`}
+        eyebrow={focusEyebrow(frame.question.skillId)}
         prompt={frame.question.prompt}
         responseHint={null}
         shape={{

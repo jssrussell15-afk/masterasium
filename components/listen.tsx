@@ -65,24 +65,15 @@ export function ListenButton({
   );
 }
 
-export function HighlightedWords({
-  text,
-  activeWord,
-  whole,
-}: {
-  text: string;
-  activeWord: number | null;
-  whole: boolean;
-}) {
+export function HighlightedWords({ text, activeWord }: { text: string; activeWord: number | null }) {
   const words = splitWords(text);
-  if (words.length === 0 || (!whole && activeWord == null)) return text;
+  if (words.length === 0 || activeWord == null) return text;
   const nodes: ReactNode[] = [];
   let cursor = 0;
   words.forEach((word, index) => {
     if (word.start > cursor) nodes.push(text.slice(cursor, word.start));
-    const on = whole || activeWord === index;
     nodes.push(
-      <span key={`${word.start}-${word.text}`} className={on ? "listen-word" : undefined}>
+      <span key={`${word.start}-${word.text}`} className={activeWord === index ? "listen-word" : undefined}>
         {word.text}
       </span>,
     );
@@ -95,7 +86,6 @@ export function HighlightedWords({
 type SpeechHandle = {
   speaking: boolean;
   activeWord: number | null;
-  whole: boolean;
   toggle: () => void;
   stop: () => void;
 };
@@ -111,7 +101,6 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
   const active = options?.active ?? true;
   const [speaking, setSpeaking] = useState(false);
   const [activeWord, setActiveWord] = useState<number | null>(null);
-  const [whole, setWhole] = useState(false);
   const token = useRef(0);
   const speakingRef = useRef(false);
   const mounted = useRef(true);
@@ -127,7 +116,6 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
     speakingRef.current = false;
     setSpeaking(false);
     setActiveWord(null);
-    setWhole(false);
   }
 
   function stop() {
@@ -143,8 +131,7 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
     window.speechSynthesis.cancel();
     speakingRef.current = true;
     setSpeaking(true);
-    setWhole(false);
-    setActiveWord(splitWords(spoken).length > 0 ? 0 : null);
+    setActiveWord(null);
 
     const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.lang = "en-CA";
@@ -155,7 +142,6 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
       if (!mine()) return;
       if (event.name && event.name !== "word") return;
       sawBoundary = true;
-      setWhole(false);
       setActiveWord(wordIndexAt(splitWords(spoken), event.charIndex ?? 0));
     };
     utterance.onend = () => {
@@ -171,17 +157,13 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
     const words = splitWords(spoken).length || 1;
     window.setTimeout(() => {
       if (!mine() || sawBoundary) return;
-      setWhole(true);
-    }, 280);
-    window.setTimeout(() => {
-      if (!mine() || sawBoundary) return;
       clearVisual();
     }, Math.min(8000, Math.max(1200, words * 380)));
 
     try {
       window.speechSynthesis.speak(utterance);
     } catch {
-      // The browser refused speech. The highlight fallback above still runs.
+      // The browser refused speech. Stop still shows until the timer above.
     }
   }
 
@@ -196,7 +178,6 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
         if (!mounted.current) return;
         setSpeaking(false);
         setActiveWord(null);
-        setWhole(false);
       });
     };
   }, [text]);
@@ -213,7 +194,6 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
         if (!mounted.current) return;
         setSpeaking(false);
         setActiveWord(null);
-        setWhole(false);
       });
     };
   }, [auto, active, text]);
@@ -223,7 +203,7 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
     else begin();
   }
 
-  return { speaking, activeWord, whole, toggle, stop };
+  return { speaking, activeWord, toggle, stop };
 }
 
 export function ListenPassage({
@@ -259,7 +239,7 @@ export function ListenPassage({
               : localWordIndex(spoken, range?.start ?? 0, range?.text ?? "", speech.activeWord);
           return (
             <Tag key={`${part.text}-${index}`} id={part.id} className={part.className}>
-              <HighlightedWords text={part.text.trim()} activeWord={localWord} whole={speech.whole} />
+              <HighlightedWords text={part.text.trim()} activeWord={localWord} />
             </Tag>
           );
         })}
@@ -304,11 +284,7 @@ export function ChoiceOption({
         onClick={onPick}
       >
         {children ?? (
-          <HighlightedWords
-            text={text}
-            activeWord={showListen ? speech.activeWord : null}
-            whole={showListen && speech.whole}
-          />
+          <HighlightedWords text={text} activeWord={showListen ? speech.activeWord : null} />
         )}
       </button>
     </div>

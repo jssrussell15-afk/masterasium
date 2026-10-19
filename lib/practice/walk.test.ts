@@ -4,6 +4,8 @@ import { describe, expect, it } from "vitest";
 import { QuestionPractice } from "@/components/question-practice";
 import { freshFeedback, reduceFeedback } from "@/lib/practice/feedback";
 import { generateQuestion } from "@/lib/practice/generate";
+import { focusEyebrow } from "@/lib/practice/skills";
+import ShowMeSamplePage from "@/app/preview/show-me/page";
 import { packStoredAnswer, readStoredWalk, withAttemptMark } from "@/lib/practice/stored-answer";
 import { showMeUseLine, targetSpan, type Walkthrough } from "@/lib/practice/walk";
 import type { Question } from "@/lib/practice/types";
@@ -187,6 +189,22 @@ describe("show me step specs", () => {
     const next = sample("g3-add-sub", (question) => question.prompt !== addition.prompt && question.prompt.includes("+"));
     expect(next.prompt).not.toBe(addition.prompt);
     expect(next.answer).not.toBe("");
+  });
+
+  it("labels every Show me scene with the skill title", async () => {
+    const scenes = [
+      ["help", "g3-add-sub"],
+      ["add-1", "g3-add-sub"],
+      ["sub", "g3-add-sub"],
+      ["mult", "g3-mult"],
+      ["frac", "g3-fractions"],
+      ["time", "g3-time"],
+    ] as const;
+    for (const [scene, skillId] of scenes) {
+      const html = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene }) }));
+      expect(html).toContain(focusEyebrow(skillId));
+      expect(html).not.toContain(`Focus · ${skillId}`);
+    }
   });
 
   it("describes walkthrough use without a new event kind", () => {

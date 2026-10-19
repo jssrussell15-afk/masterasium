@@ -115,7 +115,7 @@ export function ShowMePanel({
     <>
       <ListenButton speaking={speech.speaking} onClick={speech.toggle} />
       <p className="show-me-caption" aria-live="polite">
-        <HighlightedWords text={caption} activeWord={speech.activeWord} whole={speech.whole} />
+        <HighlightedWords text={caption} activeWord={speech.activeWord} />
       </p>
       <span className="show-me-count">
         Step {index + 1} of {total}
