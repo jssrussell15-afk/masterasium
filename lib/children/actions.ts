@@ -231,7 +231,9 @@ export async function rememberTabletChild(
 
 /** The parent keeps this browser and leaves the confirmation. */
 export async function leaveSignupToDesk(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes previous state; this action only redirects
   _previous: ChildState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes form data; this action reads no fields
   _formData: FormData,
 ): Promise<ChildState> {
   await requireUser();

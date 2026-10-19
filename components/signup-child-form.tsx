@@ -32,7 +32,7 @@ export function SignupChildForm() {
         <h1 className="display text-4xl">Add your child</h1>
       </div>
       <div className="field">
-        <label htmlFor="child-first-name">Child's first name</label>
+        <label htmlFor="child-first-name">Child&apos;s first name</label>
         <input
           id="child-first-name"
           name="firstName"

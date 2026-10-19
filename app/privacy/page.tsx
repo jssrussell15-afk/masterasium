@@ -32,8 +32,8 @@ export default async function PrivacyPage() {
         <p>We keep as little as we can, in four buckets:</p>
         <ul>
           <li>
-            <strong>Account data</strong> — a parent's email and password, plus each
-            child's first name, grade, and province. Kept while the account is active,
+            <strong>Account data</strong> — a parent&apos;s email and password, plus each
+            child&apos;s first name, grade, and province. Kept while the account is active,
             deleted thirty days after closure.
           </li>
           <li>
@@ -42,7 +42,7 @@ export default async function PrivacyPage() {
             purged.
           </li>
           <li>
-            <strong>AI Create drafts</strong> — stored only on the child's device.
+            <strong>AI Create drafts</strong> — stored only on the child&apos;s device.
             Nothing is uploaded to our servers.
           </li>
           <li>
@@ -95,7 +95,7 @@ export default async function PrivacyPage() {
 
         <h2 className="display">Your rights</h2>
         <p>
-          You may request access to or deletion of your account or a child's information
+          You may request access to or deletion of your account or a child&apos;s information
           at any time. Email{" "}
           <a href="mailto:hello@masterasium.example?subject=Deletion%20request">
             hello@masterasium.example
