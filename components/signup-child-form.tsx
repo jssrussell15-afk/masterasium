@@ -3,6 +3,7 @@
 import { useActionState, useState, type KeyboardEvent } from "react";
 import { addSignupChild, type ChildState } from "@/lib/children/actions";
 import { isSupportedGrade, type SupportedGrade } from "@/lib/grades";
+import { GRADE_PROMPT_HELP, gradePromptTitle } from "@/lib/practice/placement";
 import { CHILD_FIRST_NAME_MAX, childNameFieldMessage } from "@/lib/validation";
 
 const initial: ChildState = {};
@@ -10,6 +11,7 @@ const grades: SupportedGrade[] = [1, 2, 3, 4, 5, 6, 7, 8];
 
 export function SignupChildForm() {
   const [grade, setGrade] = useState<SupportedGrade>(1);
+  const [name, setName] = useState("");
   const [state, action, pending] = useActionState(addSignupChild, initial);
   const nameError = childNameFieldMessage(state.error);
   const formError = nameError ? undefined : state.error;
@@ -29,19 +31,24 @@ export function SignupChildForm() {
     <form action={action} className="grid gap-4">
       <div>
         <p className="step-kicker">Step 2 of 2</p>
-        <h1 className="display text-4xl">Add your child</h1>
+        <h1 className="display text-4xl">{gradePromptTitle(name.trim() || "your child")}</h1>
+        <p id="grade-prompt-help" className="hint mt-2">
+          {GRADE_PROMPT_HELP}
+        </p>
       </div>
       <div className="field">
-        <label htmlFor="child-first-name">Child's first name</label>
+        <label htmlFor="child-first-name">Child&apos;s first name</label>
         <input
           id="child-first-name"
           name="firstName"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
           autoComplete="off"
           autoCapitalize="words"
           maxLength={CHILD_FIRST_NAME_MAX}
           required
           aria-invalid={nameError ? true : undefined}
-          aria-describedby={nameError ? "child-first-name-error" : undefined}
+          aria-describedby={nameError ? "child-first-name-error" : "grade-prompt-help"}
         />
         {nameError ? (
           <p id="child-first-name-error" className="field-error">
@@ -76,9 +83,8 @@ export function SignupChildForm() {
         ))}
       </div>
       <input type="hidden" name="grade" value={grade} />
-      <p className="hint">You can change the grade any time.</p>
       <button className="btn btn-primary" type="submit" disabled={pending}>
-        {pending ? "Saving…" : "Add child"}
+        {pending ? "Saving…" : "Start"}
       </button>
       {formError ? (
         <p className="feedback bad" role="alert">

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, type FormEvent, type ReactNode } from "react";
+import { HighlightedWords, ListenButton, useSpoken } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
-import { ReadAloud } from "@/components/read-aloud";
 import type { WalkStep, WalkVisual } from "@/lib/practice/walk";
 import { targetSpan } from "@/lib/practice/walk";
 
@@ -46,6 +46,7 @@ export function ShowMePanel({
   onDigit,
   onDelete,
   onNext,
+  onBack,
   onClose,
   action,
   fields,
@@ -65,6 +66,7 @@ export function ShowMePanel({
   onDigit: (digit: string) => void;
   onDelete: () => void;
   onNext: () => void;
+  onBack: () => void;
   onClose: () => void;
   action?: (formData: FormData) => void;
   fields: { name: string; value: string }[];
@@ -72,6 +74,7 @@ export function ShowMePanel({
   onElapsed?: (form: HTMLFormElement) => void;
 }) {
   const caption = handoff ? "Your turn: try one like it" : step.caption;
+  const speech = useSpoken(caption);
   const last = index === total - 1;
 
   useEffect(() => {
@@ -100,23 +103,41 @@ export function ShowMePanel({
 
   const nextButton = (
     <button className="btn btn-primary show-me-next" type={handoff && action ? "submit" : "button"} disabled={pending} onClick={handoff ? undefined : onNext}>
-      {pending ? "One moment…" : "Next step"}
+      {pending ? "One moment…" : "Next"}
     </button>
+  );
+  const backButton = (
+    <button type="button" className="show-me-back" onClick={onBack} disabled={pending || (!handoff && index === 0)}>
+      Back
+    </button>
+  );
+  const bar = (
+    <>
+      <ListenButton speaking={speech.speaking} onClick={speech.toggle} />
+      <p className="show-me-caption" aria-live="polite">
+        <HighlightedWords text={caption} activeWord={speech.activeWord} whole={speech.whole} />
+      </p>
+      <span className="show-me-count">
+        Step {index + 1} of {total}
+      </span>
+      {backButton}
+      {nextButton}
+    </>
   );
 
   return (
     <aside className="show-me" aria-label="Show me">
-      <div className="show-me-head">
-        <PathIcon />
-        <p className="show-me-title">Show me</p>
-        {handoff ? <span className="show-me-count">Your turn</span> : <span className="show-me-count">Step {index + 1} of {total}</span>}
-      </div>
-      <div className="speak-row">
-        <p className="show-me-caption" aria-live="polite">
-          {caption}
-        </p>
-        <ReadAloud text={caption} label="Speak this step" />
-      </div>
+      {handoff ? (
+        <form id="show-me-handoff" className="show-me-bar" action={action} onSubmit={stamp}>
+          {fields.map((field) => (
+            <input key={field.name} type="hidden" name={field.name} value={field.value} />
+          ))}
+          <input type="hidden" name="intent" value={handoffIntent} />
+          {bar}
+        </form>
+      ) : (
+        <div className="show-me-bar">{bar}</div>
+      )}
       <div className="show-me-stage">
         {handoff ? null : step.visual ? <WalkVisualView visual={step.visual} /> : null}
         {!handoff && last ? (
@@ -137,28 +158,7 @@ export function ShowMePanel({
           <NumberKeypad disabled={pending} onDigit={onDigit} onDelete={onDelete} extras={extraKey ? [extraKey] : []} />
         ) : null}
       </div>
-      {handoff ? (
-        <form id="show-me-handoff" action={action} onSubmit={stamp}>
-          {fields.map((field) => (
-            <input key={field.name} type="hidden" name={field.name} value={field.value} />
-          ))}
-          <input type="hidden" name="intent" value={handoffIntent} />
-          {nextButton}
-        </form>
-      ) : (
-        nextButton
-      )}
     </aside>
-  );
-}
-
-function PathIcon() {
-  return (
-    <svg className="show-me-path" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 17c3.5-1 4-6 8-6s4.2 5 7 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <circle cx="5.5" cy="17" r="1.5" fill="currentColor" />
-      <circle cx="20" cy="15" r="1.5" fill="currentColor" />
-    </svg>
   );
 }
 

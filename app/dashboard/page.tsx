@@ -26,6 +26,9 @@ import type { SkillProgress } from "@/lib/practice/types";
 import type { TrendWeek } from "@/lib/practice/trend";
 import { buildParentProgress } from "@/lib/lesson/parent";
 import { loadParentBundle } from "@/lib/lesson/store";
+import { StartingPoint } from "@/components/starting-point";
+import { parentPlacementCopy, practiceAnchor } from "@/lib/practice/placement";
+import { loadPlacement } from "@/lib/practice/placement-store";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 import { showMeUseLine } from "@/lib/practice/walk";
 
@@ -46,6 +49,7 @@ async function Desk({
 }) {
   const params = await searchParams;
   const notice = Array.isArray(params.notice) ? params.notice[0] : params.notice;
+  const noticeChild = Array.isArray(params.child) ? params.child[0] : params.child;
   const { supabase, user } = await requireUser();
   const profileError = await ensureProfile(supabase, user.id);
   const roster = await loadRoster(supabase, user.id);
@@ -88,7 +92,13 @@ async function Desk({
       ) : (
         <div className="grid gap-4">
           {children.map((child) => (
-            <ChildCard key={child.id} child={child} supabase={supabase} pinSaved={notice === "pin"} />
+            <ChildCard
+              key={child.id}
+              child={child}
+              supabase={supabase}
+              pinSaved={notice === "pin"}
+              adjusted={notice === "start" && (!noticeChild || noticeChild === child.id)}
+            />
           ))}
         </div>
       )}
@@ -102,10 +112,12 @@ async function ChildCard({
   child,
   supabase,
   pinSaved,
+  adjusted,
 }: {
   child: RosterChild;
   supabase: SupabaseClient;
   pinSaved: boolean;
+  adjusted: boolean;
 }) {
   const working = isSupportedGrade(child.workingGrade) ? child.workingGrade : null;
   if (!isSupportedGrade(child.grade) || !working) {
@@ -131,14 +143,24 @@ async function ChildCard({
   if (log.error) return <p className="feedback bad">{log.error}</p>;
 
   const today = torontoDate();
+  const placement = await loadPlacement(supabase, child.id);
+  const anchor = practiceAnchor(placement.placement, working);
   const focus = accuracyScheduler.chooseSkill({
     grade: working,
     cards,
     sessionCount: 0,
     today,
+    startSkillId: anchor.startSkillId,
   });
-  const skills = describeSkills(working, cards);
-  const portrait = buildPortrait({ grade: working, cards, attempts: log.attempts, today });
+  const skills = describeSkills(working, cards, anchor.startSkillId);
+  const portrait = buildPortrait({
+    grade: working,
+    cards,
+    attempts: log.attempts,
+    today,
+    startSkillId: anchor.startSkillId,
+  });
+  const placementCopy = placement.placement ? parentPlacementCopy(child.first_name, placement.placement) : null;
 
   const { data: stub } = await supabase
     .from("digest_stubs")
@@ -163,6 +185,22 @@ async function ChildCard({
         <p className="hint">
           Asked to work in Grade {child.requestedGrade}. Approve it in account settings.
         </p>
+      ) : null}
+      {placement.error ? <p className="feedback bad">{placement.error}</p> : null}
+      {placementCopy ? (
+        <div className="grid gap-2">
+          <p>{placementCopy.start}</p>
+          {placementCopy.ready ? <p>{placementCopy.ready}</p> : null}
+        </div>
+      ) : placement.available ? (
+        <p className="hint">
+          {child.grade <= 2
+            ? `We'll start ${child.first_name} with the basics and adjust as we go.`
+            : `A quick check runs the first time ${child.first_name} practises, so we know where to start.`}
+        </p>
+      ) : null}
+      {placement.available ? (
+        <StartingPoint childId={child.id} firstName={child.first_name} grade={child.grade} adjusted={adjusted} />
       ) : null}
       <StartPracticeButton childId={child.id} />
       <SetPinForm

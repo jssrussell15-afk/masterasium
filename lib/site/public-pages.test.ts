@@ -48,6 +48,9 @@ describe("public pages", () => {
     expect(html).toContain("1 week");
     expect(html).toContain("1 month");
     expect(html).toContain("streaks");
+    expect(html).toContain("Why do we do a quick check?");
+    expect(html).toContain("Why might my child start below their grade?");
+    expect(html).toContain("How do I change the starting point?");
     expect(html).not.toContain("$");
   });
 

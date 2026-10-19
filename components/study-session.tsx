@@ -125,6 +125,7 @@ function StudyPractice({ practice }: { practice: PracticeSet }) {
     <div className="mt-6 grid gap-6">
       <div>
         {practice.logoData ? (
+          // eslint-disable-next-line @next/next/no-img-element -- logo is a data URL stored with the practice set; next/image does not optimize data URLs
           <img src={practice.logoData} alt="" className="study-logo" />
         ) : null}
         <p className="eyebrow mt-3">Practice · {practice.code}</p>

@@ -55,7 +55,7 @@ export async function loadCanDo(
     supabase.from("skill_reviews").select("skill_id, gap, due_on, done_at").eq("child_id", childId),
     supabase
       .from("skill_states")
-      .select("skill_id, attempted, correct, streak, fsrs, updated_at")
+      .select("skill_id, attempted, correct, streak:consecutive_correct, fsrs, updated_at")
       .eq("child_id", childId),
   ]);
 

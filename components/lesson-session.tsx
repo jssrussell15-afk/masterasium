@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
+import { ListenPassage } from "@/components/listen";
 import { QuestionPractice } from "@/components/question-practice";
-import { ReadAloud } from "@/components/read-aloud";
 import { lessonAction, type LessonClientState } from "@/lib/lesson/actions";
 import type { LessonScreen } from "@/lib/lesson/screen";
 
@@ -62,12 +62,13 @@ export function LessonView({
       {screen.kind === "intro" ? (
         <section className="card grid gap-4" aria-label="Lesson introduction">
           <p className="eyebrow">{screen.eyebrow}</p>
-          <div className="speak-row">
-            <h1 className="display text-4xl">{screen.title}</h1>
-            <ReadAloud text={`${screen.title}. ${screen.summary}`} label="Speak the introduction" />
-          </div>
+          <ListenPassage
+            parts={[
+              { text: screen.title, as: "h1", className: "display text-4xl" },
+              { text: screen.summary, as: "p", className: "text-xl leading-snug" },
+            ]}
+          />
           <VideoSlot video={screen.video} />
-          <p className="text-xl leading-snug">{screen.summary}</p>
           <StepForm
             action={action}
             childId={childId}
@@ -84,21 +85,13 @@ export function LessonView({
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-3xl">{screen.title}</h1>
           {screen.lead ? <p className="text-lg">{screen.lead}</p> : null}
-          <div className="speak-row">
-            <p className={numeralClass(screen.prompt)}>{screen.prompt}</p>
-            <ReadAloud
-              text={`${screen.prompt}. ${screen.steps.join(". ")}. Answer: ${screen.answer}.`}
-              label="Speak the example"
-            />
-          </div>
-          <ol className="lesson-steps">
-            {screen.steps.map((step) => (
-              <li key={step}>{step}</li>
-            ))}
-          </ol>
-          <p className="text-xl">
-            Answer: <strong>{screen.answer}</strong>
-          </p>
+          <ListenPassage
+            parts={[
+              { text: screen.prompt, as: "p", className: numeralClass(screen.prompt) },
+              ...screen.steps.map((step) => ({ text: step, as: "p" as const, className: "text-lg" })),
+              { text: `Answer: ${screen.answer}`, as: "p" as const, className: "text-xl" },
+            ]}
+          />
           <StepForm
             action={action}
             childId={childId}
@@ -112,6 +105,7 @@ export function LessonView({
       ) : null}
       {screen.kind === "question" ? (
         <QuestionPractice
+          key={screen.taskKey}
           questionId={screen.taskKey}
           eyebrow={`${screen.eyebrow} · ${screen.title}`}
           prompt={screen.prompt}
@@ -144,16 +138,12 @@ export function LessonView({
         <section className="card grid gap-4" aria-label="What to look at" role="status">
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-3xl">Look at this step</h1>
-          <div className="speak-row">
-            <p className="text-xl leading-snug">{screen.note}</p>
-            <ReadAloud
-              text={`${screen.note} The answer is ${screen.expected}.`}
-              label="Speak the feedback"
-            />
-          </div>
-          <p className="text-xl">
-            The answer is <strong>{screen.expected}</strong>.
-          </p>
+          <ListenPassage
+            parts={[
+              { text: screen.note, as: "p", className: "text-xl leading-snug" },
+              { text: `The answer is ${screen.expected}.`, as: "p", className: "text-xl" },
+            ]}
+          />
           <StepForm
             action={action}
             childId={childId}
@@ -170,10 +160,7 @@ export function LessonView({
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-4xl">{screen.title}</h1>
           <p className="hint">You can tell a parent:</p>
-          <div className="speak-row">
-            <p className="lesson-learned">{screen.sentence}</p>
-            <ReadAloud text={screen.sentence} label="Speak what I learned" />
-          </div>
+          <ListenPassage parts={[{ text: screen.sentence, as: "p", className: "lesson-learned" }]} />
           {screen.nextReview ? (
             <p className="hint">This comes back for a quiet review on {screen.nextReview}.</p>
           ) : (

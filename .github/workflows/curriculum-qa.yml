@@ -34,6 +34,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Lint
+        run: npm run lint -- --max-warnings=0
       - name: Apply migrations
         run: bash scripts/apply-curriculum-db.sh
       - run: npm test

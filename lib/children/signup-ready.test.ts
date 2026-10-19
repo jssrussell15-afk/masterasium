@@ -13,6 +13,7 @@ describe("signup confirmation", () => {
       }),
     );
     expect(html).toContain("Sam is set up for Grade 3");
+    expect(html).toContain("A quick check comes first, so we know where to start.");
     expect(html).toContain("signup-ready");
     expect(html).toContain("btn btn-primary");
     expect(html).toContain("Start practice on this device");

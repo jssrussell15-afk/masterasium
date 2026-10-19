@@ -79,7 +79,8 @@ describe("show me step specs", () => {
       expect(html).toContain(`data-walk-target="${step.target}"`);
       expect(html).toContain(step.caption);
       expect(html).toContain(`Step ${index + 1} of ${walk.steps.length}`);
-      expect(html).toContain("Next step");
+      expect(html).toContain(">Next<");
+      expect(html).toContain(">Back<");
       expect(html).not.toContain("The answer is");
       expect(html).not.toContain("Here's how.");
     });

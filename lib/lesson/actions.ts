@@ -40,7 +40,7 @@ async function saveCard(supabase: SupabaseClient, childId: string, card: SkillCa
       skill_id: card.skillId,
       attempted: card.attempted,
       correct: card.correct,
-      streak: card.streak,
+      consecutive_correct: card.streak,
       fsrs: card.fsrs,
       updated_at: new Date().toISOString(),
     },

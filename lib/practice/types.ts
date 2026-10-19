@@ -46,6 +46,8 @@ export type QuestionView = {
   example?: WorkedExample | null;
   /** Show me steps. Null keeps the text "Here's how" fallback. */
   walk?: Walkthrough | null;
+  /** Grade 1–2 answer tiles. Null keeps a typed answer. */
+  choices?: string[] | null;
   /** Restored after a refresh so a retry does not become a new first try. */
   resume?: {
     phase: Exclude<FeedbackPhase, "answering">;
@@ -88,6 +90,8 @@ export type PracticeView = {
   recap: string | null;
   requestedGrade: SupportedGrade | null;
   today: string;
+  /** Parent setting. Omitted means the grade default. */
+  autoRead?: boolean;
 };
 
 export type PracticeState = {

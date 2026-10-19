@@ -7,6 +7,8 @@ import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { studentHome } from "@/lib/practice/home";
 import { describeCatalog } from "@/lib/practice/scheduler";
+import { practiceAnchor } from "@/lib/practice/placement";
+import { loadPlacement } from "@/lib/practice/placement-store";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
 export default function PracticeIndexPage() {
@@ -42,11 +44,14 @@ async function StudentHomeLoader() {
   const log = await loadAttemptLog(supabase, child.id);
   if (log.error) return <p className="feedback bad mt-8">{log.error}</p>;
 
+  const placement = await loadPlacement(supabase, child.id);
+  const anchor = practiceAnchor(placement.placement, access.working);
   const home = studentHome({
     grade: access.working,
     cards,
     attempts: log.attempts,
     today: torontoDate(),
+    startSkillId: anchor.startSkillId,
   });
 
   return (
@@ -55,7 +60,7 @@ async function StudentHomeLoader() {
       childName={child.first_name}
       grade={access.working}
       home={home}
-      skills={describeCatalog(access, cards)}
+      skills={describeCatalog(access, cards, anchor.startSkillId)}
       access={access}
       requestedGrade={access.requested}
     />

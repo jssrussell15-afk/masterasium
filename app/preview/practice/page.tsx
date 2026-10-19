@@ -15,10 +15,11 @@ export const metadata = {
 export default async function PracticeSamplePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; grade?: string }>;
 }) {
   const params = await searchParams;
   const view: PreviewView = VIEWS.includes(params.view as PreviewView) ? (params.view as PreviewView) : "question";
+  const grade = params.grade === "1" ? 1 : 3;
   const example = buildWorkedExample({ skillId: "g1-add-10", livePrompt: "6 + 2 = ?" });
   const skills: SkillProgress[] = skillsForGrade(1).slice(0, 4).map((skill, index) => ({
     id: skill.id,
@@ -35,7 +36,7 @@ export default async function PracticeSamplePage({
 
   return (
     <Shell narrow role="student" action={null} homeHref="/preview/practice?view=home">
-      <PracticePreview view={view} example={example} skills={skills} />
+      <PracticePreview view={view} example={example} skills={skills} grade={grade} />
     </Shell>
   );
 }

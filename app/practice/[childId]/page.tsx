@@ -1,11 +1,14 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { PlacementCheck } from "@/components/placement-check";
 import { PracticeSession } from "@/components/practice-session";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { requireStudent } from "@/lib/auth/student";
+import { readsAloudAutomatically } from "@/lib/children/read-aloud";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
+import { loadPlacement } from "@/lib/practice/placement-store";
 import { loadCards, loadOrIssueQuestion } from "@/lib/practice/session";
 
 export default function PracticePage(props: PageProps<"/practice/[childId]">) {
@@ -41,6 +44,12 @@ async function PracticeLoader({
     return <p className="feedback bad mt-8">That grade is not open yet.</p>;
   }
 
+  const placement = await loadPlacement(supabase, data.id);
+  if (placement.error) return <p className="feedback bad mt-8">{placement.error}</p>;
+  if (placement.available && !placement.placement) {
+    return <PlacementCheck childId={data.id} grade={access.enrolled} />;
+  }
+
   const { cards, error: cardError } = await loadCards(supabase, data.id);
   if (cardError) return <p className="feedback bad mt-8">{cardError}</p>;
 
@@ -66,6 +75,7 @@ async function PracticeLoader({
         recap: null,
         requestedGrade: access.requested,
         today: torontoDate(),
+        autoRead: readsAloudAutomatically(access.working, data.read_questions_aloud),
       }}
     />
   );

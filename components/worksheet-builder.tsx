@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { GRADES } from "@/lib/grades";
 import {
   buildWorksheetQuestions,
@@ -8,7 +8,13 @@ import {
   saveWorksheet,
 } from "@/lib/worksheets/actions";
 import { makeAccessCode } from "@/lib/worksheets/code";
-import { readLocalTemplates, writeLocalSet, writeLocalTemplate } from "@/lib/worksheets/local";
+import {
+  getLocalTemplateServerSnapshot,
+  getLocalTemplateSnapshot,
+  subscribeLocalTemplates,
+  writeLocalSet,
+  writeLocalTemplate,
+} from "@/lib/worksheets/local";
 import { readPrintedPage } from "@/lib/worksheets/ocr";
 import { UNREADABLE_PAGE_MESSAGE, type PageTextResult } from "@/lib/worksheets/page-text";
 import { classifyPageFile, type StoredPageScan } from "@/lib/worksheets/page-scan";
@@ -40,6 +46,76 @@ function downloadBytes(bytes: Uint8Array, filename: string) {
   link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
+}
+
+function mergeTemplates(saved: LayoutTemplate[], local: LayoutTemplate[]): LayoutTemplate[] {
+  if (local.length === 0) return saved;
+  const ids = new Set(saved.map((item) => item.id));
+  const extras = local.filter((item) => !ids.has(item.id));
+  return extras.length > 0 ? [...saved, ...extras] : saved;
+}
+
+function PageFilePreview({ scan, onRemove }: { scan: StoredPageScan; onRemove: () => void }) {
+  const imageRef = useRef<HTMLImageElement>(null);
+  const pdfRef = useRef<HTMLIFrameElement>(null);
+  const [pageRead, setPageRead] = useState<PageTextResult | null>(null);
+  const [pageReading, setPageReading] = useState(true);
+  const label = scan.file.name || "page";
+
+  useLayoutEffect(() => {
+    const frame = scan.kind === "pdf" ? pdfRef.current : imageRef.current;
+    if (!frame) return;
+    const previewUrl = URL.createObjectURL(scan.file);
+    frame.src = previewUrl;
+    return () => {
+      URL.revokeObjectURL(previewUrl);
+      frame.src = "";
+    };
+  }, [scan.file, scan.kind]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void readPrintedPage(scan.file, scan.kind)
+      .then((result) => {
+        if (!cancelled) setPageRead(result);
+      })
+      .catch(() => {
+        if (!cancelled) setPageRead({ ok: false, message: UNREADABLE_PAGE_MESSAGE });
+      })
+      .finally(() => {
+        if (!cancelled) setPageReading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scan.file, scan.kind]);
+
+  return (
+    <div className="page-preview-wrap">
+      <p className="text-sm">{label} is saved on this page.</p>
+      {scan.kind === "pdf" ? (
+        <iframe ref={pdfRef} title={`Preview of ${label}`} className="page-preview page-preview-pdf" />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- blob URL for a page that stays on this device; next/image cannot optimize it
+        <img ref={imageRef} alt={`Preview of ${label}`} className="page-preview" />
+      )}
+      {pageReading ? <p className="hint text-sm">Reading the printed text…</p> : null}
+      {pageRead?.ok ? (
+        <div className="page-text-wrap">
+          <p className="text-sm">Text read from the page</p>
+          <pre className="page-text">{pageRead.text}</pre>
+        </div>
+      ) : null}
+      {pageRead && !pageRead.ok ? (
+        <p className="text-sm" role="status">
+          {pageRead.message}
+        </p>
+      ) : null}
+      <button type="button" className="btn btn-quiet w-fit" onClick={onRemove}>
+        Remove
+      </button>
+    </div>
+  );
 }
 
 function fileSlug(title: string): string {
@@ -81,6 +157,12 @@ export function WorksheetBuilder({
   storageError: string | null;
 }) {
   const [templates, setTemplates] = useState<LayoutTemplate[]>(initialTemplates);
+  const localTemplates = useSyncExternalStore(
+    subscribeLocalTemplates,
+    getLocalTemplateSnapshot,
+    getLocalTemplateServerSnapshot,
+  );
+  const savedTemplates = mergeTemplates(templates, localTemplates);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState("");
@@ -96,10 +178,8 @@ export function WorksheetBuilder({
   const [uploadText, setUploadText] = useState("");
   const [uploadNote, setUploadNote] = useState<string | null>(null);
   const [pageScan, setPageScan] = useState<StoredPageScan | null>(null);
-  const [pagePreviewUrl, setPagePreviewUrl] = useState<string | null>(null);
+  const [pageToken, setPageToken] = useState(0);
   const [pageNote, setPageNote] = useState<string | null>(null);
-  const [pageReading, setPageReading] = useState(false);
-  const [pageRead, setPageRead] = useState<PageTextResult | null>(null);
   const [delivery, setDelivery] = useState<"pdf" | "link">("pdf");
   const [answerSheet, setAnswerSheet] = useState(false);
   const [pending, setPending] = useState(false);
@@ -110,50 +190,6 @@ export function WorksheetBuilder({
   const gradeSkills = useMemo(() => skills.filter((skill) => skill.grade === grade), [skills, grade]);
   const skillTitle = skills.find((skill) => skill.id === skillId)?.title ?? null;
 
-  useEffect(() => {
-    if (!pageScan) {
-      setPagePreviewUrl(null);
-      return;
-    }
-    const previewUrl = URL.createObjectURL(pageScan.file);
-    setPagePreviewUrl(previewUrl);
-    return () => URL.revokeObjectURL(previewUrl);
-  }, [pageScan]);
-
-  useEffect(() => {
-    if (!pageScan) {
-      setPageReading(false);
-      setPageRead(null);
-      return;
-    }
-    let cancelled = false;
-    setPageReading(true);
-    setPageRead(null);
-    void readPrintedPage(pageScan.file, pageScan.kind)
-      .then((result) => {
-        if (!cancelled) setPageRead(result);
-      })
-      .catch(() => {
-        if (!cancelled) setPageRead({ ok: false, message: UNREADABLE_PAGE_MESSAGE });
-      })
-      .finally(() => {
-        if (!cancelled) setPageReading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [pageScan]);
-
-  useEffect(() => {
-    const local = readLocalTemplates();
-    if (local.length === 0) return;
-    setTemplates((current) => {
-      const ids = new Set(current.map((item) => item.id));
-      const extras = local.filter((item) => !ids.has(item.id));
-      return extras.length > 0 ? [...current, ...extras] : current;
-    });
-  }, []);
-
   function onPageFile(file: File | null) {
     if (!file) return;
     const classified = classifyPageFile(file);
@@ -162,12 +198,13 @@ export function WorksheetBuilder({
       return;
     }
     setPageScan({ file, kind: classified.kind });
+    setPageToken((current) => current + 1);
     setPageNote(null);
   }
 
   function applyTemplate(id: string) {
     setSelectedTemplateId(id);
-    const template = templates.find((item) => item.id === id);
+    const template = savedTemplates.find((item) => item.id === id);
     if (!template) return;
     setTitle(template.title || "Math practice");
     setInstructions(template.instructions);
@@ -311,7 +348,7 @@ export function WorksheetBuilder({
             Saved layouts
             <select value={selectedTemplateId} onChange={(event) => applyTemplate(event.target.value)}>
               <option value="">Choose a saved layout</option>
-              {templates.map((template) => (
+              {savedTemplates.map((template) => (
                 <option key={template.id} value={template.id}>
                   {template.name}
                 </option>
@@ -366,7 +403,10 @@ export function WorksheetBuilder({
             onChange={(event) => void onLogo(event.target.files?.[0] ?? null)}
           />
         </label>
-        {logoData ? <img src={logoData} alt="" className="study-logo" /> : null}
+        {logoData ? (
+          // eslint-disable-next-line @next/next/no-img-element -- logo is a data URL kept in this browser; next/image does not optimize data URLs
+          <img src={logoData} alt="" className="study-logo" />
+        ) : null}
         <button type="button" className="btn btn-secondary w-fit" disabled={pending} onClick={() => void onSaveTemplate()}>
           Save layout
         </button>
@@ -398,38 +438,8 @@ export function WorksheetBuilder({
               {pageNote}
             </p>
           ) : null}
-          {pageScan && pagePreviewUrl ? (
-            <div className="page-preview-wrap">
-              <p className="text-sm">{pageScan.file.name || "Page"} is saved on this page.</p>
-              {pageScan.kind === "pdf" ? (
-                <iframe
-                  title={`Preview of ${pageScan.file.name || "page"}`}
-                  src={pagePreviewUrl}
-                  className="page-preview page-preview-pdf"
-                />
-              ) : (
-                <img
-                  src={pagePreviewUrl}
-                  alt={`Preview of ${pageScan.file.name || "page"}`}
-                  className="page-preview"
-                />
-              )}
-              {pageReading ? <p className="hint text-sm">Reading the printed text…</p> : null}
-              {pageRead?.ok ? (
-                <div className="page-text-wrap">
-                  <p className="text-sm">Text read from the page</p>
-                  <pre className="page-text">{pageRead.text}</pre>
-                </div>
-              ) : null}
-              {pageRead && !pageRead.ok ? (
-                <p className="text-sm" role="status">
-                  {pageRead.message}
-                </p>
-              ) : null}
-              <button type="button" className="btn btn-quiet w-fit" onClick={() => setPageScan(null)}>
-                Remove
-              </button>
-            </div>
+          {pageScan ? (
+            <PageFilePreview key={pageToken} scan={pageScan} onRemove={() => setPageScan(null)} />
           ) : null}
         </div>
         <div className="segmented" role="group" aria-label="How to create questions">

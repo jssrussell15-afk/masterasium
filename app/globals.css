@@ -1623,38 +1623,11 @@ html:has(.question-screen) main {
   font-weight: 650;
 }
 
-.speak-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.speak-row > :first-child {
-  flex: 1;
-  min-width: 0;
-}
-
-.read-aloud,
-.save-note {
-  font-size: 1rem;
-  font-weight: 650;
-}
-
-.read-aloud {
-  flex: none;
-  min-width: 48px;
-  min-height: 48px;
-  border: 2px solid var(--line);
-  border-radius: 999px;
-  background: white;
-  color: var(--ink);
-  padding: 0.4rem 0.85rem;
-}
-
 .save-note {
   margin: 0.35rem 0 0;
   color: var(--muted);
+  font-size: 1rem;
+  font-weight: 650;
 }
 
 .number-pad {
@@ -1676,6 +1649,34 @@ html:has(.question-screen) main {
 
 .number-pad button[data-key="delete"] {
   font-size: 1rem;
+}
+
+.answer-choices {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.answer-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.answer-choice-tile {
+  flex: 1;
+  min-height: var(--tap);
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  color: var(--ink);
+  padding: 0.55rem 0.9rem;
+  font-size: 1.5rem;
+  font-weight: 650;
+  text-align: left;
+}
+
+.answer-choice-tile[aria-pressed="true"] {
+  background: #d3ebf7;
 }
 
 .walk-dim {
@@ -1768,7 +1769,19 @@ html:has(.question-screen) main {
   font-weight: 650;
 }
 
+.show-me-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+}
+
+.show-me-bar .show-me-count {
+  margin-left: 0;
+}
+
 .show-me-caption {
+  flex: 1 1 10rem;
   margin: 0;
   min-height: 1.6rem;
   font-size: 1.25rem;
@@ -1793,11 +1806,28 @@ html:has(.question-screen) main {
   font-size: 1.05rem;
 }
 
+.show-me-back,
+.show-me-bar .show-me-next {
+  width: auto;
+  position: static;
+  min-height: var(--tap);
+  padding: 0 0.95rem;
+  font-weight: 650;
+}
+
+.show-me-back {
+  border: 2px solid #1f5c38;
+  border-radius: 999px;
+  background: white;
+  color: #143324;
+}
+
+.show-me-back:disabled {
+  opacity: 0.45;
+}
+
 .show-me-next {
-  width: 100%;
-  min-height: 48px;
-  position: sticky;
-  bottom: 0.5rem;
+  min-height: var(--tap);
   background: #1f5c38;
   color: white;
 }
@@ -2570,4 +2600,144 @@ html:has(.question-screen) .site-footer {
   .lesson-preview .hint-actions {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.prompt-row,
+.listen-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.listen-copy,
+.prompt-row .prompt {
+  flex: 1;
+  min-width: 0;
+}
+
+.listen-copy > :first-child {
+  margin-top: 0;
+}
+
+.listen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  box-sizing: border-box;
+  width: 7.75rem;
+  min-height: var(--tap);
+  flex: none;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-pill);
+  background: var(--color-white);
+  color: var(--ink);
+  padding: 0 0.7rem;
+  font-weight: 650;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.listen-choice {
+  width: var(--tap);
+  min-width: var(--tap);
+  max-width: var(--tap);
+  height: var(--tap);
+  padding: 0;
+}
+
+.listen-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+.listen-word {
+  background: #d3ebf7;
+  border-radius: 0.15rem;
+}
+
+.read-aloud-setting {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: var(--tap);
+  font-weight: 650;
+}
+
+.read-aloud-setting input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.placement-screen,
+.starting-point {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.placement-screen .btn,
+.starting-point .btn,
+.starting-point .picture-choice {
+  width: 100%;
+  white-space: normal;
+}
+
+.placement-input,
+.answer-draft {
+  width: 100%;
+  min-height: 64px;
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  padding: 0.8rem 1rem;
+  font-size: 1.6rem;
+}
+
+.answer-draft {
+  display: flex;
+  align-items: center;
+}
+
+.picture-choices {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.picture-choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 64px;
+  border: 2px solid var(--line);
+  border-radius: 1rem;
+  background: white;
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+}
+
+.fraction-pic {
+  display: flex;
+  width: 8.5rem;
+  height: 2.4rem;
+  flex: none;
+  border: 2px solid var(--line-strong, var(--line));
+  border-radius: 0.4rem;
+  overflow: hidden;
+}
+
+.fraction-part {
+  flex: 1;
+  background: white;
+  border-right: 1px solid var(--line);
+}
+
+.fraction-part:last-child {
+  border-right: 0;
+}
+
+.fraction-part.shaded {
+  background: var(--blue);
 }

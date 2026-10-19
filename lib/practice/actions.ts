@@ -3,6 +3,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 import { attemptWritePlan, isAttemptId } from "@/lib/practice/attempt-once";
+import { runClaimedLearning } from "@/lib/practice/learning-claim";
 import { answersMatch } from "@/lib/practice/answers";
 import { feedbackFromMark, markFromState, reduceFeedback, whyLine } from "@/lib/practice/feedback";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
@@ -22,6 +23,8 @@ import {
 } from "@/lib/practice/session";
 import { isLessonSkill } from "@/lib/lesson/catalog";
 import { syncReviewRows } from "@/lib/lesson/store";
+import { practiceAnchor } from "@/lib/practice/placement";
+import { loadPlacement } from "@/lib/practice/placement-store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
 import { readAttemptMark, readStoredPlan, readStoredWalk, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
@@ -54,11 +57,14 @@ async function snapshot(
 ): Promise<PracticeState> {
   const score = totals(cards);
   const today = torontoDate();
+  const loaded = await loadPlacement(supabase, childId);
+  const anchor = practiceAnchor(loaded.placement, access.working);
   const focus = accuracyScheduler.chooseSkill({
     grade: access.working,
     cards,
     sessionCount: 0,
     today,
+    startSkillId: anchor.startSkillId,
   });
   const log = await loadAttemptLog(supabase, childId);
   const portrait = buildPortrait({
@@ -66,12 +72,13 @@ async function snapshot(
     cards,
     attempts: log.attempts,
     today,
+    startSkillId: anchor.startSkillId,
   });
   return {
     attempted: score.attempted,
     correctCount: score.correct,
     focusTitle: focus.title,
-    skills: describeCatalog(access, cards),
+    skills: describeCatalog(access, cards, anchor.startSkillId),
     streakDays: portrait.streakDays,
     streakMilestone: portrait.streakMilestone,
     recap: portrait.recap,
@@ -80,6 +87,18 @@ async function snapshot(
     ...extra,
     ...(log.error ? { error: extra.error ?? log.error } : {}),
   };
+}
+
+async function persistCards(
+  supabase: SupabaseClient,
+  childId: string,
+  card: SkillCard,
+  extra: SkillCard | null,
+): Promise<string | null> {
+  const stateError = await saveCard(supabase, childId, card);
+  if (stateError) return stateError;
+  if (extra && extra.skillId !== card.skillId) return saveCard(supabase, childId, extra);
+  return null;
 }
 
 async function saveCard(
@@ -93,7 +112,7 @@ async function saveCard(
       skill_id: card.skillId,
       attempted: card.attempted,
       correct: card.correct,
-      streak: card.streak,
+      consecutive_correct: card.streak,
       fsrs: card.fsrs,
       updated_at: new Date().toISOString(),
     },
@@ -249,9 +268,9 @@ async function advancePractice(
   const plan = isAttemptId(attemptId) ? attemptWritePlan(prior.row) : "insert";
   if (plan === "skip") return continueAfterSave(supabase, childId, access);
   if (plan === "apply" && prior.row) {
-    const appliedError = await applyStoredAttempt(supabase, childId, attemptId, prior.row);
-    if (appliedError) return { error: appliedError };
-    return continueAfterSave(supabase, childId, access);
+    const applied = await applyStoredAttempt(supabase, childId, attemptId);
+    if (applied.error) return { error: applied.error };
+    return continueAfterSave(supabase, childId, access, applied.counted);
   }
 
   const loaded = await loadPending(supabase, childId, questionId);
@@ -318,27 +337,26 @@ async function advancePractice(
       const again = await readClientAttempt(supabase, childId, attemptId);
       if (again.error) return { error: again.error };
       if (again.row?.learning_applied) return continueAfterSave(supabase, childId, access);
-      const appliedError = again.row
-        ? await applyStoredAttempt(supabase, childId, attemptId, again.row)
-        : null;
-      if (appliedError) return { error: appliedError };
-      return continueAfterSave(supabase, childId, access);
+      if (!again.row) return continueAfterSave(supabase, childId, access, false);
+      const applied = await applyStoredAttempt(supabase, childId, attemptId);
+      if (applied.error) return { error: applied.error };
+      return continueAfterSave(supabase, childId, access, applied.counted);
     }
     return { error: friendlyDbError(inserted.error) };
   }
 
-  const stateError = await saveCard(supabase, childId, nextCard);
-  if (stateError) return { error: stateError };
-  if (applied.extra && applied.extra.skillId !== nextCard.skillId) {
-    const extraError = await saveCard(supabase, childId, applied.extra);
-    if (extraError) return { error: extraError };
-  }
   if (isAttemptId(attemptId)) {
-    await supabase
-      .from("attempts")
-      .update({ learning_applied: true })
-      .eq("child_id", childId)
-      .eq("client_attempt_id", attemptId);
+    const claimed = await runClaimedLearning({
+      supabase,
+      childId,
+      attemptId,
+      apply: () => persistCards(supabase, childId, nextCard, applied.extra ?? null),
+    });
+    if (claimed.error) return { error: claimed.error };
+    if (!claimed.counted) return continueAfterSave(supabase, childId, access, false);
+  } else {
+    const stateError = await persistCards(supabase, childId, nextCard, applied.extra ?? null);
+    if (stateError) return { error: stateError };
   }
   if (isLessonSkill(question.skill_id)) {
     await syncReviewRows(supabase, childId, question.skill_id, readLearn(nextCard.fsrs), today);
@@ -423,35 +441,31 @@ async function applyStoredAttempt(
   supabase: SupabaseClient,
   childId: string,
   attemptId: string,
-  row: ClientAttemptRow,
-): Promise<string | null> {
-  const { cards, error } = await loadCards(supabase, childId);
-  if (error) return error;
-  const today = torontoDate();
-  const applied = applyLearning({
-    card: cardFor(cards, row.skill_id),
-    correct: row.correct,
-    kind: "focus",
-    today,
+): Promise<{ error: string | null; counted: boolean }> {
+  return runClaimedLearning({
+    supabase,
+    childId,
+    attemptId,
+    apply: async (row) => {
+      const { cards, error } = await loadCards(supabase, childId);
+      if (error) return error;
+      const today = torontoDate();
+      const applied = applyLearning({
+        card: cardFor(cards, row.skill_id),
+        correct: row.correct,
+        kind: "focus",
+        today,
+      });
+      return persistCards(supabase, childId, applied.card, applied.extra ?? null);
+    },
   });
-  const saved = await saveCard(supabase, childId, applied.card);
-  if (saved) return saved;
-  if (applied.extra && applied.extra.skillId !== applied.card.skillId) {
-    const extraError = await saveCard(supabase, childId, applied.extra);
-    if (extraError) return extraError;
-  }
-  const { error: flagError } = await supabase
-    .from("attempts")
-    .update({ learning_applied: true })
-    .eq("child_id", childId)
-    .eq("client_attempt_id", attemptId);
-  return flagError ? friendlyDbError(flagError) : null;
 }
 
 async function continueAfterSave(
   supabase: SupabaseClient,
   childId: string,
   access: GradeAccess,
+  counted = true,
 ): Promise<PracticeState> {
   const { cards, error } = await loadCards(supabase, childId);
   if (error) return { error };
@@ -459,7 +473,7 @@ async function continueAfterSave(
   if (!issued.question) return { error: issued.error ?? "Could not load the next question." };
   return snapshot(supabase, childId, access, cards, {
     feedbackFor: issued.question.questionId,
-    saveNote: "saved",
+    ...(counted ? { saveNote: "saved" as const } : {}),
     next: issued.question,
   });
 }
@@ -640,7 +654,7 @@ async function stampIntro(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data, error } = await supabase
       .from("skill_states")
-      .select("attempted, correct, streak, fsrs, updated_at")
+      .select("attempted, correct, streak:consecutive_correct, fsrs, updated_at")
       .eq("child_id", childId)
       .eq("skill_id", skillId)
       .maybeSingle();
@@ -670,7 +684,7 @@ async function stampIntro(
           skill_id: skillId,
           attempted: 0,
           correct: 0,
-          streak: 0,
+          consecutive_correct: 0,
           fsrs,
           updated_at: new Date().toISOString(),
         })

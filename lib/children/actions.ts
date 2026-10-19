@@ -16,6 +16,7 @@ import {
   signupPracticePath,
   signupReadyPath,
 } from "@/lib/children/signup-practice";
+import { isReadAloudMissing } from "@/lib/children/read-aloud";
 import { friendlyDbError } from "@/lib/db-error";
 import { isSupportedGrade } from "@/lib/grades";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
@@ -231,7 +232,9 @@ export async function rememberTabletChild(
 
 /** The parent keeps this browser and leaves the confirmation. */
 export async function leaveSignupToDesk(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes previous state; this action only redirects
   _previous: ChildState,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- useActionState passes form data; this action reads no fields
   _formData: FormData,
 ): Promise<ChildState> {
   await requireUser();
@@ -368,4 +371,29 @@ export async function decideGradeRequest(
   });
   if (error) return { error: friendlyDbError(error) };
   redirect(approve ? "/settings?notice=grade-approved" : "/settings?notice=grade-declined");
+}
+
+export async function setReadQuestionsAloud(
+  _previous: ChildState,
+  formData: FormData,
+): Promise<ChildState> {
+  const { supabase, user } = await requireUser();
+  const childId = String(formData.get("childId") ?? "");
+  const enabled = formData.getAll("enabled").includes("1");
+  if (!childId) return { error: "Choose a child first." };
+
+  const { data, error } = await supabase
+    .from("children")
+    .update({ read_questions_aloud: enabled })
+    .eq("id", childId)
+    .eq("parent_id", user.id)
+    .select("id");
+  if (error) {
+    if (isReadAloudMissing(error)) {
+      return { error: "Read aloud is not ready yet. Practice can start once the database is updated." };
+    }
+    return { error: friendlyDbError(error) };
+  }
+  if (!data?.length) return { error: "That child profile is not on this account." };
+  redirect("/settings?notice=read-aloud");
 }

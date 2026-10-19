@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
+import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
-import { ReadAloud } from "@/components/read-aloud";
 import { HighlightedPrompt, LightbulbIcon, ShowMePanel } from "@/components/show-me";
 import { answersMatch } from "@/lib/practice/answers";
 import type { WorkedExample } from "@/lib/practice/example";
@@ -40,6 +40,9 @@ export function QuestionPractice({
   walk = null,
   handoffIntent = "your-turn",
   walkStart = null,
+  grade = null,
+  autoRead,
+  choices = null,
 }: {
   questionId: string;
   eyebrow: string;
@@ -70,6 +73,11 @@ export function QuestionPractice({
   handoffIntent?: string;
   /** Opens a still frame for screenshots and tests. */
   walkStart?: { step: number; handoff?: boolean; hint?: boolean } | null;
+  /** Working grade. Grades 1–2 hear the question and can listen to each choice. */
+  grade?: number | null;
+  /** Parent setting. When omitted, Grades 1–2 read the question automatically. */
+  autoRead?: boolean;
+  choices?: string[] | null;
 }) {
   const guided = walk && walk.steps.length >= 3 ? walk : null;
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
@@ -101,30 +109,10 @@ export function QuestionPractice({
         : phase === "revealed"
           ? "Here's how."
           : "";
-  const feedbackSpeech = walking
-    ? ""
-    : phase === "correct"
-      ? ["That's right.", why ?? ""].filter(Boolean).join(" ")
-      : phase === "retry"
-        ? "Not quite. Try again."
-        : phase === "revealed"
-          ? ["Here's how.", ...steps, expected ? `The answer is ${expected}.` : ""].filter(Boolean).join(" ")
-          : "";
-
-  useEffect(() => {
-    setValues(valuesFor(shape, draft));
-    setHintOpen(Boolean(walkStart?.hint));
-    setExampleOpen(exampleStartsOpen);
-    setActiveField("answer");
-    setDismissed(false);
-    setLocalOpen(Boolean(walkStart && !walkStart.hint));
-    setStepIndex(walkStart?.step ?? 0);
-    setHandoff(Boolean(walkStart?.handoff));
-    setWalkDraft("");
-    setWalkMiss(false);
-    // A parent re-render must not wipe a retry the child is still typing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionId]);
+  const readOnArrival = autoRead ?? (grade != null && grade <= 2);
+  const choiceList = choices ?? [];
+  const showChoices = phase === "answering" && !walking && choiceList.length > 0;
+  const choiceListen = grade != null && grade <= 2;
 
   useEffect(() => {
     if (phase !== "retry" || walking) return;
@@ -169,6 +157,18 @@ export function QuestionPractice({
     setWalkDraft((current) => current.slice(0, -1));
   }
 
+  function goBack() {
+    if (!guided) return;
+    if (handoff) {
+      setHandoff(false);
+      setWalkMiss(false);
+      return;
+    }
+    if (stepIndex <= 0) return;
+    setWalkMiss(false);
+    setStepIndex((current) => current - 1);
+  }
+
   function goNext() {
     if (!guided || handoff) return;
     if (stepIndex < guided.steps.length - 1) {
@@ -210,22 +210,27 @@ export function QuestionPractice({
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
         <section className={walking ? "question-card walk-raised" : "question-card"} aria-label="Question">
           <p className="topic-label">{eyebrow}</p>
-          <div className="speak-row">
+          {walking ? (
             <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>
-              {walking && step && !handoff ? (
+              {step && !handoff ? (
                 <HighlightedPrompt prompt={prompt} target={step.target} occurrence={step.occurrence ?? 0} />
               ) : (
                 prompt
               )}
             </h1>
-            <ReadAloud text={prompt} label="Speak the question" />
-          </div>
-          {responseHint ? (
-            <div className="speak-row">
-              <p className="hint">{responseHint}</p>
-              <ReadAloud text={responseHint} label="Speak the hint" />
-            </div>
-          ) : null}
+          ) : (
+            <ListenPassage
+              auto={readOnArrival && phase === "answering"}
+              parts={[
+                {
+                  text: prompt,
+                  as: "h1",
+                  className: prompt.length > 80 ? "prompt prompt-long" : "prompt",
+                },
+              ]}
+            />
+          )}
+          {responseHint ? <p className="hint">{responseHint}</p> : null}
           {phase === "answering" && !walking ? <AssistedPrompt assist={assist} /> : null}
           {guideSteps.length > 0 && phase === "answering" && !walking ? (
             <ol className="guide-steps">
@@ -235,13 +240,10 @@ export function QuestionPractice({
             </ol>
           ) : null}
           {showHint && hint ? (
-            <div className="speak-row">
-              <p className="inline-help">
-                <LightbulbIcon />
-                <span>{hint}</span>
-              </p>
-              <ReadAloud text={hint} label="Speak the hint" />
-            </div>
+            <p className="inline-help">
+              <LightbulbIcon />
+              <span>{hint}</span>
+            </p>
           ) : null}
           {exampleOpen && example && !walking ? <WorkedExampleBlock example={example} /> : null}
           <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
@@ -253,13 +255,12 @@ export function QuestionPractice({
               {saveNote === "saving" ? "Saving…" : "Saved"}
             </p>
           ) : null}
-          {feedbackSpeech ? <ReadAloud text={feedbackSpeech} label="Speak the feedback" /> : null}
           {phase === "correct" && why ? <p className="why-line">{why}</p> : null}
           {phase === "retry" && !walking ? <p className="feedback warm">Not quite. Try again.</p> : null}
-          {phase === "correct" ? <p className="feedback good">That's right.</p> : null}
+          {phase === "correct" ? <p className="feedback good">That&apos;s right.</p> : null}
           {showTextReveal ? (
             <div className="feedback warm worked-reveal">
-              <p>Here's how.</p>
+              <p>Here&apos;s how.</p>
               {steps.length > 0 ? (
                 <ol className="guide-steps">
                   {steps.map((item) => (
@@ -293,6 +294,7 @@ export function QuestionPractice({
               onDigit={typeWalkDigit}
               onDelete={deleteWalkDigit}
               onNext={goNext}
+              onBack={goBack}
               onClose={() => setDismissed(true)}
               action={action}
               fields={fields}
@@ -305,6 +307,24 @@ export function QuestionPractice({
             <form action={action} className="question-form" onSubmit={stamp}>
               <HiddenFields fields={fields} />
               <input type="hidden" name="intent" value={formIntent} />
+              {showChoices ? (
+                <div className="answer-choices">
+                  {choiceList.map((choice) => (
+                    <ChoiceOption
+                      key={choice}
+                      text={choice}
+                      showListen={choiceListen}
+                      pressed={(values.answer ?? "") === choice}
+                      disabled={pending}
+                      onPick={() => {
+                        const next = { ...values, answer: choice };
+                        setValues(next);
+                        onDraft?.(choice, values.remainder ?? "");
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : null}
               <AnswerFields
                 shape={shape}
                 values={values}
@@ -391,10 +411,6 @@ function WorkedExampleBlock({ example }: { example: WorkedExample }) {
       <p>
         Answer: <strong>{example.answer}</strong>
       </p>
-      <ReadAloud
-        text={`${example.prompt}. ${example.steps.join(". ")}. Answer: ${example.answer}.`}
-        label="Speak the example"
-      />
     </aside>
   );
 }
