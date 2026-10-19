@@ -68,9 +68,9 @@ Not built. Do not send one from this spec.
 
 The desk can already save a daily draft into `digest_stubs` ("Save today's summary"). `POST /api/digest` with `x-digest-secret` only checks the secret and returns `{ "status": "stubbed" }`. That stub currently includes attempted count and accuracy. The email must not. A later mailer may read the stub, but it has to drop scores and any streak field before a parent sees it.
 
-- Activity-gated. Send only when the child completed real activity that calendar day.
-- Threshold: 5 or more questions answered, or 5 or more minutes of practice, in that calendar day. Use the parent's local timezone when it is known. Otherwise use the site default, which is `America/Toronto` (`torontoDate` in `lib/digest/build.ts`).
-- One short line. Example: "Oliver did 12 minutes of fractions today."
+- Activity-gated. Send only when the child answered 5 or more questions that calendar day. Minutes are not a trigger.
+- Threshold: 5 or more questions answered that calendar day. Use the parent's local timezone when it is known. Otherwise use the site default, which is `America/Toronto` (`torontoDate` in `lib/digest/build.ts`).
+- One short line. Example: "Oliver did 12 minutes of fractions today." Duration can appear in the sentence. The trigger is questions answered, not minutes.
 - Parent only. Toggle in parent settings.
 - Default the toggle off until the weekly digest is trusted. Say that in the setting: daily notes stay off until the Sunday note has been useful.
 - No scores, no comparison with anyone else, and no "keep the streak" language.
