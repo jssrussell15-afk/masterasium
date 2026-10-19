@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
-import { ReadAloud } from "@/components/read-aloud";
+import { SpeakButton } from "@/components/speak-line";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -82,15 +82,6 @@ export function QuestionPractice({
           : "";
 
   useEffect(() => {
-    setValues(valuesFor(shape, draft));
-    setHintOpen(false);
-    setExampleOpen(exampleStartsOpen);
-    setActiveField("answer");
-    // A parent re-render must not wipe a retry the child is still typing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionId]);
-
-  useEffect(() => {
     if (phase !== "retry") return;
     const node = inputRef.current;
     if (!node) return;
@@ -131,14 +122,14 @@ export function QuestionPractice({
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
       <section className="question-card" aria-label="Question">
         <p className="topic-label">{eyebrow}</p>
-        <div className="speak-row">
+        <div className="prompt-row">
           <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
-          <ReadAloud text={prompt} label="Speak the question" />
+          <SpeakButton text={prompt} label="Read the question" />
         </div>
         {responseHint ? (
-          <div className="speak-row">
+          <div className="prompt-row">
             <p className="hint">{responseHint}</p>
-            <ReadAloud text={responseHint} label="Speak the hint" />
+            <SpeakButton text={responseHint} label="Read the hint" />
           </div>
         ) : null}
         {phase === "answering" ? <AssistedPrompt assist={assist} /> : null}
@@ -150,9 +141,9 @@ export function QuestionPractice({
           </ol>
         ) : null}
         {showHint && hint ? (
-          <div className="speak-row">
+          <div className="prompt-row">
             <p className="inline-help">{hint}</p>
-            <ReadAloud text={hint} label="Speak the hint" />
+            <SpeakButton text={hint} label="Read the hint" />
           </div>
         ) : null}
         {exampleOpen && example ? <WorkedExampleBlock example={example} /> : null}
@@ -165,13 +156,13 @@ export function QuestionPractice({
             {saveNote === "saving" ? "Saving…" : "Saved"}
           </p>
         ) : null}
-        {feedbackSpeech ? <ReadAloud text={feedbackSpeech} label="Speak the feedback" /> : null}
+        {feedbackSpeech ? <SpeakButton text={feedbackSpeech} label="Read the feedback" /> : null}
         {phase === "correct" && why ? <p className="why-line">{why}</p> : null}
         {phase === "retry" ? <p className="feedback warm">Not quite. Try again.</p> : null}
-        {phase === "correct" ? <p className="feedback good">That's right.</p> : null}
+        {phase === "correct" ? <p className="feedback good">That&apos;s right.</p> : null}
         {phase === "revealed" ? (
           <div className="feedback warm worked-reveal">
-            <p>Here's how.</p>
+            <p>Here&apos;s how.</p>
             {steps.length > 0 ? (
               <ol className="guide-steps">
                 {steps.map((step) => (
@@ -283,9 +274,9 @@ function WorkedExampleBlock({ example }: { example: WorkedExample }) {
       <p>
         Answer: <strong>{example.answer}</strong>
       </p>
-      <ReadAloud
+      <SpeakButton
         text={`${example.prompt}. ${example.steps.join(". ")}. Answer: ${example.answer}.`}
-        label="Speak the example"
+        label="Read the example"
       />
     </aside>
   );

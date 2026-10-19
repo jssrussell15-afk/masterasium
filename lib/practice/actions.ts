@@ -21,6 +21,8 @@ import {
 } from "@/lib/practice/session";
 import { isLessonSkill } from "@/lib/lesson/catalog";
 import { syncReviewRows } from "@/lib/lesson/store";
+import { practiceAnchor } from "@/lib/practice/placement";
+import { loadPlacement } from "@/lib/practice/placement-store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
 import { readAttemptMark, readStoredPlan, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
@@ -52,11 +54,14 @@ async function snapshot(
 ): Promise<PracticeState> {
   const score = totals(cards);
   const today = torontoDate();
+  const loaded = await loadPlacement(supabase, childId);
+  const anchor = practiceAnchor(loaded.placement, access.working);
   const focus = accuracyScheduler.chooseSkill({
     grade: access.working,
     cards,
     sessionCount: 0,
     today,
+    startSkillId: anchor.startSkillId,
   });
   const log = await loadAttemptLog(supabase, childId);
   const portrait = buildPortrait({
@@ -64,12 +69,13 @@ async function snapshot(
     cards,
     attempts: log.attempts,
     today,
+    startSkillId: anchor.startSkillId,
   });
   return {
     attempted: score.attempted,
     correctCount: score.correct,
     focusTitle: focus.title,
-    skills: describeCatalog(access, cards),
+    skills: describeCatalog(access, cards, anchor.startSkillId),
     streakDays: portrait.streakDays,
     streakMilestone: portrait.streakMilestone,
     recap: portrait.recap,
@@ -91,7 +97,7 @@ async function saveCard(
       skill_id: card.skillId,
       attempted: card.attempted,
       correct: card.correct,
-      streak: card.streak,
+      consecutive_correct: card.streak,
       fsrs: card.fsrs,
       updated_at: new Date().toISOString(),
     },
@@ -617,7 +623,7 @@ async function stampIntro(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data, error } = await supabase
       .from("skill_states")
-      .select("attempted, correct, streak, fsrs, updated_at")
+      .select("attempted, correct, streak:consecutive_correct, fsrs, updated_at")
       .eq("child_id", childId)
       .eq("skill_id", skillId)
       .maybeSingle();
@@ -647,7 +653,7 @@ async function stampIntro(
           skill_id: skillId,
           attempted: 0,
           correct: 0,
-          streak: 0,
+          consecutive_correct: 0,
           fsrs,
           updated_at: new Date().toISOString(),
         })

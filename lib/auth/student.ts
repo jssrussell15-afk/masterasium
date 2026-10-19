@@ -3,9 +3,12 @@ import "server-only";
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { createStudentClient } from "@/lib/auth/student-client";
 import { friendlyDbError, isGradeProgressMissing } from "@/lib/db-error";
 import { STUDENT_COOKIE, studentCookieOptions } from "@/lib/auth/student-cookie";
 import { isSupabaseConfigured, requireSupabaseEnv } from "@/lib/supabase/env";
+
+export { createStudentClient };
 
 export type StudentChild = {
   id: string;
@@ -23,20 +26,6 @@ export function createAnonClient(): SupabaseClient {
       persistSession: false,
       autoRefreshToken: false,
       detectSessionInUrl: false,
-    },
-  });
-}
-
-export function createStudentClient(token: string): SupabaseClient {
-  const { url, key } = requireSupabaseEnv();
-  return createSupabaseClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-    global: {
-      headers: { "x-student-token": token },
     },
   });
 }

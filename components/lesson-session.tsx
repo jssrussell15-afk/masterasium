@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { QuestionPractice } from "@/components/question-practice";
-import { ReadAloud } from "@/components/read-aloud";
+import { SpeakButton } from "@/components/speak-line";
 import { lessonAction, type LessonClientState } from "@/lib/lesson/actions";
 import type { LessonScreen } from "@/lib/lesson/screen";
 
@@ -62,9 +62,9 @@ export function LessonView({
       {screen.kind === "intro" ? (
         <section className="card grid gap-4" aria-label="Lesson introduction">
           <p className="eyebrow">{screen.eyebrow}</p>
-          <div className="speak-row">
+          <div className="prompt-row">
             <h1 className="display text-4xl">{screen.title}</h1>
-            <ReadAloud text={`${screen.title}. ${screen.summary}`} label="Speak the introduction" />
+            <SpeakButton text={`${screen.title}. ${screen.summary}`} label="Read the introduction" />
           </div>
           <VideoSlot video={screen.video} />
           <p className="text-xl leading-snug">{screen.summary}</p>
@@ -84,11 +84,11 @@ export function LessonView({
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-3xl">{screen.title}</h1>
           {screen.lead ? <p className="text-lg">{screen.lead}</p> : null}
-          <div className="speak-row">
+          <div className="prompt-row">
             <p className={numeralClass(screen.prompt)}>{screen.prompt}</p>
-            <ReadAloud
+            <SpeakButton
               text={`${screen.prompt}. ${screen.steps.join(". ")}. Answer: ${screen.answer}.`}
-              label="Speak the example"
+              label="Read the example"
             />
           </div>
           <ol className="lesson-steps">
@@ -112,6 +112,7 @@ export function LessonView({
       ) : null}
       {screen.kind === "question" ? (
         <QuestionPractice
+          key={screen.taskKey}
           questionId={screen.taskKey}
           eyebrow={`${screen.eyebrow} · ${screen.title}`}
           prompt={screen.prompt}
@@ -142,12 +143,9 @@ export function LessonView({
         <section className="card grid gap-4" aria-label="What to look at" role="status">
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-3xl">Look at this step</h1>
-          <div className="speak-row">
+          <div className="prompt-row">
             <p className="text-xl leading-snug">{screen.note}</p>
-            <ReadAloud
-              text={`${screen.note} The answer is ${screen.expected}.`}
-              label="Speak the feedback"
-            />
+            <SpeakButton text={`${screen.note} The answer is ${screen.expected}.`} label="Read the feedback" />
           </div>
           <p className="text-xl">
             The answer is <strong>{screen.expected}</strong>.
@@ -168,9 +166,9 @@ export function LessonView({
           <p className="eyebrow">{screen.eyebrow}</p>
           <h1 className="display text-4xl">{screen.title}</h1>
           <p className="hint">You can tell a parent:</p>
-          <div className="speak-row">
+          <div className="prompt-row">
             <p className="lesson-learned">{screen.sentence}</p>
-            <ReadAloud text={screen.sentence} label="Speak what I learned" />
+            <SpeakButton text={screen.sentence} label="Read what I learned" />
           </div>
           {screen.nextReview ? (
             <p className="hint">This comes back for a quiet review on {screen.nextReview}.</p>

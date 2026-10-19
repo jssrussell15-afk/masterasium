@@ -9,6 +9,22 @@ export const STUDENT_LOGIN_SETUP_MESSAGE =
 export const GRADE_PROGRESS_SETUP_MESSAGE =
   "Grade progress is not ready yet. Practice can start once the database is updated.";
 
+export const COLUMN_UPDATE_MESSAGE =
+  "Something on our side needs an update. Please try again later.";
+
+export const PLACEMENT_SETUP_MESSAGE =
+  "The quick check is not ready yet. Practice can start once the database is updated.";
+
+export function isPlacementMissing(error: DbError): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("save_placement") ||
+    message.includes("set_starting_point") ||
+    (message.includes("placement") &&
+      (message.includes("does not exist") || message.includes("schema cache") || error.code === "42703"))
+  );
+}
+
 export function isGradeProgressMissing(error: DbError): boolean {
   const message = error.message.toLowerCase();
   return (
@@ -76,6 +92,9 @@ export function friendlyDbError(error: DbError): string {
   ) {
     return "A child cannot be saved yet. The child profile is not ready in the database.";
   }
+  if (isPlacementMissing(error)) {
+    return PLACEMENT_SETUP_MESSAGE;
+  }
   if (isGradeProgressMissing(error)) {
     return GRADE_PROGRESS_SETUP_MESSAGE;
   }
@@ -85,13 +104,23 @@ export function friendlyDbError(error: DbError): string {
   if (message.includes("worksheet") || message.includes("open_practice_set")) {
     return "The worksheet tables are not in the database yet. Paste the worksheet setup statements shown on this page into the Supabase SQL editor.";
   }
-  if (
-    error.code === "42P01" ||
-    error.code === "PGRST205" ||
-    message.includes("does not exist") ||
-    message.includes("schema cache")
-  ) {
+  if (isMissingColumn(error, message)) {
+    return COLUMN_UPDATE_MESSAGE;
+  }
+  if (isMissingTable(error, message)) {
     return "The database tables are missing. Run supabase/migrations/001_init.sql in the Supabase SQL editor.";
   }
   return error.message;
+}
+
+function isMissingColumn(error: DbError, message: string): boolean {
+  return error.code === "42703" || /column .* does not exist/.test(message);
+}
+
+function isMissingTable(error: DbError, message: string): boolean {
+  return (
+    error.code === "42P01" ||
+    error.code === "PGRST205" ||
+    /relation .* does not exist/.test(message)
+  );
 }

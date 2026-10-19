@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useActionState } from "react";
 import { IntroModal } from "@/components/intro-modal";
 import { QuestionPractice } from "@/components/question-practice";
@@ -31,42 +31,80 @@ function kindLabel(kind: QuestionKind): string {
 }
 
 const initial: PracticeState = {};
+const SERVER_DRAFT = "server";
+
+type QuestionIds = {
+  questionId: string;
+  snapshot: string;
+  attemptId: string;
+  checkId: string;
+};
+
+type StoredDraft = {
+  attemptId: string;
+  checkId: string;
+  answer: string;
+  remainder: string;
+};
+
+function subscribeDrafts(onStoreChange: () => void) {
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+}
+
+function draftSnapshot(childId: string, questionId: string): string {
+  const stored = draftForQuestion(window.localStorage, childId, questionId);
+  if (!stored) return "";
+  const packed: StoredDraft = {
+    attemptId: stored.attemptId,
+    checkId: stored.checkId,
+    answer: stored.answer,
+    remainder: stored.remainder,
+  };
+  return JSON.stringify(packed);
+}
+
+function parseStored(snapshot: string): StoredDraft | null {
+  if (!snapshot) return null;
+  try {
+    return JSON.parse(snapshot) as StoredDraft;
+  } catch {
+    return null;
+  }
+}
+
+function idsFor(questionId: string, snapshot: string, resume: boolean, previous: QuestionIds | null): QuestionIds {
+  const parsed = parseStored(snapshot);
+  const same = previous?.questionId === questionId;
+  return {
+    questionId,
+    snapshot,
+    attemptId: parsed?.attemptId || (same ? (previous?.attemptId ?? "") : "") || newAttemptId(),
+    checkId:
+      (parsed && !resume ? parsed.checkId : same && !resume ? (previous?.checkId ?? "") : "") || newAttemptId(),
+  };
+}
 
 export function PracticeSession({ view }: { view: PracticeView }) {
-  const appliedCheck = useRef("");
   const epoch = useRef(0);
-  const runRef = useRef<(previous: PracticeState, formData: FormData) => Promise<PracticeState>>(
-    async (previous) => previous,
-  );
   const heldRef = useRef<PracticeState>(initial);
+  const startedAt = useRef<number | null>(null);
+  const submitted = useRef(false);
   const [held, setHeld] = useState<PracticeState>(initial);
   const [saveNote, setSaveNote] = useState<"saving" | "saved" | null>(null);
+  const [appliedCheckId, setAppliedCheckId] = useState("");
+  const [finishedIntro, setFinishedIntro] = useState("");
+
   function commit(next: PracticeState) {
     heldRef.current = next;
     setHeld(next);
   }
-  const [attemptId, setAttemptId] = useState("");
-  const [checkId, setCheckId] = useState("");
-  const [localDraft, setLocalDraft] = useState("");
-  const dispatch = useCallback(
-    (previous: PracticeState, formData: FormData) =>
-      runRef.current(previous, formData).then((result) => {
-        commit(result);
-        return result;
-      }),
-    [],
-  );
-  const [, formAction, pending] = useActionState(dispatch, initial);
+
   const state = held;
   const question = state.next ?? view.question;
   const card = question.intro ? introCardModel(question.intro, question.prompt) : null;
   const introToken = question.intro && card ? `${question.questionId}:${question.intro.skillId}:${question.intro.cycle}` : "";
-  const [finishedIntro, setFinishedIntro] = useState("");
   const showingIntro = card != null && question.intro != null && finishedIntro !== introToken;
-  const startedAt = useRef<number | null>(null);
-  const submitted = useRef(false);
-  const seenQuestion = useRef(question.questionId);
-  const [completed, setCompleted] = useState(0);
   const grade = state.workingGrade ?? view.grade;
   const phase: FeedbackPhase =
     state.feedbackFor === question.questionId && state.phase
@@ -80,37 +118,38 @@ export function PracticeSession({ view }: { view: PracticeView }) {
     state.feedbackFor === question.questionId
       ? (state.expected ?? null)
       : (question.resume?.expected ?? null);
-  const restoredDraft = question.resume?.draft || localDraft;
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = draftForQuestion(window.localStorage, view.childId, question.questionId);
-    appliedCheck.current = "";
-    if (stored) {
-      setAttemptId(stored.attemptId);
-      setCheckId(question.resume ? newAttemptId() : stored.checkId);
-      setLocalDraft(
-        question.resume ? "" : stored.remainder ? `${stored.answer} r ${stored.remainder}` : stored.answer,
-      );
-      return;
-    }
-    setAttemptId(newAttemptId());
-    setCheckId(newAttemptId());
-    setLocalDraft("");
-  }, [question.questionId, view.childId]);
+  const snapshot = useSyncExternalStore(
+    subscribeDrafts,
+    () => draftSnapshot(view.childId, question.questionId),
+    () => SERVER_DRAFT,
+  );
+  const ready = snapshot !== SERVER_DRAFT;
+  const stored = ready ? parseStored(snapshot) : null;
+  const restoredDraft = question.resume
+    ? (question.resume.draft ?? "")
+    : stored
+      ? stored.remainder
+        ? `${stored.answer} r ${stored.remainder}`
+        : stored.answer
+      : "";
 
-  useEffect(() => {
-    if (seenQuestion.current === question.questionId) return;
-    seenQuestion.current = question.questionId;
-    setCompleted((count) => count + 1);
+  const [ids, setIds] = useState<QuestionIds | null>(null);
+  if (ready && (ids?.questionId !== question.questionId || ids.snapshot !== snapshot)) {
+    setIds(idsFor(question.questionId, snapshot, Boolean(question.resume), ids));
+  }
+
+  const [progress, setProgress] = useState({ questionId: question.questionId, completed: 0 });
+  if (progress.questionId !== question.questionId) {
+    setProgress({ questionId: question.questionId, completed: progress.completed + 1 });
     setSaveNote(null);
-  }, [question.questionId]);
+    setAppliedCheckId("");
+  }
 
-  function retryLater(
-    draft: AttemptDraft,
-    extra: { name: string; value: string }[],
-    token: number,
-  ) {
+  const attemptId = ids?.questionId === question.questionId ? ids.attemptId : "";
+  const checkId = ids?.questionId === question.questionId ? ids.checkId : "";
+
+  function retryLater(draft: AttemptDraft, extra: { name: string; value: string }[], token: number) {
     if (typeof window === "undefined") return;
     void flushDraft({
       draft,
@@ -120,7 +159,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           const result = await practiceAction({}, formDataFromDraft(item, extra));
           if (token !== epoch.current) return { ok: true };
           if (!result.error) {
-            if (item.intent === "check" || item.intent === "show-how") appliedCheck.current = item.checkId;
+            if (item.intent === "check" || item.intent === "show-how") setAppliedCheckId(item.checkId);
             commit({ ...result, saveNote: "saved" });
             setSaveNote("saved");
             return { ok: true };
@@ -137,18 +176,25 @@ export function PracticeSession({ view }: { view: PracticeView }) {
     });
   }
 
-  runRef.current = async (_previous, formData) => {
+  async function submit(formData: FormData): Promise<PracticeState> {
     const previous = heldRef.current;
     const token = ++epoch.current;
     prepareAttemptFields({
       formData,
-      appliedCheckId: appliedCheck.current,
+      appliedCheckId,
       nextId: newAttemptId,
     });
     const nextCheck = String(formData.get("checkId") ?? "");
     const nextAttempt = String(formData.get("attemptId") ?? "");
-    if (nextCheck) setCheckId(nextCheck);
-    if (nextAttempt) setAttemptId(nextAttempt);
+    if (nextCheck || nextAttempt) {
+      const kept = snapshot === SERVER_DRAFT ? "" : snapshot;
+      setIds((current) => ({
+        questionId: question.questionId,
+        snapshot: current?.questionId === question.questionId ? current.snapshot : kept,
+        attemptId: nextAttempt || current?.attemptId || "",
+        checkId: nextCheck || current?.checkId || "",
+      }));
+    }
     const draft = draftFromForm(formData);
     const extra = carriedFields(formData);
     if (draft && typeof window !== "undefined") upsertDraft(window.localStorage, draft);
@@ -157,7 +203,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
       if (token !== epoch.current) return result;
       if (!result.error) {
         if (draft && (draft.intent === "check" || draft.intent === "show-how")) {
-          appliedCheck.current = draft.checkId;
+          setAppliedCheckId(draft.checkId);
         }
         if (draft && typeof window !== "undefined") markDraftSaved(window.localStorage, draft.attemptId);
         if (result.saveNote) setSaveNote(result.saveNote);
@@ -176,7 +222,14 @@ export function PracticeSession({ view }: { view: PracticeView }) {
       }
       return { ...previous, error: "That answer is still on this screen." };
     }
-  };
+  }
+
+  const [, formAction, pending] = useActionState(async (_previous: PracticeState, formData: FormData) => {
+    const result = await submit(formData);
+    heldRef.current = result;
+    setHeld(result);
+    return result;
+  }, initial);
 
   useEffect(() => {
     if (showingIntro) return;
@@ -229,7 +282,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         ]
       : []),
   ];
-  const shownSave = saveNote ?? state.saveNote ?? null;
+  const shownSave = progress.questionId === question.questionId ? (saveNote ?? state.saveNote ?? null) : null;
 
   return (
     <div className="question-screen">
@@ -261,6 +314,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         />
       ) : (
         <QuestionPractice
+          key={`${question.questionId}:${restoredDraft}`}
           questionId={question.questionId}
           eyebrow={`${kindLabel(question.kind)} · ${question.skillTitle}`}
           prompt={question.prompt}
@@ -268,7 +322,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           shape={question.shape}
           hint={question.hints?.hint ?? null}
           example={question.example ?? null}
-          progress={{ index: (completed % PRACTICE_SET_SIZE) + 1, total: PRACTICE_SET_SIZE }}
+          progress={{ index: (progress.completed % PRACTICE_SET_SIZE) + 1, total: PRACTICE_SET_SIZE }}
           phase={phase}
           why={why}
           steps={steps}

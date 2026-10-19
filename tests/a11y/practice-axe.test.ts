@@ -104,9 +104,9 @@ describe("practice accessibility", () => {
       }),
     );
     const html = window.document.body.innerHTML;
-    expect(html).toContain("Speak the question");
-    expect(html).toContain("Speak the hint");
-    expect(html).toContain("Speak the feedback");
+    expect(html).toContain("Read the question");
+    expect(html).toContain("Read the hint");
+    expect(html).toContain("Read the feedback");
     expect(html).toContain("Digit 5");
     expect(html).toContain('aria-label="Number keypad"');
     const results = await axe.run(window.document.body, {
@@ -126,7 +126,7 @@ describe("practice accessibility", () => {
         onViewed: () => undefined,
       }),
     );
-    expect(intro.window.document.body.innerHTML).toContain("Speak the introduction");
+    expect(intro.window.document.body.innerHTML).toContain("Read the introduction");
     expect(intro.window.document.body.innerHTML).toContain(">Start<");
     const introResults = await axe.run(intro.window.document.body, {
       rules: { "color-contrast": { enabled: false }, region: { enabled: false } },

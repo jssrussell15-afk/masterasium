@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { ReadAloud } from "@/components/read-aloud";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { SpeakButton } from "@/components/speak-line";
 
 export function IntroModal({
   title,
@@ -18,8 +18,8 @@ export function IntroModal({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const startRef = useRef<HTMLButtonElement>(null);
-  const onFinishedRef = useRef(onFinished);
-  const onViewedRef = useRef(onViewed);
+  const onFinishedEvent = useEffectEvent(onFinished);
+  const onViewedEvent = useEffectEvent(onViewed);
   const [showAnswer, setShowAnswer] = useState(false);
   const spoken = [
     title,
@@ -30,11 +30,9 @@ export function IntroModal({
   ]
     .filter(Boolean)
     .join(". ");
-  onFinishedRef.current = onFinished;
-  onViewedRef.current = onViewed;
 
   useEffect(() => {
-    onViewedRef.current();
+    onViewedEvent();
   }, [title]);
 
   useEffect(() => {
@@ -42,7 +40,7 @@ export function IntroModal({
     if (!node) return;
     if (!node.open) node.showModal();
     startRef.current?.focus();
-    const close = () => onFinishedRef.current();
+    const close = () => onFinishedEvent();
     node.addEventListener("cancel", close);
     return () => {
       node.removeEventListener("cancel", close);
@@ -53,11 +51,11 @@ export function IntroModal({
   return (
     <dialog ref={dialog} className="intro-dialog" aria-labelledby="intro-title">
       <section className="intro-card">
-        <div className="speak-row">
+        <div className="prompt-row">
           <h1 id="intro-title" className="display">
             {title}
           </h1>
-          <ReadAloud text={spoken} label="Speak the introduction" />
+          <SpeakButton text={spoken} label="Read the introduction" />
         </div>
         {sentences.map((sentence) => (
           <p key={sentence} className="intro-sentence">

@@ -27,6 +27,7 @@ export function buildPortrait(input: {
   cards: SkillCard[];
   attempts: AttemptPoint[];
   today: string;
+  startSkillId?: string;
 }): PracticePortrait {
   const streak = sessionStreak(
     input.attempts.map((attempt) => attempt.date),
@@ -37,6 +38,7 @@ export function buildPortrait(input: {
     cards: input.cards,
     sessionCount: 0,
     today: input.today,
+    startSkillId: input.startSkillId,
   });
   const todayRows = input.attempts.filter((attempt) => attempt.date === input.today);
   const counts = new Map<string, number>();

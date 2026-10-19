@@ -36,6 +36,11 @@ export function SignupReady({
       <h1 className="display text-4xl">
         {firstName} is set up for Grade {grade}
       </h1>
+      <p className="hint">
+        {grade <= 2
+          ? `Grade ${grade}. We'll start with the basics and adjust as we go.`
+          : "A quick check comes first, so we know where to start. You can change the starting point on the parent desk."}
+      </p>
       {saved ? (
         <p className="status" role="status">
           This tablet remembers {firstName}.
