@@ -48,6 +48,12 @@ export type QuestionView = {
   walk?: Walkthrough | null;
   /** Grade 1–2 answer tiles. Null keeps a typed answer. */
   choices?: string[] | null;
+  /** Shown after a missed earlier skill. No review label and no score. */
+  onRamp?: {
+    line: string;
+    step: string | null;
+    handoff: string;
+  };
   /** Restored after a refresh so a retry does not become a new first try. */
   resume?: {
     phase: Exclude<FeedbackPhase, "answering">;

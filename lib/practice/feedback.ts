@@ -12,6 +12,8 @@ export type AttemptMark = {
   firstTryCorrect: boolean;
   given: string;
   showedHow: boolean;
+  /** Opened Show me an example before the first try was decided. */
+  showedExample?: boolean;
   /** Client id for this check. A retry with the same id does not count again. */
   clientCheckId?: string;
 };
@@ -76,13 +78,16 @@ export function markFromState(
   previous: AttemptMark | null,
   given: string,
   showedHow: boolean,
+  showedExample = false,
 ): AttemptMark | null {
   if (state.phase === "answering" || state.firstTryCorrect == null) return previous;
+  const example = Boolean(previous?.showedExample) || showedExample;
   return {
     phase: state.phase,
     firstTryCorrect: state.firstTryCorrect,
     given: previous?.given ?? given,
     showedHow: Boolean(previous?.showedHow) || showedHow,
+    ...(example ? { showedExample: true } : {}),
   };
 }
 

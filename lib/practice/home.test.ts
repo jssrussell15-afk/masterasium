@@ -67,7 +67,9 @@ describe("student home", () => {
       today: "2026-10-18",
     });
     const assigned = home.assigned.find((skill) => skill.id === due.id);
-    expect(assigned?.note).toBe("Review today");
+    expect(assigned?.note).toBe(due.title);
+    expect(home.assigned.map((skill) => skill.note).join(" ")).not.toMatch(/review/i);
+    expect(JSON.stringify(home)).not.toContain("Assigned for another look");
   });
 });
 

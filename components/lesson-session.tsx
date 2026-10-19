@@ -161,11 +161,7 @@ export function LessonView({
           <h1 className="display text-4xl">{screen.title}</h1>
           <p className="hint">You can tell a parent:</p>
           <ListenPassage parts={[{ text: screen.sentence, as: "p", className: "lesson-learned" }]} />
-          {screen.nextReview ? (
-            <p className="hint">This comes back for a quiet review on {screen.nextReview}.</p>
-          ) : (
-            <p className="hint">This will come back in a day, a week, and a month.</p>
-          )}
+          <p className="hint">You can practise this again later.</p>
           <Link className="btn btn-primary lesson-tap" href="/practice">
             Back to skills
           </Link>

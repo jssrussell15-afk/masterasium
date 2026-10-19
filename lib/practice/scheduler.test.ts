@@ -39,12 +39,12 @@ describe("AccuracyScheduler", () => {
     expect(skill.id).toBe("g5-mult");
   });
 
-  it("reviews a mastered skill on the 3rd and 7th counts of every 8", () => {
+  it("leaves a review slot empty when the mastered skill is not due", () => {
     const cards = [mastered("g1-count")];
-    expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 3 }).id).toBe("g1-count");
-    expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 4 }).id).toBe("g1-add-10");
-    expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 7 }).id).toBe("g1-count");
+    expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 2 }).id).toBe("g1-add-10");
+    expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 5 }).id).toBe("g1-add-10");
     expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 8 }).id).toBe("g1-add-10");
+    expect(accuracyScheduler.chooseSkill({ grade: 1, cards, sessionCount: 0 }).id).toBe("g1-add-10");
   });
 
   it("keeps the focus skill when nothing is mastered yet", () => {

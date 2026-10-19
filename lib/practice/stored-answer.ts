@@ -5,12 +5,13 @@ import type { Walkthrough } from "@/lib/practice/walk";
 export type StoredPlan = {
   kind: QuestionKind | null;
   rollbackSkillId: string | null;
+  onRamp: boolean;
 };
 
 export function packStoredAnswer(
   answer: string,
   steps: string[],
-  meta?: { kind?: QuestionKind; rollbackSkillId?: string; walk?: Walkthrough | null },
+  meta?: { kind?: QuestionKind; rollbackSkillId?: string; walk?: Walkthrough | null; onRamp?: boolean },
 ): string {
   return JSON.stringify({
     v: 1,
@@ -19,6 +20,7 @@ export function packStoredAnswer(
     ...(meta?.kind ? { kind: meta.kind } : {}),
     ...(meta?.rollbackSkillId ? { rollbackSkillId: meta.rollbackSkillId } : {}),
     ...(meta?.walk ? { walk: meta.walk } : {}),
+    ...(meta?.onRamp ? { onRamp: true } : {}),
   });
 }
 
@@ -39,19 +41,25 @@ export function unpackStoredAnswer(stored: string): { answer: string; steps: str
 
 export function readStoredPlan(stored: string): StoredPlan {
   try {
-    const parsed = JSON.parse(stored) as { v?: number; kind?: unknown; rollbackSkillId?: unknown };
+    const parsed = JSON.parse(stored) as {
+      v?: number;
+      kind?: unknown;
+      rollbackSkillId?: unknown;
+      onRamp?: unknown;
+    };
     if (parsed?.v === 1) {
       const kind = parsed.kind;
       return {
         kind:
           kind === "focus" || kind === "review" || kind === "check" || kind === "support" ? kind : null,
         rollbackSkillId: typeof parsed.rollbackSkillId === "string" ? parsed.rollbackSkillId : null,
+        onRamp: parsed.onRamp === true,
       };
     }
   } catch {
     // Plain answers have no plan.
   }
-  return { kind: null, rollbackSkillId: null };
+  return { kind: null, rollbackSkillId: null, onRamp: false };
 }
 
 export function readStoredWalk(stored: string): Walkthrough | null {
@@ -92,6 +100,7 @@ export function readAttemptMark(stored: string): AttemptMark | null {
       firstTryCorrect: mark.firstTryCorrect,
       given: typeof mark.given === "string" ? mark.given : "",
       showedHow: mark.showedHow === true,
+      ...(mark.showedExample === true ? { showedExample: true } : {}),
       ...(typeof mark.clientCheckId === "string" ? { clientCheckId: mark.clientCheckId } : {}),
     };
   } catch {
@@ -110,6 +119,7 @@ export function withAttemptMark(stored: string, mark: AttemptMark): string {
     ...(plan.kind ? { kind: plan.kind } : {}),
     ...(plan.rollbackSkillId ? { rollbackSkillId: plan.rollbackSkillId } : {}),
     ...(walk ? { walk } : {}),
+    ...(plan.onRamp ? { onRamp: true } : {}),
     mark,
   });
 }

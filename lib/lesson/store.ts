@@ -178,6 +178,16 @@ export async function syncReviewRows(
   learn: LearnState,
   today: string,
 ): Promise<void> {
+  if (learn.recallMark === "day" || learn.recallMark === "week" || learn.recallMark === "month") {
+    await supabase
+      .from("skill_reviews")
+      .update({ done_at: new Date().toISOString() })
+      .eq("child_id", childId)
+      .eq("skill_id", skillId)
+      .eq("gap", learn.recallMark)
+      .is("done_at", null);
+    return;
+  }
   const { data, error } = await supabase
     .from("skill_reviews")
     .select("gap, due_on, done_at")

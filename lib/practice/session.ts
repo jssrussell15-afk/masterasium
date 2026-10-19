@@ -11,6 +11,7 @@ import { hintLadder } from "@/lib/practice/hints";
 import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/intro";
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import { planNextQuestion } from "@/lib/practice/learning";
+import { onRampCopy } from "@/lib/practice/review";
 import { readLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
 import type { AttemptPoint } from "@/lib/practice/portrait";
@@ -87,6 +88,7 @@ function presentQuestion(
   intro: SkillIntro | null,
   mark: AttemptMark | null,
   walk: Walkthrough | null,
+  onRamp = false,
 ): QuestionView {
   const shape = answerShape(prompt, expected);
   const assist = assistFor({
@@ -95,6 +97,11 @@ function presentQuestion(
     firstStep: steps[0] ?? null,
     expected,
     kind,
+  });
+  const example = buildWorkedExample({
+    skillId: skill.id,
+    livePrompt: prompt,
+    small: kind === "support",
   });
   return {
     questionId,
@@ -113,13 +120,10 @@ function presentQuestion(
       expected,
       prompt,
     }),
-    example: buildWorkedExample({
-      skillId: skill.id,
-      livePrompt: prompt,
-      small: kind === "support",
-    }),
+    example,
     walk: clientWalk(walk, expected, mark),
     choices: practiceChoices(skill.grade, prompt, expected, questionId),
+    ...(onRamp ? { onRamp: onRampCopy(example?.steps[0] ?? skill.exampleSteps[0]) } : {}),
     ...(mark
       ? {
           resume: {
@@ -193,7 +197,7 @@ async function persistQuestion(
   childId: string,
   skill: Skill,
   cards: SkillCard[],
-  plan: { kind: QuestionKind; small: boolean; rollbackSkillId?: string },
+  plan: { kind: QuestionKind; small: boolean; rollbackSkillId?: string; onRamp?: boolean },
   intro: SkillIntro | null,
   built?: Question,
 ): Promise<{ question: QuestionView | null; error: string | null }> {
@@ -216,6 +220,7 @@ async function persistQuestion(
         kind: plan.kind,
         rollbackSkillId: plan.rollbackSkillId,
         walk: generated.walk ?? null,
+        onRamp: plan.onRamp === true,
       }),
     })
     .select("id, skill_id, prompt, answer")
@@ -241,6 +246,7 @@ async function persistQuestion(
       intro,
       null,
       generated.walk ?? null,
+      plan.onRamp === true,
     ),
     error: null,
   };
@@ -338,6 +344,7 @@ export async function loadOrIssueQuestion(
           kind,
           small: kind === "support",
           ...(stored.rollbackSkillId ? { rollbackSkillId: stored.rollbackSkillId } : {}),
+          ...(stored.onRamp ? { onRamp: true } : {}),
         },
         intro,
       );
@@ -354,6 +361,7 @@ export async function loadOrIssueQuestion(
         null,
         readAttemptMark(existing.answer),
         readStoredWalk(existing.answer) ?? walkForSkill(skill.id, existing.prompt, unpacked.answer),
+        stored.onRamp,
       ),
       error: null,
     };

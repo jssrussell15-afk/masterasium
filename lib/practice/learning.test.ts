@@ -88,7 +88,8 @@ describe("lesson check", () => {
       card = applyLearning({ card, correct, kind: "check", today }).card;
     }
     expect(readLearn(card.fsrs).lessonCheck).toBe("passed");
-    expect(readLearn(card.fsrs).reviewDueAt).toBe(addDays(today, 14));
+    expect(readLearn(card.fsrs).recallStep).toBe(0);
+    expect(readLearn(card.fsrs).reviewDueAt).toBe(addDays(today, 1));
     expect(isConfirmed(card)).toBe(true);
     expect(accuracyScheduler.chooseSkill({ grade: 1, cards: [card], sessionCount: 0 }).id).toBe(
       "g1-add-10",
@@ -111,30 +112,32 @@ describe("lesson check", () => {
 });
 
 describe("spaced review", () => {
-  it("prefers a due skill on a review turn and flags a miss", () => {
+  it("weaves a due skill at question 3 and re-teaches a miss without a second hit", () => {
     const count = {
       ...mastered("g1-count"),
       correct: 10,
-      fsrs: writeLearn(null, { lessonCheck: "passed", reviewDueAt: "2026-10-01" }),
+      fsrs: writeLearn(null, { lessonCheck: "passed", reviewDueAt: "2026-10-01", recallStep: 2 }),
     };
     const add = {
       ...mastered("g1-add-10"),
       fsrs: writeLearn(null, { lessonCheck: "passed", reviewDueAt: "2026-12-01" }),
     };
-    expect(accuracyScheduler.chooseSkill({ grade: 1, cards: [count, add], sessionCount: 3 }).id).toBe(
-      "g1-add-10",
+    expect(accuracyScheduler.chooseSkill({ grade: 1, cards: [count, add], sessionCount: 2 }).id).toBe(
+      "g1-sub-10",
     );
     expect(
-      accuracyScheduler.chooseSkill({ grade: 1, cards: [count, add], sessionCount: 3, today }).id,
+      accuracyScheduler.chooseSkill({ grade: 1, cards: [count, add], sessionCount: 2, today }).id,
     ).toBe("g1-count");
 
     const missed = applyLearning({ card: count, correct: false, kind: "review", today }).card;
     expect(readLearn(missed.fsrs).needsReview).toBe(true);
-    const once = applyLearning({ card: missed, correct: true, kind: "focus", today }).card;
-    expect(readLearn(once.fsrs).needsReview).toBe(true);
-    const cleared = applyLearning({ card: once, correct: true, kind: "focus", today }).card;
+    expect(readLearn(missed.fsrs).recallStep).toBe(1);
+    expect(missed.streak).toBe(0);
+    expect(readLearn(missed.fsrs).missStreak).toBeUndefined();
+    const cleared = applyLearning({ card: missed, correct: true, kind: "review", today }).card;
     expect(readLearn(cleared.fsrs).needsReview).toBeUndefined();
-    expect(readLearn(cleared.fsrs).reviewDueAt).toBe(addDays(today, 14));
+    expect(readLearn(cleared.fsrs).recallStep).toBe(1);
+    expect(readLearn(cleared.fsrs).reviewDueAt).toBe(addDays(today, 3));
   });
 });
 

@@ -62,6 +62,37 @@ describe("practice question screen", () => {
     expect(html).not.toContain(">Notes<");
   });
 
+  it("keeps a review item unlabeled and readable, with a quiet on-ramp", () => {
+    const sample = view();
+    const html = renderToStaticMarkup(
+      createElement(PracticeSession, {
+        view: {
+          ...sample,
+          question: {
+            ...sample.question,
+            kind: "review",
+            skillTitle: "Fractions as equal parts",
+            prompt: "What fraction is shaded?",
+            onRamp: {
+              line: "Let's try this one together.",
+              step: "There are 8 equal parts in the whole.",
+              handoff: "Your turn: try one like it.",
+            },
+          },
+        },
+      }),
+    );
+    expect(html).toContain("Fractions as equal parts");
+    expect(html).toContain("Let&#x27;s try this one together.");
+    expect(html).toContain("Your turn: try one like it.");
+    expect(html).toContain("What fraction is shaded?");
+    expect(html).toContain(">Listen<");
+    expect(html).not.toContain('aria-label="Read this step"');
+    expect(html).not.toMatch(/Review today|Review question|>Review<|Review ·/);
+    expect(html).not.toMatch(/forgot|demot|Back to grade/i);
+    expect(html).not.toContain("Kept fractions");
+  });
+
   it("keeps a notes pad beside the question from grade 4 up", () => {
     const html = renderToStaticMarkup(createElement(PracticeSession, { view: view(4) }));
     expect(html).toContain('aria-label="Scratchpad"');

@@ -6,7 +6,11 @@ import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { requireUser } from "@/lib/auth/session";
 import { buildSundayDigest } from "@/lib/digest/sunday";
-import { torontoDate } from "@/lib/digest/build";
+import { freshKeptLine, freshTopicsForWeek, torontoDate } from "@/lib/digest/build";
+import { addDays } from "@/lib/practice/dates";
+import { readLearn } from "@/lib/practice/memory";
+import { skillById } from "@/lib/practice/skills";
+import { loadCards } from "@/lib/practice/session";
 import { buildParentProgress } from "@/lib/lesson/parent";
 import { loadParentBundle } from "@/lib/lesson/store";
 
@@ -37,15 +41,39 @@ async function DigestLoader({ params }: { params: Promise<{ childId: string }> }
   if (!data) notFound();
 
   const bundle = await loadParentBundle(supabase, childId);
+  const today = torontoDate();
   const progress = buildParentProgress({
-    today: torontoDate(),
+    today,
     lessons: bundle.lessons,
     reviews: bundle.reviews,
     attempts: bundle.attempts,
     solved: bundle.solved,
     repaired: bundle.repaired,
   });
-  const digest = buildSundayDigest(data.first_name, progress);
+  const loadedCards = await loadCards(supabase, childId);
+  const freshLine = loadedCards.error
+    ? null
+    : freshKeptLine(
+        freshTopicsForWeek(
+          loadedCards.cards
+            .flatMap((card) => {
+              const skill = skillById(card.skillId);
+              if (!skill) return [];
+              return [
+                {
+                  title: skill.title,
+                  grade: skill.grade,
+                  order: skill.order,
+                  freshOn: readLearn(card.fsrs).recallFreshOn ?? null,
+                },
+              ];
+            })
+            .sort((left, right) => left.grade - right.grade || left.order - right.order),
+          addDays(today, -6),
+          today,
+        ),
+      );
+  const digest = buildSundayDigest(data.first_name, progress, freshLine);
   // TODO: call sendSundayDigest(digest) when an email provider is chosen.
   // This preview only renders the note. It does not send email.
 

@@ -32,6 +32,7 @@ export function QuestionPractice({
   saveNote = null,
   guideSteps = [],
   assist = null,
+  onRamp = null,
   aside,
   action,
   fields = [],
@@ -63,6 +64,7 @@ export function QuestionPractice({
   saveNote?: "saving" | "saved" | null;
   guideSteps?: string[];
   assist?: AssistView | null;
+  onRamp?: { line: string; step: string | null; handoff: string } | null;
   aside?: ReactNode;
   action?: (formData: FormData) => void;
   fields?: { name: string; value: string }[];
@@ -210,6 +212,13 @@ export function QuestionPractice({
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
         <section className={walking ? "question-card walk-raised" : "question-card"} aria-label="Question">
           <p className="topic-label">{eyebrow}</p>
+          {onRamp ? (
+            <div className="on-ramp">
+              <p className="hint">{onRamp.line}</p>
+              {onRamp.step ? <p className="hint">{onRamp.step}</p> : null}
+              <p className="hint">{onRamp.handoff}</p>
+            </div>
+          ) : null}
           {walking ? (
             <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>
               {step && !handoff ? (
@@ -307,6 +316,7 @@ export function QuestionPractice({
             <form action={action} className="question-form" onSubmit={stamp}>
               <HiddenFields fields={fields} />
               <input type="hidden" name="intent" value={formIntent} />
+              <input type="hidden" name="openedExample" value={exampleOpen ? "1" : "0"} />
               {showChoices ? (
                 <div className="answer-choices">
                   {choiceList.map((choice) => (
