@@ -112,4 +112,6 @@ export type PracticeState = {
   requestNote?: string;
   requestedGrade?: SupportedGrade | null;
   workingGrade?: SupportedGrade;
+  /** Calm save state while a retry is in flight. */
+  saveNote?: "saving" | "saved";
 };

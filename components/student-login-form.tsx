@@ -209,12 +209,12 @@ export function StudentLoginForm({
             </p>
             <div className="pin-pad" role="group" aria-label="PIN">
               {DIGITS.map((digit) => (
-                <button key={digit} type="button" onClick={() => addDigit(digit)}>
+                <button key={digit} type="button" aria-label={`Digit ${digit}`} onClick={() => addDigit(digit)}>
                   {digit}
                 </button>
               ))}
               <span aria-hidden="true" />
-              <button type="button" onClick={() => addDigit("0")}>
+              <button type="button" aria-label="Digit 0" onClick={() => addDigit("0")}>
                 0
               </button>
               <button type="button" data-key="delete" aria-label="Delete" onClick={deleteDigit}>

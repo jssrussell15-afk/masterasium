@@ -73,6 +73,7 @@ export function readAttemptMark(stored: string): AttemptMark | null {
       given: typeof mark.given === "string" ? mark.given : "",
       showedHow: mark.showedHow === true,
       ...(mark.showedExample === true ? { showedExample: true } : {}),
+      ...(typeof mark.clientCheckId === "string" ? { clientCheckId: mark.clientCheckId } : {}),
     };
   } catch {
     return null;

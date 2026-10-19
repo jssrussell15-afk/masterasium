@@ -13,6 +13,8 @@ export type AttemptMark = {
   showedHow: boolean;
   /** Opened Show me an example before the first try was decided. */
   showedExample?: boolean;
+  /** Client id for this check. A retry with the same id does not count again. */
+  clientCheckId?: string;
 };
 
 export type FeedbackState = {

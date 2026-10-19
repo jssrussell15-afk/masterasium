@@ -85,7 +85,8 @@ describe("practice question screen", () => {
     expect(html).toContain("Let&#x27;s try this one together.");
     expect(html).toContain("Your turn: try one like it.");
     expect(html).toContain("What fraction is shaded?");
-    expect(html).toContain('aria-label="Read aloud"');
+    expect(html).toContain('aria-label="Read the question"');
+    expect(html).toContain('aria-label="Read this step"');
     expect(html).not.toMatch(/Review today|Review question|>Review<|Review ·/);
     expect(html).not.toMatch(/forgot|demot|Back to grade/i);
     expect(html).not.toContain("Kept fractions");
