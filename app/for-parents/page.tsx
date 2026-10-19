@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { sessionChrome } from "@/components/header-auth";
 import { Shell } from "@/components/site-header";
+import { PLACEMENT_FAQ } from "@/lib/practice/placement";
 
 export const metadata: Metadata = {
   title: "For parents · Masterasium",
@@ -18,6 +19,11 @@ export default async function ForParentsPage() {
         <p>
           Masterasium stays with one skill until it sticks. Practice is free while we test. Ontario
           lessons are open. Quebec is not included.
+        </p>
+        <p>
+          For Grades 3 and up, practice begins with a quick check so we know where to start. Grades
+          1 and 2 start with the basics. There is no score. You can change the starting point on
+          the parent desk.
         </p>
 
         <h2 className="display">A short lesson first</h2>
@@ -43,6 +49,14 @@ export default async function ForParentsPage() {
           A skill that is already learned returns for a short review: after 1 day, again after 1
           week, and again after 1 month. The review is the same kind of question, not a new prize.
         </p>
+
+        <h2 className="display">Questions</h2>
+        {PLACEMENT_FAQ.map((entry) => (
+          <section key={entry.question}>
+            <h3 className="font-semibold">{entry.question}</h3>
+            <p>{entry.answer}</p>
+          </section>
+        ))}
 
         <h2 className="display">Why there are no rewards or streaks</h2>
         <p>

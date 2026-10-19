@@ -44,6 +44,13 @@ export default async function HomePage() {
         <ol className="step-list mt-4">
           <li>
             <span>
+              <strong>A quick check.</strong> For Grades 3 and up, a few questions show where to
+              begin. Grades 1 and 2 start with the basics. You can change the starting point any
+              time.
+            </span>
+          </li>
+          <li>
+            <span>
               <strong>Watch.</strong> A short lesson introduces the skill.
             </span>
           </li>

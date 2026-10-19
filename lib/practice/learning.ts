@@ -22,6 +22,10 @@ export function planNextQuestion(input: {
   requestedSkillId?: string;
   explicit?: boolean;
   coachSmall?: boolean;
+  /** Opens practice here. Omitted, the grade warm-up stays the start. */
+  startSkillId?: string;
+  /** A strand to fold in after the opening questions, when the check was clear. */
+  mixSkillId?: string;
 }): QuestionPlan {
   const inGrade = (id: string | undefined): id is string =>
     !!id && skillsForGrade(input.grade).some((skill) => skill.id === id);
@@ -35,6 +39,7 @@ export function planNextQuestion(input: {
     cards: input.cards,
     sessionCount: input.sessionCount,
     today: input.today,
+    startSkillId: input.startSkillId,
   });
   const card = input.cards.find((item) => item.skillId === chosen.id);
   const learn = readLearn(card?.fsrs);
@@ -62,12 +67,23 @@ export function planNextQuestion(input: {
     cards: input.cards,
     sessionCount: 0,
     today: input.today,
+    startSkillId: input.startSkillId,
   });
-  return {
+  const plan: QuestionPlan = {
     skillId: chosen.id,
     kind: chosen.id === focus.id ? "focus" : "review",
     small: false,
   };
+  const mixTurn = input.sessionCount > 0 && input.sessionCount % 4 === 3;
+  if (
+    mixTurn &&
+    plan.kind === "focus" &&
+    inGrade(input.mixSkillId) &&
+    plan.skillId !== input.mixSkillId
+  ) {
+    return { skillId: input.mixSkillId, kind: "focus", small: false };
+  }
+  return plan;
 }
 
 export function applyLearning(input: {

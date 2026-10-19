@@ -45,6 +45,7 @@ export function studentHome(input: {
   cards: SkillCard[];
   attempts: AttemptPoint[];
   today: string;
+  startSkillId?: string;
 }): StudentHome {
   const skills = skillsForGrade(input.grade);
   const focus = accuracyScheduler.chooseSkill({
@@ -52,6 +53,7 @@ export function studentHome(input: {
     cards: input.cards,
     sessionCount: 0,
     today: input.today,
+    startSkillId: input.startSkillId,
   });
   const review = skills.filter((skill) =>
     isReviewDue(readLearn(input.cards.find((card) => card.skillId === skill.id)?.fsrs), input.today),

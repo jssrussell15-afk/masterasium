@@ -11,6 +11,8 @@ import { isSupportedGrade } from "@/lib/grades";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { requireUser } from "@/lib/auth/session";
 import { buildPortrait } from "@/lib/practice/portrait";
+import { parentPlacementCopy, practiceAnchor } from "@/lib/practice/placement";
+import { loadPlacement } from "@/lib/practice/placement-store";
 import { accuracyScheduler } from "@/lib/practice/scheduler";
 import { loadAttemptLog, loadCards } from "@/lib/practice/session";
 
@@ -63,17 +65,22 @@ export async function saveDigestDraft(
   if (log.error) return { error: log.error };
 
   const todayRows = log.attempts.filter((attempt) => attempt.date === range.date);
+  const placement = await loadPlacement(supabase, childId);
+  const anchor = practiceAnchor(placement.placement, access.working);
+  const copy = placement.placement ? parentPlacementCopy(child.first_name, placement.placement) : null;
   const focus = accuracyScheduler.chooseSkill({
     grade: access.working,
     cards,
     sessionCount: 0,
     today: range.date,
+    startSkillId: anchor.startSkillId,
   });
   const portrait = buildPortrait({
     grade: access.working,
     cards,
     attempts: log.attempts,
     today: range.date,
+    startSkillId: anchor.startSkillId,
   });
   const correct = todayRows.filter((row) => row.correct).length;
   const summary: DigestSummary = buildDigestSummary({
@@ -85,6 +92,8 @@ export async function saveDigestDraft(
     focusSkillId: focus.id,
     focusSkillTitle: focus.title,
     recap: portrait.recap,
+    placementNote: copy?.start ?? null,
+    readyNote: copy?.ready ?? null,
   });
 
   const { error } = await supabase.from("digest_stubs").upsert(

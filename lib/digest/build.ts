@@ -13,6 +13,9 @@ export type DigestSummary = {
   focusSkillTitle: string;
   recap?: string | null;
   streakDays?: number;
+  /** Parent line about where practice started. No email is sent. */
+  placementNote?: string | null;
+  readyNote?: string | null;
 };
 
 export function torontoDate(now = new Date()): string {
@@ -73,6 +76,8 @@ export function buildDigestSummary(input: {
   focusSkillTitle: string;
   recap?: string | null;
   streakDays?: number;
+  placementNote?: string | null;
+  readyNote?: string | null;
 }): DigestSummary {
   return {
     ...input,
@@ -91,6 +96,8 @@ export function renderDigestText(summary: DigestSummary): string {
     `Current focus: ${summary.focusSkillTitle}`,
   ];
   if (summary.recap) lines.push(summary.recap);
+  if (summary.placementNote) lines.push(summary.placementNote);
+  if (summary.readyNote) lines.push(summary.readyNote);
   lines.push("", "Today's summary was saved. No email was sent.");
   return lines.join("\n");
 }

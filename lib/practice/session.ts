@@ -21,6 +21,8 @@ import {
   emptyCard,
   type SkillCard,
 } from "@/lib/practice/scheduler";
+import { loadPlacement } from "@/lib/practice/placement-store";
+import { practiceAnchor } from "@/lib/practice/placement";
 import { skillById, type Skill } from "@/lib/practice/skills";
 import type { Question, QuestionKind, QuestionView } from "@/lib/practice/types";
 
@@ -128,9 +130,14 @@ function presentQuestion(
   };
 }
 
-function kindFor(skill: Skill, grade: SupportedGrade, cards: SkillCard[]): QuestionKind {
+function kindFor(
+  skill: Skill,
+  grade: SupportedGrade,
+  cards: SkillCard[],
+  startSkillId?: string,
+): QuestionKind {
   const today = torontoDate();
-  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0, today });
+  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0, today, startSkillId });
   return skill.id === focus.id ? "focus" : "review";
 }
 
@@ -238,6 +245,8 @@ export async function issueQuestion(
 ): Promise<{ question: QuestionView | null; error: string | null }> {
   const sessionCount = cards.reduce((total, card) => total + card.attempted, 0);
   const today = torontoDate();
+  const loaded = options?.explicit ? null : await loadPlacement(supabase, childId);
+  const anchor = practiceAnchor(loaded?.placement ?? null, grade);
   const plan = planNextQuestion({
     grade,
     cards,
@@ -246,6 +255,8 @@ export async function issueQuestion(
     requestedSkillId: options?.skillId,
     explicit: options?.explicit,
     coachSmall: Boolean(options?.small) && !options?.explicit,
+    startSkillId: anchor.startSkillId,
+    mixSkillId: anchor.mixSkillId,
   });
   const skill = skillById(plan.skillId);
   if (!skill || skill.grade !== grade) {
@@ -274,10 +285,12 @@ export async function loadOrIssueQuestion(
 
   const existing = data as PendingRow | null;
   const skill = existing ? skillById(existing.skill_id) : undefined;
+  const loaded = await loadPlacement(supabase, childId);
+  const anchor = practiceAnchor(loaded.placement, grade);
   if (existing && skill && skill.grade === grade) {
     const unpacked = unpackStoredAnswer(existing.answer);
     const stored = readStoredPlan(existing.answer);
-    const kind = stored.kind ?? kindFor(skill, grade, cards);
+    const kind = stored.kind ?? kindFor(skill, grade, cards, anchor.startSkillId);
     const today = torontoDate();
     const intro = await introForIssued(
       supabase,

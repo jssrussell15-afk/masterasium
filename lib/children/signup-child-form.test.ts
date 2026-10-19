@@ -7,7 +7,9 @@ describe("signup step 2", () => {
   it("asks for a first name and a grade", () => {
     const html = renderToStaticMarkup(createElement(SignupChildForm));
     expect(html).toContain("Step 2 of 2");
-    expect(html).toContain("Add your child");
+    expect(html).toContain("What grade is your child in?");
+    expect(html).toContain("This tells us where the quick check begins.");
+    expect(html).toContain(">Start<");
     expect(html).toContain("Child&#x27;s first name");
     expect(html).toContain('autoComplete="off"');
     expect(html).toContain('autoCapitalize="words"');
@@ -16,7 +18,7 @@ describe("signup step 2", () => {
     expect(html).toContain("grade-pick-check");
     expect(html).toContain("✓");
     expect(html).toContain("pill-row grade-picks");
-    expect(html).toContain("You can change the grade any time.");
+    expect(html).not.toContain("You can change the grade any time.");
     expect(html).toContain('aria-checked="true"');
     for (const grade of [1, 2, 3, 4, 5, 6, 7, 8]) {
       expect(html).toContain(`aria-label="Grade ${grade}"`);
