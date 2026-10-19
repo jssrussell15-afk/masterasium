@@ -10,9 +10,10 @@ export function speakText(text: string) {
   window.speechSynthesis.speak(utterance);
 }
 
-export function SpeakButton({ text }: { text: string }) {
+export function SpeakButton({ text, label = "Read aloud" }: { text: string; label?: string }) {
+  if (!text.trim()) return null;
   return (
-    <button type="button" className="speak-btn" aria-label="Read aloud" onClick={() => speakText(text)}>
+    <button type="button" className="speak-btn" aria-label={label} onClick={() => speakText(text)}>
       <svg viewBox="0 0 24 24" aria-hidden="true" className="speak-icon">
         <path
           fill="currentColor"

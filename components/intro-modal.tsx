@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { SpeakButton } from "@/components/speak-line";
 
 export function IntroModal({
   title,
@@ -20,6 +21,15 @@ export function IntroModal({
   const onFinishedEvent = useEffectEvent(onFinished);
   const onViewedEvent = useEffectEvent(onViewed);
   const [showAnswer, setShowAnswer] = useState(false);
+  const spoken = [
+    title,
+    ...sentences,
+    example?.prompt ?? "",
+    ...(example?.steps ?? []),
+    showAnswer && example ? `Answer: ${example.answer}.` : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
 
   useEffect(() => {
     onViewedEvent();
@@ -34,16 +44,19 @@ export function IntroModal({
     node.addEventListener("cancel", close);
     return () => {
       node.removeEventListener("cancel", close);
-      if (node.open) node.close();
+      if (node.open && typeof node.close === "function") node.close();
     };
   }, [title]);
 
   return (
     <dialog ref={dialog} className="intro-dialog" aria-labelledby="intro-title">
       <section className="intro-card">
-        <h1 id="intro-title" className="display">
-          {title}
-        </h1>
+        <div className="prompt-row">
+          <h1 id="intro-title" className="display">
+            {title}
+          </h1>
+          <SpeakButton text={spoken} label="Read the introduction" />
+        </div>
         {sentences.map((sentence) => (
           <p key={sentence} className="intro-sentence">
             {sentence}

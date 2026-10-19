@@ -27,12 +27,14 @@ export function QuestionPractice({
   draft = "",
   exampleStartsOpen = false,
   pending = false,
+  saveNote = null,
   guideSteps = [],
   assist = null,
   aside,
   action,
   fields = [],
   onElapsed,
+  onDraft,
 }: {
   questionId: string;
   eyebrow: string;
@@ -50,12 +52,14 @@ export function QuestionPractice({
   draft?: string;
   exampleStartsOpen?: boolean;
   pending?: boolean;
+  saveNote?: "saving" | "saved" | null;
   guideSteps?: string[];
   assist?: AssistView | null;
   aside?: ReactNode;
   action?: (formData: FormData) => void;
   fields?: { name: string; value: string }[];
   onElapsed?: (form: HTMLFormElement) => void;
+  onDraft?: (answer: string, remainder: string) => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
   const [hintOpen, setHintOpen] = useState(false);
@@ -68,6 +72,14 @@ export function QuestionPractice({
   const progressText = progress ? progressLabel(progress.index, progress.total) : null;
   const announcement =
     phase === "correct" ? "That's right." : phase === "retry" ? "Not quite. Try again." : phase === "revealed" ? "Here's how." : "";
+  const feedbackSpeech =
+    phase === "correct"
+      ? ["That's right.", why ?? ""].filter(Boolean).join(" ")
+      : phase === "retry"
+        ? "Not quite. Try again."
+        : phase === "revealed"
+          ? ["Here's how.", ...steps, expected ? `The answer is ${expected}.` : ""].filter(Boolean).join(" ")
+          : "";
 
   useEffect(() => {
     if (phase !== "retry") return;
@@ -112,9 +124,14 @@ export function QuestionPractice({
         <p className="topic-label">{eyebrow}</p>
         <div className="prompt-row">
           <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
-          <SpeakButton text={prompt} />
+          <SpeakButton text={prompt} label="Read the question" />
         </div>
-        {responseHint ? <p className="hint">{responseHint}</p> : null}
+        {responseHint ? (
+          <div className="prompt-row">
+            <p className="hint">{responseHint}</p>
+            <SpeakButton text={responseHint} label="Read the hint" />
+          </div>
+        ) : null}
         {phase === "answering" ? <AssistedPrompt assist={assist} /> : null}
         {guideSteps.length > 0 && phase === "answering" ? (
           <ol className="guide-steps">
@@ -123,11 +140,23 @@ export function QuestionPractice({
             ))}
           </ol>
         ) : null}
-        {showHint && hint ? <p className="inline-help">{hint}</p> : null}
+        {showHint && hint ? (
+          <div className="prompt-row">
+            <p className="inline-help">{hint}</p>
+            <SpeakButton text={hint} label="Read the hint" />
+          </div>
+        ) : null}
         {exampleOpen && example ? <WorkedExampleBlock example={example} /> : null}
         <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
           {announcement}
+          {saveNote === "saving" ? " Saving." : saveNote === "saved" ? " Saved." : ""}
         </p>
+        {saveNote ? (
+          <p className="save-note" aria-hidden="true">
+            {saveNote === "saving" ? "Saving…" : "Saved"}
+          </p>
+        ) : null}
+        {feedbackSpeech ? <SpeakButton text={feedbackSpeech} label="Read the feedback" /> : null}
         {phase === "correct" && why ? <p className="why-line">{why}</p> : null}
         {phase === "retry" ? <p className="feedback warm">Not quite. Try again.</p> : null}
         {phase === "correct" ? <p className="feedback good">That&apos;s right.</p> : null}
@@ -155,7 +184,11 @@ export function QuestionPractice({
           <AnswerFields
             shape={shape}
             values={values}
-            onChange={(name, value) => setValues((current) => ({ ...current, [name]: value }))}
+            onChange={(name, value) => {
+              const next = { ...values, [name]: value };
+              setValues(next);
+              onDraft?.(next.answer ?? "", next.remainder ?? "");
+            }}
             readOnly={finished}
             disabled={pending}
             inputRef={inputRef}
@@ -241,6 +274,10 @@ function WorkedExampleBlock({ example }: { example: WorkedExample }) {
       <p>
         Answer: <strong>{example.answer}</strong>
       </p>
+      <SpeakButton
+        text={`${example.prompt}. ${example.steps.join(". ")}. Answer: ${example.answer}.`}
+        label="Read the example"
+      />
     </aside>
   );
 }
@@ -257,12 +294,18 @@ function NumberKeypad({
   return (
     <div className="number-pad" role="group" aria-label="Number keypad">
       {DIGITS.map((digit) => (
-        <button key={digit} type="button" disabled={disabled} onClick={() => onDigit(digit)}>
+        <button
+          key={digit}
+          type="button"
+          aria-label={`Digit ${digit}`}
+          disabled={disabled}
+          onClick={() => onDigit(digit)}
+        >
           {digit}
         </button>
       ))}
       <span aria-hidden="true" />
-      <button type="button" disabled={disabled} onClick={() => onDigit("0")}>
+      <button type="button" aria-label="Digit 0" disabled={disabled} onClick={() => onDigit("0")}>
         0
       </button>
       <button type="button" data-key="delete" aria-label="Delete" disabled={disabled} onClick={onDelete}>
