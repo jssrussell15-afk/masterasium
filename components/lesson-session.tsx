@@ -102,6 +102,7 @@ export function LessonView({
       ) : null}
       {screen.kind === "question" ? (
         <QuestionPractice
+          key={screen.taskKey}
           questionId={screen.taskKey}
           eyebrow={`${screen.eyebrow} · ${screen.title}`}
           prompt={screen.prompt}

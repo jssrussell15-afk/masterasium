@@ -118,6 +118,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         />
       ) : (
         <QuestionPractice
+          key={question.questionId}
           questionId={question.questionId}
           eyebrow={`${kindLabel(question.kind)} · ${question.skillTitle}`}
           prompt={question.prompt}
