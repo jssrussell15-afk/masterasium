@@ -107,7 +107,7 @@ alter table public.children enable row level security;
 alter table public.skill_states enable row level security;
 alter table public.attempts enable row level security;
 alter table public.pending_questions enable row level security;
-alter table public notify_emails enable row level security;
+alter table public.notify_emails enable row level security;
 alter table public.digest_stubs enable row level security;
 
 create policy "parents read their profile"
@@ -193,9 +193,9 @@ create policy "parents own digest drafts"
   with check (parent_id = auth.uid());
 
 create policy "anyone can join the notify list"
-  on public notify_emails for insert
+  on public.notify_emails for insert
   to anon, authenticated
-  with check (email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$);
+  with check (email ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$');
 
 grant select, insert, update on public.profiles to authenticated;
 grant select, insert, update, delete on public.children to authenticated;
@@ -203,4 +203,4 @@ grant select, insert, update, delete on public.skill_states to authenticated;
 grant select, insert, update, delete on public.attempts to authenticated;
 grant select, insert, update, delete on public.pending_questions to authenticated;
 grant select, insert, update, delete on public.digest_stubs to authenticated;
-grant insert on public notify_emails to anon, authenticated;
+grant insert on public.notify_emails to anon, authenticated;
