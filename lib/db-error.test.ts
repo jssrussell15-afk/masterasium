@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  COLUMN_UPDATE_MESSAGE,
   friendlyDbError,
   GRADE_PROGRESS_SETUP_MESSAGE,
   STUDENT_LOGIN_SETUP_MESSAGE,
@@ -64,5 +65,45 @@ describe("friendlyDbError", () => {
         code: "23505",
       }),
     ).toBe("That username is already taken.");
+  });
+
+  it("uses calm copy for a missing column and keeps the table message for a missing relation", () => {
+    expect(
+      friendlyDbError({
+        message: 'column skill_states.streak does not exist',
+        code: "42703",
+      }),
+    ).toBe(COLUMN_UPDATE_MESSAGE);
+    expect(
+      friendlyDbError({
+        message: 'column "public.skill_states.consecutive_correct" does not exist',
+      }),
+    ).toBe(COLUMN_UPDATE_MESSAGE);
+    expect(friendlyDbError({ message: "undefined column", code: "42703" })).toBe(
+      COLUMN_UPDATE_MESSAGE,
+    );
+    expect(COLUMN_UPDATE_MESSAGE).not.toMatch(/001_init\.sql/);
+
+    expect(
+      friendlyDbError({
+        message: 'relation "public.skill_states" does not exist',
+      }),
+    ).toMatch(/001_init\.sql/);
+    expect(
+      friendlyDbError({
+        message: "Could not find the table public.skill_states in the schema cache",
+        code: "PGRST205",
+      }),
+    ).toMatch(/001_init\.sql/);
+    expect(
+      friendlyDbError({
+        message: "Could not find the table public.widgets in the schema cache",
+      }),
+    ).toBe("Could not find the table public.widgets in the schema cache");
+    expect(
+      friendlyDbError({
+        message: "function public.not_a_real_thing() does not exist",
+      }),
+    ).toBe("function public.not_a_real_thing() does not exist");
   });
 });

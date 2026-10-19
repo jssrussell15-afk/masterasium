@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
-import { homeFor, permissionForPath, roleFromSession } from "@/lib/auth/roles";
+import { currentStudentId } from "@/lib/auth/student-client";
+import { homeFor, permissionForPath, roleFromSession, type Role } from "@/lib/auth/roles";
 import { STUDENT_COOKIE } from "@/lib/auth/student-cookie";
 import { isSupabaseConfigured, requireSupabaseEnv } from "@/lib/supabase/env";
 
@@ -15,7 +16,8 @@ function isStudentPath(pathname: string): boolean {
 
 export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hasStudent = Boolean(request.cookies.get(STUDENT_COOKIE)?.value);
+  const studentToken = request.cookies.get(STUDENT_COOKIE)?.value?.trim() ?? "";
+  const hasStudent = Boolean(studentToken);
   const asRole = request.nextUrl.searchParams.get("as");
 
   if (!isSupabaseConfigured()) {
@@ -68,21 +70,40 @@ export async function updateSession(request: NextRequest) {
     return redirectWithCookies(request, "/login", supabaseResponse, "?as=student");
   }
 
+  // Login and signup are the only routes that bounce a student cookie away.
+  // Confirm the token here. Other routes keep the cookie check so this call
+  // is not added to every request. The header cannot reuse this result:
+  // proxy runs in its own invocation, before the page render.
+  const authRole =
+    pathname === "/login" || pathname === "/signup"
+      ? await roleForAuthPage(studentToken, signedIn)
+      : role;
+
   if (pathname === "/signup") {
-    if (role === "student") return redirectWithCookies(request, homeFor("student"), supabaseResponse);
-    if (role === "parent") return redirectWithCookies(request, homeFor("parent"), supabaseResponse);
+    if (authRole === "student") return redirectWithCookies(request, homeFor("student"), supabaseResponse);
+    if (authRole === "parent") return redirectWithCookies(request, homeFor("parent"), supabaseResponse);
   }
 
   if (pathname === "/login") {
-    if (role === "student" && asRole !== "parent") {
+    if (authRole === "student" && asRole !== "parent") {
       return redirectWithCookies(request, homeFor("student"), supabaseResponse);
     }
-    if (role === "parent" && asRole !== "student") {
+    if (authRole === "parent" && asRole !== "student") {
       return redirectWithCookies(request, homeFor("parent"), supabaseResponse);
     }
   }
 
   return supabaseResponse;
+}
+
+async function roleForAuthPage(studentToken: string, hasParent: boolean): Promise<Role | null> {
+  if (!studentToken) return roleFromSession({ hasStudent: false, hasParent });
+  try {
+    const childId = await currentStudentId(studentToken);
+    return roleFromSession({ hasStudent: Boolean(childId), hasParent });
+  } catch {
+    return roleFromSession({ hasStudent: false, hasParent });
+  }
 }
 
 function redirectWithCookies(
