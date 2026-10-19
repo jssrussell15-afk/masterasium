@@ -180,7 +180,8 @@ async function markPractice(
     feedbackFromMark(existing),
     mode === "show-how" ? { type: "show-how" } : { type: "check", correct },
   );
-  const mark = markFromState(result.state, existing, given, mode === "show-how");
+  const showedExample = String(formData.get("openedExample") ?? "") === "1";
+  const mark = markFromState(result.state, existing, given, mode === "show-how", showedExample);
   if (!mark) return previous;
 
   const { error: updateError } = await supabase
@@ -238,6 +239,7 @@ async function advancePractice(
     kind: storedPlan.kind,
     today,
     rollbackCard: storedPlan.rollbackSkillId ? cardFor(cards, storedPlan.rollbackSkillId) : null,
+    showedExample: mark.showedExample === true,
   });
   let nextCard = applied.card;
   let note: string | undefined;

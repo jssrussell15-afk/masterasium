@@ -37,7 +37,8 @@ function asHome(skill: Skill, note: string): HomeSkill {
 
 /**
  * Three short lists for the student home.
- * Assigned is the path plus review the grade still owes.
+ * Assigned is the path plus earlier skills that are due.
+ * Notes stay free of the word review.
  * Recommended is other skills worth a try, never a copy of assigned.
  */
 export function studentHome(input: {
@@ -88,16 +89,7 @@ export function studentHome(input: {
     assigned: assignedIds.flatMap((id) => {
       const skill = skills.find((item) => item.id === id) ?? skillById(id);
       if (!skill) return [];
-      const learn = readLearn(input.cards.find((card) => card.skillId === skill.id)?.fsrs);
-      const due = isReviewDue(learn, input.today);
-      const note =
-        skill.id === focus.id
-          ? "Next in this grade"
-          : due && !learn.needsReview
-            ? "Review today"
-            : due
-              ? "Assigned for another look"
-              : "Next in this grade";
+      const note = skill.id === focus.id ? "Next in this grade" : skill.title;
       return [asHome(skill, note)];
     }),
     recommended: recommendedIds.flatMap((id) => {

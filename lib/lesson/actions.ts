@@ -6,7 +6,7 @@ import { friendlyDbError } from "@/lib/db-error";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import { lessonById } from "@/lib/lesson/catalog";
-import { explainMiss, reduceLesson, reviewPlanDates, settleLessonFeedback } from "@/lib/lesson/flow";
+import { explainMiss, reduceLesson, settleLessonFeedback } from "@/lib/lesson/flow";
 import { holdToMark, isHoldNote, packHold, readHold } from "@/lib/lesson/hold";
 import { buildLessonScreen, lessonTask, type LessonScreen } from "@/lib/lesson/screen";
 import { feedbackFromMark, markFromState, reduceFeedback } from "@/lib/practice/feedback";
@@ -25,6 +25,7 @@ import { readLearn, writeLearn } from "@/lib/practice/memory";
 import { givenAnswer } from "@/lib/practice/parts";
 import { cardFor, loadCards } from "@/lib/practice/session";
 import { recordAttempt, type SkillCard } from "@/lib/practice/scheduler";
+import { armFirstRecall } from "@/lib/practice/review";
 import { skillById } from "@/lib/practice/skills";
 
 export type LessonClientState = {
@@ -166,13 +167,9 @@ export async function lessonAction(
       const recorded = recordAttempt(current, correct);
       const learn = { ...readLearn(recorded.fsrs) };
       if (stepped.justCompleted) {
-        const plan = reviewPlanDates(today);
         learn.lessonHold = undefined;
         learn.lessonCheck = "passed";
-        learn.reviewPlan = plan;
-        learn.reviewDueAt = plan[0];
-        learn.needsReview = undefined;
-        learn.reviewHits = undefined;
+        armFirstRecall(learn, today);
       } else {
         learn.lessonHold = true;
       }

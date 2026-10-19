@@ -13,8 +13,8 @@ import { allowsScratchpad } from "@/lib/practice/surface";
 import type { PracticeState, PracticeView, QuestionKind } from "@/lib/practice/types";
 import type { FeedbackPhase } from "@/lib/practice/feedback";
 
-function kindLabel(kind: QuestionKind): string {
-  if (kind === "review") return "Review";
+function kindLabel(kind: QuestionKind): string | null {
+  if (kind === "review") return null;
   if (kind === "check") return "Show what you know";
   if (kind === "support") return "Practice";
   return "Focus";
@@ -120,7 +120,12 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         <QuestionPractice
           key={question.questionId}
           questionId={question.questionId}
-          eyebrow={`${kindLabel(question.kind)} · ${question.skillTitle}`}
+          eyebrow={
+            kindLabel(question.kind)
+              ? `${kindLabel(question.kind)} · ${question.skillTitle}`
+              : question.skillTitle
+          }
+          onRamp={question.onRamp}
           prompt={question.prompt}
           responseHint={question.responseHint}
           shape={question.shape}

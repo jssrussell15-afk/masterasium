@@ -1,7 +1,7 @@
 import { selectorGrades, type GradeAccess } from "@/lib/practice/grade-access";
 import type { SupportedGrade } from "@/lib/grades";
 import { readLearn } from "@/lib/practice/memory";
-import { isReviewDue } from "@/lib/practice/review";
+import { isReviewDue, reviewCandidateIndex } from "@/lib/practice/review";
 import { skillsForGrade, type Skill } from "@/lib/practice/skills";
 import type { SkillProgress } from "@/lib/practice/types";
 
@@ -18,6 +18,7 @@ export type SkillCard = {
   skillId: string;
   attempted: number;
   correct: number;
+  /** Correct answers in a row. Saved as consecutive_correct, never a streak column. */
   streak: number;
   fsrs: unknown;
 };
@@ -27,7 +28,7 @@ export type SchedulerInput = {
   cards: SkillCard[];
   /**
    * Questions already answered in the running count.
-   * 0 asks for the focus skill. Counts 3 and 7 of every 8 can review a mastered skill.
+   * 0 asks for the current skill. Questions 3, 6, and 9 of each 10 can weave a due skill.
    */
   sessionCount: number;
   /** Toronto calendar day (YYYY-MM-DD). Omitted, date-due reviews stay quiet. */
@@ -97,20 +98,46 @@ function pathFrom(skills: Skill[], startSkillId: string | undefined): { path: Sk
   return { path, anchor };
 }
 
+/**
+ * Confirmed skills that are due, including ones before the placement anchor
+ * when the child has already practised them. Not-due mastered skills stay out.
+ */
+function reviewCandidates(
+  skills: Skill[],
+  cards: Map<string, SkillCard>,
+  today: string | undefined,
+): Skill[] {
+  return skills
+    .filter((skill) => {
+      const card = cards.get(skill.id);
+      if (!card || card.attempted < 1 || !isConfirmed(card)) return false;
+      return isReviewDue(readLearn(card.fsrs), today);
+    })
+    .sort((left, right) => compareReview(left, right, cards));
+}
+
+function compareReview(left: Skill, right: Skill, cards: Map<string, SkillCard>): number {
+  const leftLearn = readLearn(cards.get(left.id)?.fsrs);
+  const rightLearn = readLearn(cards.get(right.id)?.fsrs);
+  const leftKey = leftLearn.needsReview ? "0000-00-00" : (leftLearn.reviewDueAt ?? "9999-99-99");
+  const rightKey = rightLearn.needsReview ? "0000-00-00" : (rightLearn.reviewDueAt ?? "9999-99-99");
+  if (leftKey !== rightKey) return leftKey < rightKey ? -1 : 1;
+  const byAccuracy = accuracyOf(cards.get(left.id)) - accuracyOf(cards.get(right.id));
+  if (byAccuracy !== 0) return byAccuracy;
+  return left.order - right.order;
+}
+
 export class AccuracyScheduler implements PracticeScheduler {
   chooseSkill(input: SchedulerInput): Skill {
     const skills = skillsForGrade(input.grade);
     const { path, anchor } = pathFrom(skills, input.startSkillId);
     const cards = new Map(input.cards.map((card) => [card.skillId, card]));
-    const mastered = path.filter((skill) => isConfirmed(cards.get(skill.id)));
 
-    const reviewTurn =
-      input.sessionCount > 0 && (input.sessionCount % 8 === 3 || input.sessionCount % 8 === 7);
-    if (reviewTurn && mastered.length > 0) {
-      const due = mastered.filter((skill) =>
-        isReviewDue(readLearn(cards.get(skill.id)?.fsrs), input.today),
-      );
-      return lowestAccuracy(due.length > 0 ? due : mastered, cards);
+    const slot = reviewCandidateIndex(input.sessionCount);
+    if (slot != null) {
+      const due = reviewCandidates(skills, cards, input.today);
+      const pick = due[slot];
+      if (pick) return pick;
     }
 
     for (const skill of path) {

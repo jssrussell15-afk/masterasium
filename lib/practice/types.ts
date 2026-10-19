@@ -41,6 +41,12 @@ export type QuestionView = {
   hints?: HintLadder;
   /** A different worked example of this kind, or null when one cannot be checked. */
   example?: WorkedExample | null;
+  /** Shown after a missed earlier skill. No review label and no score. */
+  onRamp?: {
+    line: string;
+    step: string | null;
+    handoff: string;
+  };
   /** Restored after a refresh so a retry does not become a new first try. */
   resume?: {
     phase: Exclude<FeedbackPhase, "answering">;

@@ -175,25 +175,29 @@ describe("grade 3 lessons", () => {
       fsrs: writeLearn(null, {
         lessonCheck: "passed",
         reviewDueAt: today,
-        reviewPlan: reviewPlanDates(addDays(today, -1)),
+        recallStep: 0,
       }),
     };
     expect(
-      accuracyScheduler.chooseSkill({ grade: 3, cards: [place], sessionCount: 3, today }).id,
+      accuracyScheduler.chooseSkill({ grade: 3, cards: [place], sessionCount: 2, today }).id,
     ).toBe("g3-place");
-    expect(accuracyScheduler.chooseSkill({ grade: 3, cards: [place], sessionCount: 4, today }).id).toBe(
+    expect(accuracyScheduler.chooseSkill({ grade: 3, cards: [place], sessionCount: 3, today }).id).toBe(
       "g3-add-sub",
     );
 
     const cleared = applyLearning({ card: place, correct: true, kind: "review", today }).card;
     const learn = readLearn(cleared.fsrs);
-    expect(learn.reviewDueAt).toBe(addDays(today, 6));
+    expect(learn.reviewDueAt).toBe(addDays(today, 3));
+    expect(learn.recallStep).toBe(1);
+    expect(learn.recallMark).toBe("day");
     expect(learn.needsReview).toBeUndefined();
-    expect(gapsToClose(learn.reviewPlan, today, [{ gap: "day", dueOn: today }])).toEqual(["day"]);
+    expect(learn.reviewPlan).toBeUndefined();
+    expect(gapsToClose([addDays(today, 7)], today, [{ gap: "day", dueOn: today }])).toEqual(["day"]);
 
     const missed = applyLearning({ card: place, correct: false, kind: "review", today }).card;
     expect(readLearn(missed.fsrs).needsReview).toBe(true);
-    expect(readLearn(missed.fsrs).reviewPlan).toEqual(readLearn(place.fsrs).reviewPlan);
+    expect(readLearn(missed.fsrs).recallStep).toBe(0);
+    expect(readLearn(missed.fsrs).reviewPlan).toBeUndefined();
   });
 
   it("ends on a calm sentence with no points or a win", () => {
