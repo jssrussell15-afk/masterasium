@@ -1,7 +1,8 @@
 /**
- * What happens after Check, Hint, Show me an example, Show me how, and Next.
+ * What happens after Check, Help me with this, Show me an example, Show me, and Next.
  * Check never advances. Only Next does, and it clears the typed answer.
- * The first check (or Show me how, if they have not checked) is the try that counts.
+ * The first check (or Show me, if they have not checked) is the try that counts.
+ * Show me records that try as not correct.
  */
 
 export type FeedbackPhase = "answering" | "retry" | "correct" | "revealed";
@@ -33,6 +34,7 @@ export type FeedbackEvent =
   | { type: "hint" }
   | { type: "example" }
   | { type: "show-how" }
+  | { type: "show-me" }
   | { type: "next" };
 
 export type FeedbackResult = {
@@ -157,7 +159,7 @@ export function reduceFeedback(state: FeedbackState, event: FeedbackEvent): Feed
     );
   }
 
-  if (event.type === "show-how") {
+  if (event.type === "show-how" || event.type === "show-me") {
     if (state.phase === "correct" || state.phase === "revealed") return stay(state);
     const decides = state.firstTryCorrect == null;
     return stay(
@@ -166,7 +168,7 @@ export function reduceFeedback(state: FeedbackState, event: FeedbackEvent): Feed
         phase: "revealed",
         firstTryCorrect: false,
       },
-      "Here's how.",
+      event.type === "show-me" ? "Show me." : "Here's how.",
       decides ? false : null,
     );
   }

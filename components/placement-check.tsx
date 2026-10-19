@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { SpeakLine } from "@/components/speak-line";
+import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { finishPlacement, type PlacementState } from "@/lib/practice/placement-actions";
 import {
   beginPlacement,
@@ -56,8 +56,12 @@ export function PlacementCheck({ childId, grade }: { childId: string; grade: Sup
   if (phase === "intro") {
     return (
       <section className="placement-screen" aria-label="Quick check">
-        <SpeakLine as="h1" className="display text-4xl" text={PLACEMENT_INTRO_TITLE} />
-        <SpeakLine className="hint" text={PLACEMENT_INTRO_HELP} />
+        <ListenPassage
+          parts={[
+            { text: PLACEMENT_INTRO_TITLE, as: "h1", className: "display text-4xl" },
+            { text: PLACEMENT_INTRO_HELP, as: "p", className: "hint" },
+          ]}
+        />
         <button className="btn btn-primary" type="button" onClick={() => setPhase("ask")}>
           {PLACEMENT_READY}
         </button>
@@ -69,7 +73,7 @@ export function PlacementCheck({ childId, grade }: { childId: string; grade: Sup
     return (
       <section className="placement-screen" aria-label="Quick check">
         <div role="status" aria-live="polite">
-          <SpeakLine as="h1" className="display text-4xl" text={PLACEMENT_GOT_IT} />
+          <ListenPassage parts={[{ text: PLACEMENT_GOT_IT, as: "h1", className: "display text-4xl" }]} />
         </div>
       </section>
     );
@@ -82,7 +86,7 @@ export function PlacementCheck({ childId, grade }: { childId: string; grade: Sup
         <form action={action} className="grid gap-4">
           <input type="hidden" name="childId" value={childId} />
           <input type="hidden" name="marks" value={marks.join(",")} />
-          <SpeakLine as="h1" className="display text-4xl" text={line} />
+          <ListenPassage parts={[{ text: line, as: "h1", className: "display text-4xl" }]} />
           <button className="btn btn-primary" type="submit" disabled={pending}>
             {pending ? "One moment…" : PLACEMENT_BEGIN}
           </button>
@@ -100,21 +104,35 @@ export function PlacementCheck({ childId, grade }: { childId: string; grade: Sup
 
   return (
     <section className="placement-screen" aria-label="Quick check">
-      <SpeakLine as="h1" className={item.prompt.length > 60 ? "prompt prompt-long" : "prompt"} text={item.prompt} />
-      {item.responseHint ? <SpeakLine className="hint" text={item.responseHint} /> : null}
+      <ListenPassage
+        parts={[
+          {
+            text: item.prompt,
+            as: "h1",
+            className: item.prompt.length > 60 ? "prompt prompt-long" : "prompt",
+          },
+        ]}
+      />
+      {item.responseHint ? <p className="hint">{item.responseHint}</p> : null}
       {item.choices ? (
         <div className="picture-choices">
-          {item.choices.map((choice) => (
-            <button
-              key={choice.id}
-              type="button"
-              className="picture-choice"
-              aria-label={choice.label}
-              onClick={() => give(choice.id)}
-            >
-              <FractionPicture parts={choice.parts} shaded={choice.shaded} />
-            </button>
-          ))}
+          {item.choices.map((choice) =>
+            grade <= 2 ? (
+              <ChoiceOption key={choice.id} text={choice.label} showListen onPick={() => give(choice.id)}>
+                <FractionPicture parts={choice.parts} shaded={choice.shaded} />
+              </ChoiceOption>
+            ) : (
+              <button
+                key={choice.id}
+                type="button"
+                className="picture-choice"
+                aria-label={choice.label}
+                onClick={() => give(choice.id)}
+              >
+                <FractionPicture parts={choice.parts} shaded={choice.shaded} />
+              </button>
+            ),
+          )}
         </div>
       ) : (
         <div className="grid gap-3">
@@ -156,7 +174,7 @@ export function PlacementCheck({ childId, grade }: { childId: string; grade: Sup
         {PLACEMENT_UNSURE_LABEL}
       </button>
       {needAnswer ? (
-        <SpeakLine className="hint" text="Type an answer, or tap I'm not sure yet." />
+        <p className="hint">Type an answer, or tap I&apos;m not sure yet.</p>
       ) : null}
     </section>
   );

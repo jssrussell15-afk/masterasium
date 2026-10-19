@@ -336,6 +336,10 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           pending={pending}
           saveNote={shownSave}
           assist={question.assist}
+          walk={question.walk ?? null}
+          grade={grade}
+          autoRead={view.autoRead ?? grade <= 2}
+          choices={question.choices ?? null}
           aside={allowsScratchpad(grade) ? <Scratchpad /> : undefined}
           action={formAction}
           fields={fields}

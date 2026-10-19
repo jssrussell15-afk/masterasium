@@ -5,6 +5,7 @@ import { PracticeSession } from "@/components/practice-session";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
 import { requireStudent } from "@/lib/auth/student";
+import { readsAloudAutomatically } from "@/lib/children/read-aloud";
 import { torontoDate } from "@/lib/digest/build";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
 import { loadPlacement } from "@/lib/practice/placement-store";
@@ -74,6 +75,7 @@ async function PracticeLoader({
         recap: null,
         requestedGrade: access.requested,
         today: torontoDate(),
+        autoRead: readsAloudAutomatically(access.working, data.read_questions_aloud),
       }}
     />
   );

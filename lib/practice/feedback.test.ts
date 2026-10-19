@@ -55,6 +55,32 @@ describe("practice feedback", () => {
     expect(second.announcement).toBe("Here's how.");
   });
 
+  it("counts Show me as not a first-try success, then the next question can be one", () => {
+    const opened = reduceFeedback(freshFeedback(), { type: "show-me" });
+    expect(opened.advance).toBe(false);
+    expect(opened.state.phase).toBe("revealed");
+    expect(opened.state.firstTryCorrect).toBe(false);
+    expect(opened.record).toBe(false);
+    expect(opened.announcement).toBe("Show me.");
+
+    const again = reduceFeedback(opened.state, { type: "show-me" });
+    expect(again.record).toBeNull();
+    expect(again.state.firstTryCorrect).toBe(false);
+
+    const missed = check(freshFeedback(), false);
+    const second = check(missed.state, false);
+    expect(second.state.phase).toBe("revealed");
+    expect(second.state.firstTryCorrect).toBe(false);
+    expect(second.record).toBeNull();
+
+    const cleared = reduceFeedback(opened.state, { type: "next" });
+    expect(cleared.advance).toBe(true);
+    expect(cleared.state.firstTryCorrect).toBeNull();
+    const followUp = check(cleared.state, true);
+    expect(followUp.record).toBe(true);
+    expect(followUp.state.firstTryCorrect).toBe(true);
+  });
+
   it("counts Show me how as not a first-try success, then waits for Next", () => {
     const revealed = reduceFeedback(freshFeedback(), { type: "show-how" });
     expect(revealed.advance).toBe(false);

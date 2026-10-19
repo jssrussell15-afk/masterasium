@@ -14,6 +14,8 @@ export type RosterChild = {
   workingGrade: number;
   nextUnlocked: boolean;
   requestedGrade: number | null;
+  /** Null uses the grade default until a parent chooses. */
+  readQuestionsAloud: boolean | null;
 };
 
 type BasicRow = {
@@ -45,6 +47,7 @@ function asRoster(row: BasicRow, extra?: ExtraRow): RosterChild {
     workingGrade: access?.working ?? row.grade,
     nextUnlocked: access?.nextUnlocked ?? false,
     requestedGrade: access?.requested ?? null,
+    readQuestionsAloud: null,
   };
 }
 
@@ -76,7 +79,11 @@ export async function loadRoster(
   if (!extra.error) {
     const byId = new Map(((extra.data ?? []) as ExtraRow[]).map((row) => [row.id, row]));
     return {
-      children: basics.map((row) => asRoster(row, byId.get(row.id))),
+      children: await withReadAloud(
+        supabase,
+        parentId,
+        basics.map((row) => asRoster(row, byId.get(row.id))),
+      ),
       error: null,
       studentSetup: null,
       gradeSetup: null,
@@ -112,10 +119,30 @@ export async function loadRoster(
   for (const row of progressRows) byId.set(row.id, { ...byId.get(row.id), ...row });
 
   return {
-    children: basics.map((row) => asRoster(row, byId.get(row.id))),
+    children: await withReadAloud(
+      supabase,
+      parentId,
+      basics.map((row) => asRoster(row, byId.get(row.id))),
+    ),
     error: null,
     studentSetup: names?.error && isStudentLoginMissing(names.error) ? friendlyDbError(names.error) : studentSetup,
     gradeSetup:
       progress?.error && isGradeProgressMissing(progress.error) ? friendlyDbError(progress.error) : gradeSetup,
   };
+}
+
+async function withReadAloud(
+  supabase: SupabaseClient,
+  parentId: string,
+  children: RosterChild[],
+): Promise<RosterChild[]> {
+  const aloud = await supabase.from("children").select("id, read_questions_aloud").eq("parent_id", parentId);
+  if (aloud.error || !aloud.data) return children;
+  const byId = new Map(
+    (aloud.data as { id: string; read_questions_aloud: boolean | null }[]).map((row) => [
+      row.id,
+      row.read_questions_aloud,
+    ]),
+  );
+  return children.map((child) => ({ ...child, readQuestionsAloud: byId.get(child.id) ?? null }));
 }

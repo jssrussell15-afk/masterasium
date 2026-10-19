@@ -180,7 +180,7 @@ describe("placement screens", () => {
     expect(intro).toContain("Let&#x27;s do a quick check so we know where to start.");
     expect(intro).toContain(PLACEMENT_INTRO_HELP);
     expect(intro).toContain("I&#x27;m ready");
-    expect(intro).toContain('aria-label="Read aloud"');
+    expect(intro).toContain(">Listen<");
     expect(intro.toLowerCase()).not.toContain("score");
     expect(intro).not.toContain("Grade 2");
     expect(intro).not.toContain(PLACEMENT_GOT_IT);

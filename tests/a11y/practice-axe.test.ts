@@ -42,6 +42,10 @@ function installDom() {
   class Utterance {
     text = "";
     lang = "";
+    rate: number | undefined;
+    onboundary: ((event: { name?: string; charIndex?: number }) => void) | null = null;
+    onend: (() => void) | null = null;
+    onerror: ((event: { error: string }) => void) | null = null;
     constructor(text: string) {
       this.text = text;
     }
@@ -74,6 +78,15 @@ async function render(node: ReactNode) {
   return { window, root };
 }
 
+const walk = {
+  answer: "9",
+  steps: [
+    { target: "4", caption: "Start with four" },
+    { target: "+", caption: "Add the next" },
+    { target: "5", caption: "Count the rest" },
+  ],
+};
+
 describe("practice accessibility", () => {
   it("keeps the keypad in the tab order and uses a 48px tap size", () => {
     const css = readFileSync("app/globals.css", "utf8");
@@ -82,9 +95,11 @@ describe("practice accessibility", () => {
     expect(css).toMatch(/\.number-pad\s*\{[^}]*display:\s*grid/);
     expect(css).not.toMatch(/\.number-pad\s*\{[^}]*display:\s*none/);
     expect(css).toContain("min-height: 48px");
+    expect(css).toMatch(/\.listen\s*\{[^}]*min-height:\s*var\(--tap\)/);
+    expect(css).toContain("#d3ebf7");
   });
 
-  it("names the practice controls and keeps the speaker available", async () => {
+  it("names the practice controls and keeps one Listen button", async () => {
     const { window, root } = await render(
       createElement(QuestionPractice, {
         questionId: "q1",
@@ -104,9 +119,12 @@ describe("practice accessibility", () => {
       }),
     );
     const html = window.document.body.innerHTML;
-    expect(html).toContain("Read the question");
-    expect(html).toContain("Read the hint");
-    expect(html).toContain("Read the feedback");
+    const listens = [...window.document.querySelectorAll("button.listen")];
+    expect(listens).toHaveLength(1);
+    expect(listens[0]?.textContent).toContain("Listen");
+    expect(html).not.toContain(">Speak<");
+    expect(html).toContain("Write one number.");
+    expect(html).toContain("Start at 4 and count on.");
     expect(html).toContain("Digit 5");
     expect(html).toContain('aria-label="Number keypad"');
     const results = await axe.run(window.document.body, {
@@ -114,6 +132,79 @@ describe("practice accessibility", () => {
     });
     expect(results.violations).toEqual([]);
     await act(async () => root.unmount());
+  });
+
+  it("reads the open Show me step from one Listen button in the caption bar", async () => {
+    const spoken: { text: string; lang: string; rate?: number }[] = [];
+    const { window, root } = await render(
+      createElement(QuestionPractice, {
+        questionId: "walk-1",
+        eyebrow: "Focus · Add within 20",
+        prompt: "What is 4 + 5?",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "numeric" },
+        hint: null,
+        example: null,
+        progress: null,
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        action: () => undefined,
+        walk,
+        walkStart: { step: 0 },
+      }),
+    );
+    const buttons = [...window.document.querySelectorAll("button.listen")];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]?.textContent).toContain("Listen");
+    expect(window.document.body.innerHTML).toContain("Step 1 of 3");
+    expect(window.document.body.innerHTML).toContain(">Back<");
+    expect(window.document.body.innerHTML).toContain(">Next<");
+    expect(window.document.body.innerHTML).not.toContain(">Speak<");
+    window.speechSynthesis.speak = (utterance: { text: string; lang: string; rate?: number }) => {
+      spoken.push(utterance);
+    };
+    await act(async () => {
+      buttons[0]?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(spoken[0]?.text).toBe("Start with four");
+    expect(spoken[0]?.lang).toBe("en-CA");
+    expect(spoken[0]?.rate).not.toBe(0.92);
+    await act(async () => root.unmount());
+
+    const handoff = await render(
+      createElement(QuestionPractice, {
+        questionId: "walk-2",
+        eyebrow: "Focus · Add within 20",
+        prompt: "What is 4 + 5?",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "numeric" },
+        hint: null,
+        example: null,
+        progress: null,
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        action: () => undefined,
+        walk,
+        walkStart: { step: 2, handoff: true },
+      }),
+    );
+    const turn = handoff.window.document.querySelector("button.listen");
+    const heard: { text: string; lang: string }[] = [];
+    handoff.window.speechSynthesis.speak = (utterance: { text: string; lang: string }) => {
+      heard.push(utterance);
+    };
+    await act(async () => {
+      turn?.dispatchEvent(new handoff.window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(handoff.window.document.body.textContent).toContain("Your turn: try one like it");
+    expect(heard[0]?.text).toBe("Your turn: try one like it");
+    expect(heard[0]?.lang).toBe("en-CA");
+    expect(handoff.window.document.querySelectorAll("button.listen")).toHaveLength(1);
+    await act(async () => handoff.root.unmount());
   });
 
   it("names the intro card and the sign-in pad", async () => {
@@ -126,7 +217,9 @@ describe("practice accessibility", () => {
         onViewed: () => undefined,
       }),
     );
-    expect(intro.window.document.body.innerHTML).toContain("Read the introduction");
+    const listens = intro.window.document.querySelectorAll("button.listen");
+    expect(listens).toHaveLength(1);
+    expect(listens[0]?.textContent).toContain("Listen");
     expect(intro.window.document.body.innerHTML).toContain(">Start<");
     const introResults = await axe.run(intro.window.document.body, {
       rules: { "color-contrast": { enabled: false }, region: { enabled: false } },

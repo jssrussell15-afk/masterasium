@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { SpeakButton } from "@/components/speak-line";
+import { ListenPassage } from "@/components/listen";
 
 export function IntroModal({
   title,
@@ -21,15 +21,6 @@ export function IntroModal({
   const onFinishedEvent = useEffectEvent(onFinished);
   const onViewedEvent = useEffectEvent(onViewed);
   const [showAnswer, setShowAnswer] = useState(false);
-  const spoken = [
-    title,
-    ...sentences,
-    example?.prompt ?? "",
-    ...(example?.steps ?? []),
-    showAnswer && example ? `Answer: ${example.answer}.` : "",
-  ]
-    .filter(Boolean)
-    .join(". ");
 
   useEffect(() => {
     onViewedEvent();
@@ -51,17 +42,12 @@ export function IntroModal({
   return (
     <dialog ref={dialog} className="intro-dialog" aria-labelledby="intro-title">
       <section className="intro-card">
-        <div className="prompt-row">
-          <h1 id="intro-title" className="display">
-            {title}
-          </h1>
-          <SpeakButton text={spoken} label="Read the introduction" />
-        </div>
-        {sentences.map((sentence) => (
-          <p key={sentence} className="intro-sentence">
-            {sentence}
-          </p>
-        ))}
+        <ListenPassage
+          parts={[
+            { text: title, as: "h1", className: "display", id: "intro-title" },
+            ...sentences.map((sentence) => ({ text: sentence, as: "p" as const, className: "intro-sentence" })),
+          ]}
+        />
         {example ? (
           <div className="intro-example-block">
             <p className="example-prompt">{example.prompt}</p>

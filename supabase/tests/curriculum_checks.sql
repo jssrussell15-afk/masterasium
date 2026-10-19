@@ -19,3 +19,4 @@ begin
 end $$;
 
 \ir attempt_idempotency_rls.sql
+\ir read_questions_aloud_rls.sql

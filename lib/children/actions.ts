@@ -16,6 +16,7 @@ import {
   signupPracticePath,
   signupReadyPath,
 } from "@/lib/children/signup-practice";
+import { isReadAloudMissing } from "@/lib/children/read-aloud";
 import { friendlyDbError } from "@/lib/db-error";
 import { isSupportedGrade } from "@/lib/grades";
 import { ensureProfile, requireUser } from "@/lib/auth/session";
@@ -370,4 +371,26 @@ export async function decideGradeRequest(
   });
   if (error) return { error: friendlyDbError(error) };
   redirect(approve ? "/settings?notice=grade-approved" : "/settings?notice=grade-declined");
+}
+
+export async function setReadQuestionsAloud(
+  _previous: ChildState,
+  formData: FormData,
+): Promise<ChildState> {
+  const { supabase } = await requireUser();
+  const childId = String(formData.get("childId") ?? "");
+  const enabled = formData.getAll("enabled").includes("1");
+  if (!childId) return { error: "Choose a child first." };
+
+  const { error } = await supabase.rpc("set_read_questions_aloud", {
+    p_child_id: childId,
+    p_value: enabled,
+  });
+  if (error) {
+    if (isReadAloudMissing(error)) {
+      return { error: "Read aloud is not ready yet. Practice can start once the database is updated." };
+    }
+    return { error: friendlyDbError(error) };
+  }
+  redirect("/settings?notice=read-aloud");
 }

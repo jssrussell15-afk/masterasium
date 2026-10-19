@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { GradeSettings } from "@/components/grade-settings";
+import { ReadAloudSetting } from "@/components/read-aloud-setting";
 import { SetPinForm } from "@/components/student-access-forms";
 import { SignOutButton } from "@/components/sign-out-button";
 import { Shell } from "@/components/site-header";
@@ -66,6 +67,11 @@ async function Settings({
           Grade request cleared. Practice stays in the current grade.
         </p>
       ) : null}
+      {notice === "read-aloud" ? (
+        <p className="feedback good" role="status">
+          Read aloud updated.
+        </p>
+      ) : null}
 
       <section className="card grid gap-2">
         <h2 className="text-lg font-semibold">Email</h2>
@@ -93,6 +99,12 @@ async function Settings({
               {child.workingGrade === child.grade ? "" : ` · Working in Grade ${child.workingGrade}`}
             </p>
           </div>
+          <ReadAloudSetting
+            childId={child.id}
+            grade={child.workingGrade}
+            stored={child.readQuestionsAloud}
+            saved={notice === "read-aloud"}
+          />
           {roster.gradeSetup ? null : (
             <GradeSettings
               childId={child.id}

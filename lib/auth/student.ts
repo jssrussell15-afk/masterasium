@@ -4,6 +4,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { createStudentClient } from "@/lib/auth/student-client";
+import { isReadAloudMissing } from "@/lib/children/read-aloud";
 import { friendlyDbError, isGradeProgressMissing } from "@/lib/db-error";
 import { STUDENT_COOKIE, studentCookieOptions } from "@/lib/auth/student-cookie";
 import { isSupabaseConfigured, requireSupabaseEnv } from "@/lib/supabase/env";
@@ -17,6 +18,7 @@ export type StudentChild = {
   working_grade: number | null;
   next_grade_unlocked: boolean;
   requested_grade: number | null;
+  read_questions_aloud: boolean | null;
 };
 
 export function createAnonClient(): SupabaseClient {
@@ -63,11 +65,19 @@ export async function requireStudent(): Promise<
   const supabase = createStudentClient(token);
   const full = await supabase
     .from("children")
-    .select("id, first_name, grade, working_grade, next_grade_unlocked, requested_grade")
+    .select("id, first_name, grade, working_grade, next_grade_unlocked, requested_grade, read_questions_aloud")
     .maybeSingle();
 
   let data = full.data;
   let error = full.error;
+  if (error && isReadAloudMissing(error)) {
+    const again = await supabase
+      .from("children")
+      .select("id, first_name, grade, working_grade, next_grade_unlocked, requested_grade")
+      .maybeSingle();
+    data = again.data ? { ...again.data, read_questions_aloud: null } : null;
+    error = again.error;
+  }
   if (error && isGradeProgressMissing(error)) {
     const basic = await supabase.from("children").select("id, first_name, grade").maybeSingle();
     data = basic.data
@@ -76,6 +86,7 @@ export async function requireStudent(): Promise<
           working_grade: null,
           next_grade_unlocked: false,
           requested_grade: null,
+          read_questions_aloud: null,
         }
       : null;
     error = basic.error;

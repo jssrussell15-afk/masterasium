@@ -55,3 +55,10 @@ export function warmUpSkill(grade: SupportedGrade): Skill {
 export function skillById(id: string): Skill | undefined {
   return SKILLS.find((skill) => skill.id === id);
 }
+
+/** Practice and Show me both label a skill by its title, never its id. */
+export function focusEyebrow(skillId: string): string {
+  const skill = skillById(skillId);
+  if (!skill) throw new Error(`Missing skill ${skillId}.`);
+  return `Focus · ${skill.title}`;
+}

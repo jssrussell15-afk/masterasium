@@ -1,3 +1,4 @@
+import { ReadAloudSetting } from "@/components/read-aloud-setting";
 import { SetPinForm } from "@/components/student-access-forms";
 import { Shell } from "@/components/site-header";
 
@@ -25,8 +26,9 @@ export default async function SettingsSamplePage({
         <section className="card grid gap-4">
           <div>
             <h2 className="text-2xl font-semibold">Sam</h2>
-            <p className="hint mt-1">Enrolled in Grade 3</p>
+            <p className="hint mt-1">Enrolled in Grade 1 · Working in Grade 1</p>
           </div>
+          <ReadAloudSetting childId="00000000-0000-4000-8000-000000000001" grade={1} stored={null} />
           <div className="grid gap-3">
             <h3 className="text-xl font-semibold">Student sign-in</h3>
             <SetPinForm

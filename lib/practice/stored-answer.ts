@@ -1,5 +1,6 @@
 import type { AttemptMark } from "@/lib/practice/feedback";
 import type { QuestionKind } from "@/lib/practice/types";
+import type { Walkthrough } from "@/lib/practice/walk";
 
 export type StoredPlan = {
   kind: QuestionKind | null;
@@ -10,7 +11,7 @@ export type StoredPlan = {
 export function packStoredAnswer(
   answer: string,
   steps: string[],
-  meta?: { kind?: QuestionKind; rollbackSkillId?: string; onRamp?: boolean },
+  meta?: { kind?: QuestionKind; rollbackSkillId?: string; walk?: Walkthrough | null; onRamp?: boolean },
 ): string {
   return JSON.stringify({
     v: 1,
@@ -18,6 +19,7 @@ export function packStoredAnswer(
     steps,
     ...(meta?.kind ? { kind: meta.kind } : {}),
     ...(meta?.rollbackSkillId ? { rollbackSkillId: meta.rollbackSkillId } : {}),
+    ...(meta?.walk ? { walk: meta.walk } : {}),
     ...(meta?.onRamp ? { onRamp: true } : {}),
   });
 }
@@ -60,6 +62,32 @@ export function readStoredPlan(stored: string): StoredPlan {
   return { kind: null, rollbackSkillId: null, onRamp: false };
 }
 
+export function readStoredWalk(stored: string): Walkthrough | null {
+  try {
+    const parsed = JSON.parse(stored) as { v?: number; walk?: unknown };
+    if (parsed?.v !== 1) return null;
+    return walkValue(parsed.walk);
+  } catch {
+    return null;
+  }
+}
+
+function walkValue(value: unknown): Walkthrough | null {
+  if (!value || typeof value !== "object") return null;
+  const walk = value as Partial<Walkthrough>;
+  if (typeof walk.answer !== "string" || !Array.isArray(walk.steps)) return null;
+  if (walk.steps.length < 3 || walk.steps.length > 5) return null;
+  const steps = walk.steps.filter(
+    (step): step is Walkthrough["steps"][number] =>
+      Boolean(step) &&
+      typeof step === "object" &&
+      typeof (step as { target?: unknown }).target === "string" &&
+      typeof (step as { caption?: unknown }).caption === "string",
+  );
+  if (steps.length !== walk.steps.length) return null;
+  return { answer: walk.answer, steps };
+}
+
 export function readAttemptMark(stored: string): AttemptMark | null {
   try {
     const parsed = JSON.parse(stored) as { v?: number; mark?: unknown };
@@ -83,12 +111,14 @@ export function readAttemptMark(stored: string): AttemptMark | null {
 export function withAttemptMark(stored: string, mark: AttemptMark): string {
   const { answer, steps } = unpackStoredAnswer(stored);
   const plan = readStoredPlan(stored);
+  const walk = readStoredWalk(stored);
   return JSON.stringify({
     v: 1,
     answer,
     steps,
     ...(plan.kind ? { kind: plan.kind } : {}),
     ...(plan.rollbackSkillId ? { rollbackSkillId: plan.rollbackSkillId } : {}),
+    ...(walk ? { walk } : {}),
     ...(plan.onRamp ? { onRamp: true } : {}),
     mark,
   });

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { IntroModal } from "@/components/intro-modal";
 import { QuestionPractice } from "@/components/question-practice";
+import { practiceChoices } from "@/lib/practice/choices";
 import { StudentDashboard } from "@/components/student-dashboard";
 import { freshFeedback, reduceFeedback, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { WorkedExample } from "@/lib/practice/example";
@@ -32,10 +33,12 @@ export function PracticePreview({
   view,
   example,
   skills,
+  grade = 3,
 }: {
   view: "intro" | "question" | "retry" | "revealed" | "correct" | "example" | "home" | "play";
   example: WorkedExample | null;
   skills: SkillProgress[];
+  grade?: 1 | 3;
 }) {
   if (view === "home") {
     return (
@@ -105,6 +108,7 @@ export function PracticePreview({
       draft={view === "retry" ? "5" : view === "correct" ? "8" : ""}
       exampleStartsOpen={view === "example"}
       progress={1}
+      grade={grade}
     />
   );
 }
@@ -161,6 +165,7 @@ function Screen({
   exampleStartsOpen = false,
   progress,
   action,
+  grade = 3,
 }: {
   questionId: string;
   prompt: string;
@@ -174,6 +179,7 @@ function Screen({
   exampleStartsOpen?: boolean;
   progress: number;
   action?: (formData: FormData) => void;
+  grade?: 1 | 3;
 }) {
   return (
     <div className="question-screen">
@@ -199,6 +205,13 @@ function Screen({
         draft={draft}
         exampleStartsOpen={exampleStartsOpen}
         action={action ?? (() => undefined)}
+        grade={grade}
+        autoRead={grade <= 2}
+        choices={
+          grade <= 2
+            ? practiceChoices(grade, prompt, expected ?? (prompt === "6 + 2 = ?" ? "8" : "7"), questionId)
+            : null
+        }
       />
     </div>
   );
