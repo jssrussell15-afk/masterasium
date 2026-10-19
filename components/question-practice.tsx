@@ -69,15 +69,6 @@ export function QuestionPractice({
     phase === "correct" ? "That's right." : phase === "retry" ? "Not quite. Try again." : phase === "revealed" ? "Here's how." : "";
 
   useEffect(() => {
-    setValues(valuesFor(shape, draft));
-    setHintOpen(false);
-    setExampleOpen(exampleStartsOpen);
-    setActiveField("answer");
-    // A parent re-render must not wipe a retry the child is still typing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questionId]);
-
-  useEffect(() => {
     if (phase !== "retry") return;
     const node = inputRef.current;
     if (!node) return;

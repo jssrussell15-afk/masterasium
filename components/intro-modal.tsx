@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 
 export function IntroModal({
   title,
@@ -17,14 +17,12 @@ export function IntroModal({
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const startRef = useRef<HTMLButtonElement>(null);
-  const onFinishedRef = useRef(onFinished);
-  const onViewedRef = useRef(onViewed);
+  const onFinishedEvent = useEffectEvent(onFinished);
+  const onViewedEvent = useEffectEvent(onViewed);
   const [showAnswer, setShowAnswer] = useState(false);
-  onFinishedRef.current = onFinished;
-  onViewedRef.current = onViewed;
 
   useEffect(() => {
-    onViewedRef.current();
+    onViewedEvent();
   }, [title]);
 
   useEffect(() => {
@@ -32,7 +30,7 @@ export function IntroModal({
     if (!node) return;
     if (!node.open) node.showModal();
     startRef.current?.focus();
-    const close = () => onFinishedRef.current();
+    const close = () => onFinishedEvent();
     node.addEventListener("cancel", close);
     return () => {
       node.removeEventListener("cancel", close);

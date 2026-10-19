@@ -4,6 +4,10 @@ import type { LayoutTemplate, PracticeSet } from "@/lib/worksheets/types";
 const TEMPLATES_KEY = "masterasium-worksheet-templates";
 const SET_PREFIX = "masterasium-practice-set:";
 
+const EMPTY_LOCAL_TEMPLATES: LayoutTemplate[] = [];
+let localTemplateRaw: string | null = null;
+let localTemplateSnapshot: LayoutTemplate[] = EMPTY_LOCAL_TEMPLATES;
+
 export function readLocalTemplates(): LayoutTemplate[] {
   if (typeof window === "undefined") return [];
   try {
@@ -12,6 +16,31 @@ export function readLocalTemplates(): LayoutTemplate[] {
   } catch {
     return [];
   }
+}
+
+/** Server render stays on the templates passed into the page. */
+export function getLocalTemplateServerSnapshot(): LayoutTemplate[] {
+  return EMPTY_LOCAL_TEMPLATES;
+}
+
+/** Cached so useSyncExternalStore sees the same array until localStorage changes. */
+export function getLocalTemplateSnapshot(): LayoutTemplate[] {
+  if (typeof window === "undefined") return EMPTY_LOCAL_TEMPLATES;
+  const raw = window.localStorage.getItem(TEMPLATES_KEY) ?? "[]";
+  if (raw === localTemplateRaw) return localTemplateSnapshot;
+  localTemplateRaw = raw;
+  const next = readLocalTemplates();
+  localTemplateSnapshot = next.length === 0 ? EMPTY_LOCAL_TEMPLATES : next;
+  return localTemplateSnapshot;
+}
+
+export function subscribeLocalTemplates(onStoreChange: () => void): () => void {
+  if (typeof window === "undefined") return () => undefined;
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === TEMPLATES_KEY || event.key === null) onStoreChange();
+  };
+  window.addEventListener("storage", onStorage);
+  return () => window.removeEventListener("storage", onStorage);
 }
 
 export function writeLocalTemplate(template: LayoutTemplate): void {

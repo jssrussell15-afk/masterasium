@@ -183,6 +183,7 @@ function Screen({
         </Link>
       </p>
       <QuestionPractice
+        key={questionId}
         questionId={questionId}
         eyebrow="Focus · Addition within 10"
         prompt={prompt}
