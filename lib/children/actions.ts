@@ -377,23 +377,20 @@ export async function setReadQuestionsAloud(
   _previous: ChildState,
   formData: FormData,
 ): Promise<ChildState> {
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
   const childId = String(formData.get("childId") ?? "");
   const enabled = formData.getAll("enabled").includes("1");
   if (!childId) return { error: "Choose a child first." };
 
-  const { data, error } = await supabase
-    .from("children")
-    .update({ read_questions_aloud: enabled })
-    .eq("id", childId)
-    .eq("parent_id", user.id)
-    .select("id");
+  const { error } = await supabase.rpc("set_read_questions_aloud", {
+    p_child_id: childId,
+    p_value: enabled,
+  });
   if (error) {
     if (isReadAloudMissing(error)) {
       return { error: "Read aloud is not ready yet. Practice can start once the database is updated." };
     }
     return { error: friendlyDbError(error) };
   }
-  if (!data?.length) return { error: "That child profile is not on this account." };
   redirect("/settings?notice=read-aloud");
 }
