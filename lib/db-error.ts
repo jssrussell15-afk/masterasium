@@ -12,6 +12,19 @@ export const GRADE_PROGRESS_SETUP_MESSAGE =
 export const COLUMN_UPDATE_MESSAGE =
   "Something on our side needs an update. Please try again later.";
 
+export const PLACEMENT_SETUP_MESSAGE =
+  "The quick check is not ready yet. Practice can start once the database is updated.";
+
+export function isPlacementMissing(error: DbError): boolean {
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("save_placement") ||
+    message.includes("set_starting_point") ||
+    (message.includes("placement") &&
+      (message.includes("does not exist") || message.includes("schema cache") || error.code === "42703"))
+  );
+}
+
 export function isGradeProgressMissing(error: DbError): boolean {
   const message = error.message.toLowerCase();
   return (
@@ -78,6 +91,9 @@ export function friendlyDbError(error: DbError): string {
     !message.includes("p_pin")
   ) {
     return "A child cannot be saved yet. The child profile is not ready in the database.";
+  }
+  if (isPlacementMissing(error)) {
+    return PLACEMENT_SETUP_MESSAGE;
   }
   if (isGradeProgressMissing(error)) {
     return GRADE_PROGRESS_SETUP_MESSAGE;

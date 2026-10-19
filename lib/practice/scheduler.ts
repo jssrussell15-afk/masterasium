@@ -32,6 +32,11 @@ export type SchedulerInput = {
   sessionCount: number;
   /** Toronto calendar day (YYYY-MM-DD). Omitted, date-due reviews stay quiet. */
   today?: string;
+  /**
+   * Practice opens on this skill. Earlier skills in the grade stay off the path.
+   * Adaptive practice still moves forward once this skill is steady.
+   */
+  startSkillId?: string;
 };
 
 export interface PracticeScheduler {
@@ -86,11 +91,18 @@ function lowestAccuracy(skills: Skill[], cards: Map<string, SkillCard>): Skill {
   })[0];
 }
 
+function pathFrom(skills: Skill[], startSkillId: string | undefined): { path: Skill[]; anchor: Skill | undefined } {
+  const anchor = startSkillId ? skills.find((skill) => skill.id === startSkillId) : undefined;
+  const path = anchor ? skills.filter((skill) => skill.order >= anchor.order) : skills;
+  return { path, anchor };
+}
+
 export class AccuracyScheduler implements PracticeScheduler {
   chooseSkill(input: SchedulerInput): Skill {
     const skills = skillsForGrade(input.grade);
+    const { path, anchor } = pathFrom(skills, input.startSkillId);
     const cards = new Map(input.cards.map((card) => [card.skillId, card]));
-    const mastered = skills.filter((skill) => isConfirmed(cards.get(skill.id)));
+    const mastered = path.filter((skill) => isConfirmed(cards.get(skill.id)));
 
     const reviewTurn =
       input.sessionCount > 0 && (input.sessionCount % 8 === 3 || input.sessionCount % 8 === 7);
@@ -101,19 +113,27 @@ export class AccuracyScheduler implements PracticeScheduler {
       return lowestAccuracy(due.length > 0 ? due : mastered, cards);
     }
 
-    for (const skill of skills) {
-      const ready = skill.prerequisites.every((id) => isConfirmed(cards.get(id)));
+    for (const skill of path) {
+      const ready = skill.prerequisites.every((id) => {
+        const earlier = skills.find((item) => item.id === id);
+        if (anchor && earlier && earlier.order < anchor.order) return true;
+        return isConfirmed(cards.get(id));
+      });
       if (ready && !isConfirmed(cards.get(skill.id))) return skill;
     }
 
-    return lowestAccuracy(skills, cards);
+    return lowestAccuracy(path, cards);
   }
 }
 
 export const accuracyScheduler = new AccuracyScheduler();
 
-export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): SkillProgress[] {
-  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0 });
+export function describeSkills(
+  grade: SupportedGrade,
+  cards: SkillCard[],
+  startSkillId?: string,
+): SkillProgress[] {
+  const focus = accuracyScheduler.chooseSkill({ grade, cards, sessionCount: 0, startSkillId });
   const byId = new Map(cards.map((card) => [card.skillId, card]));
   return skillsForGrade(grade).map((skill) => {
     const card = byId.get(skill.id);
@@ -144,14 +164,19 @@ export function describeSkills(grade: SupportedGrade, cards: SkillCard[]): Skill
 }
 
 /** Every grade is listed. The current skill belongs to the grade they are working in. */
-export function describeCatalog(access: Pick<GradeAccess, "working">, cards: SkillCard[]): SkillProgress[] {
+export function describeCatalog(
+  access: Pick<GradeAccess, "working">,
+  cards: SkillCard[],
+  startSkillId?: string,
+): SkillProgress[] {
   const focusId = accuracyScheduler.chooseSkill({
     grade: access.working,
     cards,
     sessionCount: 0,
+    startSkillId,
   }).id;
   return selectorGrades().flatMap((grade) =>
-    describeSkills(grade, cards).map((skill) => ({
+    describeSkills(grade, cards, grade === access.working ? startSkillId : undefined).map((skill) => ({
       ...skill,
       current: skill.id === focusId,
     })),

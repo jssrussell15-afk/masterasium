@@ -36,6 +36,25 @@ describe("daily digest draft", () => {
     expect(text).toContain("No email was sent.");
   });
 
+  it("keeps the placement lines ready for a later note", () => {
+    const summary = buildDigestSummary({
+      childFirstName: "Sam",
+      grade: 2,
+      date: "2026-10-19",
+      attempted: 0,
+      correct: 0,
+      focusSkillId: "g2-add-sub",
+      focusSkillTitle: "Addition and subtraction within 100",
+      placementNote:
+        "We started Sam on Addition and subtraction within 100 at grade 2, the strongest place to build from.",
+      readyNote: "Sam looks ready for more in Measurement, so we'll mix some in.",
+    });
+    const text = renderDigestText(summary);
+    expect(text).toContain("We started Sam on Addition and subtraction within 100 at grade 2");
+    expect(text).toContain("Sam looks ready for more in Measurement, so we'll mix some in.");
+    expect(text).toContain("No email was sent.");
+  });
+
   it("leaves accuracy blank when nothing was attempted", () => {
     const summary = buildDigestSummary({
       childFirstName: "Sam",

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
+import { SpeakButton } from "@/components/speak-line";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -109,7 +110,10 @@ export function QuestionPractice({
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
       <section className="question-card" aria-label="Question">
         <p className="topic-label">{eyebrow}</p>
-        <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
+        <div className="prompt-row">
+          <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
+          <SpeakButton text={prompt} />
+        </div>
         {responseHint ? <p className="hint">{responseHint}</p> : null}
         {phase === "answering" ? <AssistedPrompt assist={assist} /> : null}
         {guideSteps.length > 0 && phase === "answering" ? (
