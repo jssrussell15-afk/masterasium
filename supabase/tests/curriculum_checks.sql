@@ -17,3 +17,5 @@ begin
     raise exception 'curriculum integrity SQL checks failed (% checks)', bad;
   end if;
 end $$;
+
+\ir attempt_idempotency_rls.sql
