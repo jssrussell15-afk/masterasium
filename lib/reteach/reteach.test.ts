@@ -156,6 +156,19 @@ describe("catch-up stage", () => {
   });
 });
 
+describe("manipulative touch size", () => {
+  const css = readFileSync("app/globals.css", "utf8");
+
+  it("keeps blocks, marks, bars, and buttons at least 48px", () => {
+    const controls = css.slice(css.indexOf(".manipulative button,"));
+    expect(controls).toContain("min-width: 48px");
+    expect(controls).toContain("min-height: 48px");
+    expect(controls).not.toContain("44px");
+    expect(css).toContain(".line-mark,\n.bar-part {\n  min-width: 48px;\n  min-height: 48px;\n}");
+    expect(css).toContain(".reteach-card .number-pad button {\n  min-width: 64px;\n  min-height: 64px;\n}");
+  });
+});
+
 describe("re-teach migration", () => {
   const sql = readFileSync(migrationPath, "utf8");
 

@@ -2449,10 +2449,11 @@ html:has(.question-screen) .site-footer {
   gap: 0.75rem;
 }
 
+/* --tap is still 44px on this branch. After #14 merges and --tap is 48px, use var(--tap) here. */
 .manipulative button,
 .reteach-card button,
 .reteach-answer {
-  min-width: 44px;
+  min-width: 48px;
   min-height: 48px;
   border: 2px solid var(--line);
   border-radius: 0.8rem;
@@ -2495,6 +2496,11 @@ html:has(.question-screen) .site-footer {
 .bar-part.is-shaded,
 .line-mark.is-here {
   background: var(--color-mist);
+}
+
+.reteach-card .number-pad button {
+  min-width: 64px;
+  min-height: 64px;
 }
 
 .reteach-answer {

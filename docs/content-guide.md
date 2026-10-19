@@ -18,7 +18,7 @@ Concrete items name a manipulative. Abstract items use `none`. Catch-up moves al
 - Number line: tap a mark, or press Arrow Right and Arrow Left. The jump size can be 1, 5, or 10.
 - Fraction bars: tap a part to shade it, or split the bar into 2 or 4 equal parts.
 
-Each control is a button at least 44px on a side, with a screen-reader name. Speak uses the device voice (`speechSynthesis`, English, Canada) for the question and the current step, the same control as the practice read-aloud. The same sentence is also announced in an aria-live region. There is no animation and no reward sound.
+Each control is a button at least 48px on a side, with a screen-reader name. `--tap` on this branch is still 44px, so the manipulative rules use 48px directly. After #14 merges and `--tap` is 48px, switch those minimums to `var(--tap)`. Speak uses the device voice (`speechSynthesis`, English, Canada) for the question and the current step, the same control as the practice read-aloud. The same sentence is also announced in an aria-live region. There is no animation and no reward sound.
 
 Manipulative actions are stored as a compact trace (`j` for jumps, `b` for group and ungroup). That trace is the input the strategy tagger reads. The tagger lives on a sibling branch until the two are combined.
 
