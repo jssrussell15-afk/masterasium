@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDigestSummary,
+  freshKeptLine,
+  freshTopicsForWeek,
   renderDigestText,
+  topicFromTitle,
   torontoDate,
   torontoDayStart,
 } from "@/lib/digest/build";
+import { buildSundayDigest, renderSundayDigestText } from "@/lib/digest/sunday";
+import { buildParentProgress } from "@/lib/lesson/parent";
 
 describe("daily digest draft", () => {
   it("uses the Toronto calendar day", () => {
@@ -67,5 +72,56 @@ describe("daily digest draft", () => {
     });
     expect(summary.accuracy).toBeNull();
     expect(renderDigestText(summary)).toContain("Accuracy: n/a");
+  });
+
+  it("writes one quiet fresh line and keeps it off the daily draft", () => {
+    expect(topicFromTitle("Fractions as equal parts")).toBe("fractions");
+    expect(topicFromTitle("Time to the minute")).toBe("time");
+    expect(freshKeptLine(["fractions"])).toBe("Kept fractions fresh.");
+    expect(freshKeptLine(["fractions", "time"])).toBe("Kept fractions and time fresh.");
+    expect(freshKeptLine(["fractions", "time", "place"])).toBe("Kept fractions and time fresh.");
+    expect(freshKeptLine([])).toBeNull();
+    expect(freshKeptLine(["fractions"])).not.toMatch(/\d|review|struggled/i);
+
+    const topics = freshTopicsForWeek(
+      [
+        { title: "Fractions as equal parts", freshOn: "2026-10-16" },
+        { title: "Time to the minute", freshOn: "2026-10-18" },
+        { title: "Place value to 1,000", freshOn: "2026-10-01" },
+        { title: "Multiplication facts to 10×10", freshOn: null },
+      ],
+      "2026-10-12",
+      "2026-10-18",
+    );
+    expect(topics).toEqual(["fractions", "time"]);
+    expect(freshTopicsForWeek([{ title: "Fractions as equal parts", freshOn: null }], "2026-10-12", "2026-10-18")).toEqual(
+      [],
+    );
+
+    const summary = buildDigestSummary({
+      childFirstName: "Maya",
+      grade: 3,
+      date: "2026-10-18",
+      attempted: 4,
+      correct: 4,
+      focusSkillId: "g3-fractions",
+      focusSkillTitle: "Fractions as equal parts",
+    });
+    expect(renderDigestText(summary)).not.toContain("Kept ");
+
+    const progress = buildParentProgress({
+      today: "2026-10-18",
+      lessons: [],
+      reviews: [],
+      attempts: [],
+      solved: null,
+      repaired: null,
+    });
+    const text = renderSundayDigestText(buildSundayDigest("Maya", progress, freshKeptLine(topics)));
+    expect(text).toContain("Kept fractions and time fresh.");
+    expect(text.match(/Kept /g)).toHaveLength(1);
+    expect(text).toContain("Coming up next");
+    expect(text).not.toMatch(/struggled|review question/i);
+    expect(renderSundayDigestText(buildSundayDigest("Maya", progress))).not.toContain("Kept ");
   });
 });

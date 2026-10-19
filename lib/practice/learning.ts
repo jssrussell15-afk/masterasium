@@ -1,6 +1,6 @@
 import { advanceLessonCheck, lessonCheckOpen } from "@/lib/practice/lesson-check";
 import { readLearn, writeLearn, type LearnState } from "@/lib/practice/memory";
-import { applyRetest } from "@/lib/practice/review";
+import { applyRetest, isReviewDue, reviewCandidateIndex } from "@/lib/practice/review";
 import { armRollback, shouldRollback, spendSupport } from "@/lib/practice/rollback";
 import { accuracyScheduler, isConfirmed, isMastered, recordAttempt, type SkillCard } from "@/lib/practice/scheduler";
 import { skillsForGrade } from "@/lib/practice/skills";
@@ -12,6 +12,8 @@ export type QuestionPlan = {
   kind: QuestionKind;
   small: boolean;
   rollbackSkillId?: string;
+  /** Quiet re-teach after a missed review. The card is not labeled review. */
+  onRamp?: boolean;
 };
 
 export function planNextQuestion(input: {
@@ -62,17 +64,18 @@ export function planNextQuestion(input: {
     return { skillId: input.requestedSkillId, kind: "focus", small: true };
   }
 
-  const focus = accuracyScheduler.chooseSkill({
-    grade: input.grade,
-    cards: input.cards,
-    sessionCount: 0,
-    today: input.today,
-    startSkillId: input.startSkillId,
-  });
+  const reviewTurn = reviewCandidateIndex(input.sessionCount) != null;
+  const woven =
+    reviewTurn &&
+    !!card &&
+    card.attempted > 0 &&
+    isConfirmed(card) &&
+    isReviewDue(learn, input.today);
   const plan: QuestionPlan = {
     skillId: chosen.id,
-    kind: chosen.id === focus.id ? "focus" : "review",
+    kind: woven ? "review" : "focus",
     small: false,
+    ...(woven && learn.needsReview ? { onRamp: true } : {}),
   };
   const mixTurn = input.sessionCount > 0 && input.sessionCount % 4 === 3;
   if (
@@ -81,6 +84,9 @@ export function planNextQuestion(input: {
     inGrade(input.mixSkillId) &&
     plan.skillId !== input.mixSkillId
   ) {
+    return { skillId: input.mixSkillId, kind: "focus", small: false };
+  }
+  if (mixTurn && plan.kind === "review" && inGrade(input.mixSkillId)) {
     return { skillId: input.mixSkillId, kind: "focus", small: false };
   }
   return plan;
@@ -92,6 +98,8 @@ export function applyLearning(input: {
   kind: QuestionKind | null;
   today: string;
   rollbackCard?: SkillCard | null;
+  /** Opened Show me an example, so a correct answer is not a clean recall. */
+  showedExample?: boolean;
 }): { card: SkillCard; extra?: SkillCard } {
   const before = readLearn(input.card.fsrs);
   const wasMastered = isMastered(input.card);
@@ -101,10 +109,10 @@ export function applyLearning(input: {
     return applySupport(recorded, before, input);
   }
 
-  const learn: LearnState = {
-    ...before,
-    missStreak: input.correct ? 0 : (before.missStreak ?? 0) + 1,
-  };
+  const learn: LearnState = { ...before };
+  if (input.kind !== "review") {
+    learn.missStreak = input.correct ? 0 : (before.missStreak ?? 0) + 1;
+  }
 
   if (input.kind === "check") {
     advanceLessonCheck(learn, before, {
@@ -118,6 +126,7 @@ export function applyLearning(input: {
       correct: input.correct,
       kind: input.kind,
       today: input.today,
+      showedExample: input.showedExample === true,
     });
   }
 

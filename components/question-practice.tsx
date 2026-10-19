@@ -30,6 +30,7 @@ export function QuestionPractice({
   saveNote = null,
   guideSteps = [],
   assist = null,
+  onRamp = null,
   aside,
   action,
   fields = [],
@@ -55,6 +56,7 @@ export function QuestionPractice({
   saveNote?: "saving" | "saved" | null;
   guideSteps?: string[];
   assist?: AssistView | null;
+  onRamp?: { line: string; step: string | null; handoff: string } | null;
   aside?: ReactNode;
   action?: (formData: FormData) => void;
   fields?: { name: string; value: string }[];
@@ -122,6 +124,18 @@ export function QuestionPractice({
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
       <section className="question-card" aria-label="Question">
         <p className="topic-label">{eyebrow}</p>
+        {onRamp ? (
+          <div className="on-ramp">
+            <p className="hint">{onRamp.line}</p>
+            {onRamp.step ? (
+              <div className="prompt-row">
+                <p className="hint">{onRamp.step}</p>
+                <SpeakButton text={onRamp.step} label="Read this step" />
+              </div>
+            ) : null}
+            <p className="hint">{onRamp.handoff}</p>
+          </div>
+        ) : null}
         <div className="prompt-row">
           <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>{prompt}</h1>
           <SpeakButton text={prompt} label="Read the question" />
@@ -181,6 +195,7 @@ export function QuestionPractice({
         <form action={action} className="question-form" onSubmit={stamp}>
           <HiddenFields fields={fields} />
           <input type="hidden" name="intent" value={finished ? "next" : "check"} />
+          <input type="hidden" name="openedExample" value={exampleOpen ? "1" : "0"} />
           <AnswerFields
             shape={shape}
             values={values}

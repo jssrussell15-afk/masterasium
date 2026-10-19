@@ -7,9 +7,15 @@ export type SundayDigest = {
   ask: string[];
   comingUp: string[];
   settingsHref: string;
+  /** One quiet line, such as "Kept fractions fresh." Omitted when every review was missed. */
+  freshLine?: string;
 };
 
-export function buildSundayDigest(childName: string, progress: ParentProgress): SundayDigest {
+export function buildSundayDigest(
+  childName: string,
+  progress: ParentProgress,
+  freshLine?: string | null,
+): SundayDigest {
   const learned =
     progress.learned.length > 0
       ? progress.learned.map((skill) => `${skill.title}. ${skill.sentence}`)
@@ -35,6 +41,7 @@ export function buildSundayDigest(childName: string, progress: ParentProgress): 
     ask,
     comingUp,
     settingsHref: "/settings",
+    ...(freshLine ? { freshLine } : {}),
   };
 }
 
@@ -42,6 +49,7 @@ export function renderSundayDigestText(digest: SundayDigest): string {
   return [
     digest.subject,
     "",
+    ...(digest.freshLine ? [digest.freshLine, ""] : []),
     "What they learned",
     ...digest.learned,
     "",

@@ -7,6 +7,7 @@ export function SundayNote({ digest }: { digest: SundayDigest }) {
       <p className="eyebrow">Sunday note</p>
       <h1 className="display text-3xl">{digest.subject}</h1>
       <p className="hint">Preview only. This note is not emailed.</p>
+      {digest.freshLine ? <p>{digest.freshLine}</p> : null}
       <section>
         <h2>What they learned</h2>
         <ul className="strand-list mt-2">

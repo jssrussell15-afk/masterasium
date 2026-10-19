@@ -9,6 +9,7 @@ import { feedbackFromMark, markFromState, reduceFeedback, whyLine } from "@/lib/
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
 import { buildPracticeEvent, type PracticeEvent } from "@/lib/practice/events";
 import { applyLearning } from "@/lib/practice/learning";
+import { isReviewDue } from "@/lib/practice/review";
 import { readLearn, writeLearn, type IntroCycle } from "@/lib/practice/memory";
 import { givenAnswer } from "@/lib/practice/parts";
 import { buildPortrait } from "@/lib/practice/portrait";
@@ -210,7 +211,8 @@ async function markPractice(
     feedbackFromMark(existing),
     mode === "show-how" ? { type: "show-how" } : { type: "check", correct },
   );
-  const marked = markFromState(result.state, existing, given, mode === "show-how");
+  const showedExample = String(formData.get("openedExample") ?? "") === "1";
+  const marked = markFromState(result.state, existing, given, mode === "show-how", showedExample);
   if (!marked) return previous;
   const mark = isAttemptId(checkId) ? { ...marked, clientCheckId: checkId } : marked;
 
@@ -280,6 +282,7 @@ async function advancePractice(
     kind: storedPlan.kind,
     today,
     rollbackCard: storedPlan.rollbackSkillId ? cardFor(cards, storedPlan.rollbackSkillId) : null,
+    showedExample: mark.showedExample === true,
   });
   let nextCard = applied.card;
   let note: string | undefined;
@@ -427,10 +430,12 @@ async function applyStoredAttempt(
       const { cards, error } = await loadCards(supabase, childId);
       if (error) return error;
       const today = torontoDate();
+      const card = cardFor(cards, row.skill_id);
+      const reviewing = isReviewDue(readLearn(card.fsrs), today);
       const applied = applyLearning({
-        card: cardFor(cards, row.skill_id),
+        card,
         correct: row.correct,
-        kind: "focus",
+        kind: reviewing ? "review" : "focus",
         today,
       });
       return persistCards(supabase, childId, applied.card, applied.extra ?? null);

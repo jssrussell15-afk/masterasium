@@ -170,11 +170,7 @@ export function LessonView({
             <p className="lesson-learned">{screen.sentence}</p>
             <SpeakButton text={screen.sentence} label="Read what I learned" />
           </div>
-          {screen.nextReview ? (
-            <p className="hint">This comes back for a quiet review on {screen.nextReview}.</p>
-          ) : (
-            <p className="hint">This will come back in a day, a week, and a month.</p>
-          )}
+          <p className="hint">You can practise this again later.</p>
           <Link className="btn btn-primary lesson-tap" href="/practice">
             Back to skills
           </Link>

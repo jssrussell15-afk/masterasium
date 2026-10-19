@@ -66,6 +66,44 @@ export function torontoDayRange(now = new Date()): { date: string; start: Date; 
   return { date: torontoDate(now), start, end };
 }
 
+/** First word of a skill title, lowercase, with no digits. `Fractions as equal parts` → fractions. */
+export function topicFromTitle(title: string): string {
+  const word = title.trim().toLowerCase().split(/\s+/)[0] ?? "";
+  return word.replace(/[^a-z]/g, "");
+}
+
+/**
+ * Topics kept fresh this week, in the order given.
+ * A missed review has no date here, so a week of misses produces no line.
+ */
+export function freshTopicsForWeek(
+  items: { title: string; freshOn?: string | null }[],
+  weekStart: string,
+  today: string,
+): string[] {
+  const topics: string[] = [];
+  for (const item of items) {
+    if (!item.freshOn || item.freshOn < weekStart || item.freshOn > today) continue;
+    const topic = topicFromTitle(item.title);
+    if (topic) topics.push(topic);
+  }
+  return topics;
+}
+
+/** One quiet parent line. Two topics at most. Null when nothing was recalled. */
+export function freshKeptLine(topics: string[]): string | null {
+  const unique: string[] = [];
+  for (const topic of topics) {
+    const clean = topic.trim().toLowerCase();
+    if (!clean || unique.includes(clean)) continue;
+    unique.push(clean);
+    if (unique.length === 2) break;
+  }
+  if (unique.length === 0) return null;
+  if (unique.length === 1) return `Kept ${unique[0]} fresh.`;
+  return `Kept ${unique[0]} and ${unique[1]} fresh.`;
+}
+
 export function buildDigestSummary(input: {
   childFirstName: string;
   grade: SupportedGrade;
@@ -85,6 +123,7 @@ export function buildDigestSummary(input: {
   };
 }
 
+/** Daily draft. The weekly fresh line stays on the Sunday note. */
 export function renderDigestText(summary: DigestSummary): string {
   const accuracy =
     summary.accuracy == null ? "n/a" : `${Math.round(summary.accuracy * 100)}%`;

@@ -23,8 +23,8 @@ import type { PracticeState, PracticeView, QuestionKind } from "@/lib/practice/t
 import type { FeedbackPhase } from "@/lib/practice/feedback";
 import type { AttemptDraft } from "@/lib/practice/draft-store";
 
-function kindLabel(kind: QuestionKind): string {
-  if (kind === "review") return "Review";
+function kindLabel(kind: QuestionKind): string | null {
+  if (kind === "review") return null;
   if (kind === "check") return "Show what you know";
   if (kind === "support") return "Practice";
   return "Focus";
@@ -316,7 +316,12 @@ export function PracticeSession({ view }: { view: PracticeView }) {
         <QuestionPractice
           key={`${question.questionId}:${restoredDraft}`}
           questionId={question.questionId}
-          eyebrow={`${kindLabel(question.kind)} · ${question.skillTitle}`}
+          eyebrow={
+            kindLabel(question.kind)
+              ? `${kindLabel(question.kind)} · ${question.skillTitle}`
+              : question.skillTitle
+          }
+          onRamp={question.onRamp}
           prompt={question.prompt}
           responseHint={question.responseHint}
           shape={question.shape}

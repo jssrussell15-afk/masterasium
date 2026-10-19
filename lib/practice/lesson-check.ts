@@ -1,6 +1,5 @@
-import { addDays } from "@/lib/practice/dates";
 import type { LearnState } from "@/lib/practice/memory";
-import { REVIEW_AFTER_DAYS } from "@/lib/practice/review";
+import { armFirstRecall } from "@/lib/practice/review";
 
 /** A short check, not a test. Four questions, pass at three correct. */
 export const CHECK_SIZE = 4;
@@ -25,9 +24,7 @@ export function advanceLessonCheck(
     learn.checkCorrect = undefined;
     if (got >= CHECK_PASS) {
       learn.lessonCheck = "passed";
-      learn.reviewDueAt = addDays(input.today, REVIEW_AFTER_DAYS);
-      learn.needsReview = undefined;
-      learn.reviewHits = undefined;
+      armFirstRecall(learn, input.today);
     } else {
       learn.lessonCheck = "retry";
     }

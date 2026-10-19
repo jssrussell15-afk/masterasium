@@ -24,10 +24,24 @@ export type LearnState = {
   supportLeft?: number;
   introSeenAt?: string;
   introCycle?: IntroCycle;
-  /** Upcoming spaced-review dates, soonest first. Absent on the 14-day retest. */
+  /**
+   * Legacy list of dates. New recalls store one `reviewDueAt` and `recallStep` instead.
+   * Kept so older cards still round-trip.
+   */
   reviewPlan?: string[];
   /** A lesson is in progress, so the 10-question bar must not open the next skill yet. */
   lessonHold?: boolean;
+  /**
+   * Index into 1, 3, 7, 14, 30. Absent means the next success is due in 1 day.
+   * Zero is stored: it is the 1-day interval, not "missing".
+   */
+  recallStep?: number;
+  /** Review misses in a row. Two returns the interval to 1 day. Not a streak. */
+  recallMisses?: number;
+  /** Toronto day of the latest first-try review recall. Parent digest only. */
+  recallFreshOn?: string;
+  /** skill_reviews gap to mark done after a success at 1, 7, or 30 days. */
+  recallMark?: "day" | "week" | "month";
 };
 
 export type SkillMemory = {
@@ -50,6 +64,17 @@ function dateString(value: unknown): string | undefined {
 
 function introCycle(value: unknown): IntroCycle | undefined {
   return value === "new" || value === "relearn" || value === "rollback" ? value : undefined;
+}
+
+function recallStep(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isInteger(value)) return undefined;
+  if (value < 0 || value > 4) return undefined;
+  return value;
+}
+
+function recallMark(value: unknown): "day" | "week" | "month" | undefined {
+  if (value === "day" || value === "week" || value === "month") return value;
+  return undefined;
 }
 
 function dateList(value: unknown): string[] | undefined {
@@ -79,6 +104,10 @@ export function readLearnFields(raw: Record<string, unknown>): LearnState {
     introCycle: introCycle(raw.introCycle),
     reviewPlan: dateList(raw.reviewPlan),
     lessonHold: raw.lessonHold === true ? true : undefined,
+    recallStep: recallStep(raw.recallStep),
+    recallMisses: positive(raw.recallMisses),
+    recallFreshOn: dateString(raw.recallFreshOn),
+    recallMark: recallMark(raw.recallMark),
   };
 }
 
@@ -104,6 +133,10 @@ export function cleanLearn(learn: LearnState): LearnState {
   if (learn.introCycle) next.introCycle = learn.introCycle;
   if (learn.reviewPlan && learn.reviewPlan.length > 0) next.reviewPlan = learn.reviewPlan;
   if (learn.lessonHold) next.lessonHold = true;
+  if (learn.recallStep != null) next.recallStep = learn.recallStep;
+  if (learn.recallMisses) next.recallMisses = learn.recallMisses;
+  if (learn.recallFreshOn) next.recallFreshOn = learn.recallFreshOn;
+  if (learn.recallMark) next.recallMark = learn.recallMark;
   return next;
 }
 
