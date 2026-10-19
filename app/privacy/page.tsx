@@ -6,7 +6,7 @@ import { Shell } from "@/components/site-header";
 export const metadata: Metadata = {
   title: "Privacy · Masterasium",
   description: "What Masterasium keeps, and what it does not. Draft for a lawyer to review.",
-);
+};
 
 export default async function PrivacyPage() {
   const chrome = await sessionChrome();
