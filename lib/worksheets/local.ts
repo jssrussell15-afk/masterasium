@@ -26,9 +26,17 @@ export function getLocalTemplateServerSnapshot(): LayoutTemplate[] {
 /** Cached so useSyncExternalStore sees the same array until localStorage changes. */
 export function getLocalTemplateSnapshot(): LayoutTemplate[] {
   if (typeof window === "undefined") return EMPTY_LOCAL_TEMPLATES;
-  const raw = window.localStorage.getItem(TEMPLATES_KEY) ?? "[]";
-  if (raw === localTemplateRaw) return localTemplateSnapshot;
-  localTemplateRaw = raw;
+  let raw: string | null;
+  try {
+    raw = window.localStorage.getItem(TEMPLATES_KEY);
+  } catch {
+    localTemplateRaw = null;
+    localTemplateSnapshot = EMPTY_LOCAL_TEMPLATES;
+    return EMPTY_LOCAL_TEMPLATES;
+  }
+  const stored = raw ?? "[]";
+  if (stored === localTemplateRaw) return localTemplateSnapshot;
+  localTemplateRaw = stored;
   const next = readLocalTemplates();
   localTemplateSnapshot = next.length === 0 ? EMPTY_LOCAL_TEMPLATES : next;
   return localTemplateSnapshot;
@@ -39,8 +47,18 @@ export function subscribeLocalTemplates(onStoreChange: () => void): () => void {
   const onStorage = (event: StorageEvent) => {
     if (event.key === TEMPLATES_KEY || event.key === null) onStoreChange();
   };
-  window.addEventListener("storage", onStorage);
-  return () => window.removeEventListener("storage", onStorage);
+  try {
+    window.addEventListener("storage", onStorage);
+  } catch {
+    return () => undefined;
+  }
+  return () => {
+    try {
+      window.removeEventListener("storage", onStorage);
+    } catch {
+      // The window may already be gone, or storage access may be blocked.
+    }
+  };
 }
 
 export function writeLocalTemplate(template: LayoutTemplate): void {
