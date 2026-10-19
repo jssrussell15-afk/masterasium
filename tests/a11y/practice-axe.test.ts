@@ -107,6 +107,7 @@ describe("practice accessibility", () => {
     expect(html).toContain("Speak the question");
     expect(html).toContain("Speak the hint");
     expect(html).toContain("Speak the feedback");
+    expect(html).toContain(">Speak<");
     expect(html).toContain("Digit 5");
     expect(html).toContain('aria-label="Number keypad"');
     const results = await axe.run(window.document.body, {
@@ -114,6 +115,79 @@ describe("practice accessibility", () => {
     });
     expect(results.violations).toEqual([]);
     await act(async () => root.unmount());
+  });
+
+  it("reads a Show me step with the shared Speak button", async () => {
+    const walk = {
+      answer: "9",
+      steps: [
+        { target: "4", caption: "Start with four" },
+        { target: "+", caption: "Add the next" },
+        { target: "5", caption: "Count the rest" },
+      ],
+    };
+    const spoken: { text: string; lang: string; rate?: number }[] = [];
+    const { window, root } = await render(
+      createElement(QuestionPractice, {
+        questionId: "walk-1",
+        eyebrow: "Focus · Add within 20",
+        prompt: "What is 4 + 5?",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "numeric" },
+        hint: null,
+        example: null,
+        progress: null,
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        action: () => undefined,
+        walk,
+        walkStart: { step: 0 },
+      }),
+    );
+    const button = window.document.querySelector('button.read-aloud[aria-label="Speak this step"]');
+    expect(button?.textContent).toContain("Speak");
+    expect(window.document.body.innerHTML).not.toContain("show-me-speak");
+    expect(window.document.body.innerHTML).not.toContain("Read this step");
+    window.speechSynthesis.speak = (utterance: { text: string; lang: string; rate?: number }) => {
+      spoken.push(utterance);
+    };
+    button?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    expect(spoken[0]?.text).toBe("Start with four");
+    expect(spoken[0]?.lang).toBe("en-CA");
+    expect(spoken[0]?.rate).not.toBe(0.92);
+    await act(async () => root.unmount());
+
+    const handoff = await render(
+      createElement(QuestionPractice, {
+        questionId: "walk-2",
+        eyebrow: "Focus · Add within 20",
+        prompt: "What is 4 + 5?",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "numeric" },
+        hint: null,
+        example: null,
+        progress: null,
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        action: () => undefined,
+        walk,
+        walkStart: { step: 2, handoff: true },
+      }),
+    );
+    const turn = handoff.window.document.querySelector('button.read-aloud[aria-label="Speak this step"]');
+    const heard: { text: string; lang: string }[] = [];
+    handoff.window.speechSynthesis.speak = (utterance: { text: string; lang: string }) => {
+      heard.push(utterance);
+    };
+    turn?.dispatchEvent(new handoff.window.MouseEvent("click", { bubbles: true }));
+    expect(handoff.window.document.body.innerHTML).toContain("Your turn: try one like it");
+    expect(heard[0]?.text).toBe("Your turn: try one like it");
+    expect(heard[0]?.lang).toBe("en-CA");
+    await act(async () => handoff.root.unmount());
   });
 
   it("names the intro card and the sign-in pad", async () => {
