@@ -1,6 +1,7 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { currentStudentId } from "@/lib/auth/student-client";
 import { STUDENT_COOKIE } from "@/lib/auth/student-cookie";
 import { roleFromSession, type Role } from "@/lib/auth/roles";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -11,17 +12,24 @@ export type HeaderSession = {
   signedIn: boolean;
 };
 
-/** The role the header should show. A student cookie wins over a parent session. */
+/** The role the header should show. A live student session wins over a parent session. */
 export async function readHeaderSession(): Promise<HeaderSession> {
-  let hasStudent = false;
+  let token = "";
   try {
     const store = await cookies();
-    hasStudent = Boolean(store.get(STUDENT_COOKIE)?.value);
+    token = store.get(STUDENT_COOKIE)?.value?.trim() ?? "";
   } catch {
     return { role: "public", signedIn: false };
   }
 
-  if (hasStudent) return { role: "student", signedIn: true };
+  if (token) {
+    try {
+      const childId = await currentStudentId(token);
+      if (childId) return { role: "student", signedIn: true };
+    } catch {
+      // Fail closed. A broken student check is not a session; a parent may still be signed in.
+    }
+  }
 
   if (!isSupabaseConfigured()) return { role: "public", signedIn: false };
 

@@ -90,7 +90,7 @@ async function saveCard(
       skill_id: card.skillId,
       attempted: card.attempted,
       correct: card.correct,
-      streak: card.streak,
+      consecutive_correct: card.streak,
       fsrs: card.fsrs,
       updated_at: new Date().toISOString(),
     },
@@ -498,7 +498,7 @@ async function stampIntro(
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const { data, error } = await supabase
       .from("skill_states")
-      .select("attempted, correct, streak, fsrs, updated_at")
+      .select("attempted, correct, streak:consecutive_correct, fsrs, updated_at")
       .eq("child_id", childId)
       .eq("skill_id", skillId)
       .maybeSingle();
@@ -528,7 +528,7 @@ async function stampIntro(
           skill_id: skillId,
           attempted: 0,
           correct: 0,
-          streak: 0,
+          consecutive_correct: 0,
           fsrs,
           updated_at: new Date().toISOString(),
         })

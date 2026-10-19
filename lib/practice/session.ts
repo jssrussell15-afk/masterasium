@@ -54,7 +54,7 @@ export async function loadCards(
 ): Promise<{ cards: SkillCard[]; error: string | null }> {
   const { data, error } = await supabase
     .from("skill_states")
-    .select("skill_id, attempted, correct, streak, fsrs")
+    .select("skill_id, attempted, correct, streak:consecutive_correct, fsrs")
     .eq("child_id", childId);
 
   if (error) return { cards: [], error: friendlyDbError(error) };
