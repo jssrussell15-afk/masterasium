@@ -40,6 +40,7 @@ function installDom() {
   class SpeechUtterance {
     text = "";
     lang = "";
+    rate: number | undefined = undefined;
     onboundary: Utterance["onboundary"] = null;
     onend: Utterance["onend"] = null;
     onerror: Utterance["onerror"] = null;
@@ -187,6 +188,46 @@ describe("grade listen behaviour", () => {
       expect(pill.textContent).toContain("Listen");
     }
     expect(window.document.querySelectorAll(".answer-choice-tile")).toHaveLength(3);
+    await act(async () => root.unmount());
+  });
+
+  it("reads a Grade 1 Show me caption from the caption bar at a slower rate", async () => {
+    const walk = {
+      answer: "9",
+      steps: [
+        { target: "4", caption: "Start with four" },
+        { target: "5", caption: "Count on five" },
+        { target: "?", caption: "Type the sum." },
+      ],
+    };
+    const { window, root, speech } = await render(
+      createElement(QuestionPractice, {
+        questionId: "g1-walk",
+        eyebrow: "Focus · Addition within 10",
+        prompt: "4 + 5 = ?",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "numeric" },
+        hint: null,
+        example: null,
+        progress: null,
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        grade: 1,
+        autoRead: true,
+        walk,
+        walkStart: { step: 0 },
+        action: () => undefined,
+      }),
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(window.document.querySelectorAll("button.listen")).toHaveLength(1);
+    expect(speech.heard.map((utterance) => utterance.text)).toContain("Start with four");
+    expect(speech.heard[0]?.rate).toBe(0.85);
+    expect(speech.heard[0]?.lang).toBe("en-CA");
     await act(async () => root.unmount());
   });
 

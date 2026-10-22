@@ -58,6 +58,11 @@ export type Walkthrough = {
 
 const WALK_SKILLS = new Set(["g3-add-sub", "g3-mult", "g3-fractions", "g3-time"]);
 
+/** Skills that have a step spec. Others start with a hint and never grow a fake walk. */
+export function skillCanWalk(skillId: string): boolean {
+  return WALK_SKILLS.has(skillId);
+}
+
 export function walkForSkill(skillId: string, prompt: string, answer: string): Walkthrough | null {
   if (!WALK_SKILLS.has(skillId)) return null;
   return walkForQuestion(prompt, answer);

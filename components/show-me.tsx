@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { HighlightedWords, ListenButton, useSpoken } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
+import { FILL_CAPTION, spokenSteps, type StepLine } from "@/lib/practice/fade";
 import type { WalkStep, WalkVisual } from "@/lib/practice/walk";
 import { targetSpan } from "@/lib/practice/walk";
 
@@ -10,26 +11,57 @@ export function HighlightedPrompt({
   prompt,
   target,
   occurrence = 0,
+  place = null,
 }: {
   prompt: string;
   target: string | null;
   occurrence?: number;
+  /** Highlight this digit of the number, so the arrow marks the place in the step. */
+  place?: "ones" | "tens" | "hundreds" | null;
 }) {
   if (!target) return prompt;
   const span = targetSpan(prompt, target, occurrence);
   if (!span) return prompt;
+  const digit = place ? digitIn(span.text, place) : null;
+  if (!digit) {
+    return (
+      <>
+        {prompt.slice(0, span.start)}
+        <Marked text={span.text} />
+        {prompt.slice(span.end)}
+      </>
+    );
+  }
   return (
     <>
       {prompt.slice(0, span.start)}
-      <span className="walk-spot">
-        <span className="walk-ring" data-walk-target={target}>
-          {span.text}
-        </span>
-        <WalkArrow />
+      <span data-walk-target={span.text}>
+        {span.text.slice(0, digit.start)}
+        <Marked text={span.text.slice(digit.start, digit.end)} />
+        {span.text.slice(digit.end)}
       </span>
       {prompt.slice(span.end)}
     </>
   );
+}
+
+function Marked({ text }: { text: string }) {
+  return (
+    <span className="walk-spot">
+      <span className="walk-ring" data-walk-target={text}>
+        {text}
+      </span>
+      <WalkArrow />
+    </span>
+  );
+}
+
+function digitIn(text: string, place: "ones" | "tens" | "hundreds"): { start: number; end: number } | null {
+  if (!/^\d+$/.test(text)) return null;
+  const fromEnd = place === "ones" ? 1 : place === "tens" ? 2 : 3;
+  if (text.length < fromEnd) return null;
+  const start = text.length - fromEnd;
+  return { start, end: start + 1 };
 }
 
 export function ShowMePanel({
@@ -52,6 +84,12 @@ export function ShowMePanel({
   fields,
   handoffIntent,
   onElapsed,
+  autoRead = false,
+  lines = null,
+  blankDrafts = {},
+  onBlank,
+  revealed = {},
+  askAnswer = true,
 }: {
   step: WalkStep;
   index: number;
@@ -72,17 +110,51 @@ export function ShowMePanel({
   fields: { name: string; value: string }[];
   handoffIntent: string;
   onElapsed?: (form: HTMLFormElement) => void;
+  /** Grades 1–2 speak the caption when it appears. Listen stays for a replay. */
+  autoRead?: boolean;
+  /** Partly filled example. Each blank is a missing number inside its step. */
+  lines?: StepLine[] | null;
+  blankDrafts?: Record<number, string>;
+  onBlank?: (index: number, value: string) => void;
+  /** A second miss has filled these blanks. The keypad leaves them alone. */
+  revealed?: Record<number, boolean>;
+  /** The last guided step asks for the answer. A read example leaves it out. */
+  askAnswer?: boolean;
 }) {
-  const caption = handoff ? "Your turn: try one like it" : step.caption;
-  const speech = useSpoken(caption);
+  const partial = Boolean(lines && lines.length > 0);
+  const caption = handoff ? "Your turn: try one like it" : partial ? FILL_CAPTION : step.caption;
+  const speechText = partial && lines && !handoff ? spokenSteps(lines) : caption;
+  const speech = useSpoken(speechText, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
+  const firstBlank = lines?.find((line) => line.blank)?.index ?? null;
+  const [active, setActive] = useState<number | null>(firstBlank);
   const last = index === total - 1;
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
         return;
+      }
+      // Level 2 blanks are read-only. A fine pointer has no keypad, so digits come from the keyboard.
+      if (partial && !handoff && !pending && lines) {
+        if (event.key === "Backspace") {
+          event.preventDefault();
+          if (active != null && !revealed[active]) onBlank?.(active, (blankDrafts[active] ?? "").slice(0, -1));
+          return;
+        }
+        const digit = /^[0-9]$/.test(event.key) ? event.key : extraKey && event.key === extraKey ? extraKey : "";
+        if (digit) {
+          event.preventDefault();
+          if (active == null || revealed[active]) return;
+          const line = lines.find((item) => item.index === active);
+          if (!line?.blank) return;
+          const current = blankDrafts[active] ?? "";
+          if (current.length >= Math.max(line.blank.length, 1)) return;
+          onBlank?.(active, `${current}${digit}`);
+          return;
+        }
       }
       if (event.key !== "Enter" || event.repeat) return;
       event.preventDefault();
@@ -95,10 +167,24 @@ export function ShowMePanel({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handoff, onClose, onNext]);
+  }, [active, blankDrafts, extraKey, handoff, lines, onBlank, onClose, onNext, partial, pending, revealed]);
 
   function stamp(event: FormEvent<HTMLFormElement>) {
     onElapsed?.(event.currentTarget);
+  }
+
+  function typeBlank(digit: string) {
+    if (active == null || revealed[active]) return;
+    const line = lines?.find((item) => item.index === active);
+    if (!line?.blank) return;
+    const current = blankDrafts[active] ?? "";
+    if (current.length >= Math.max(line.blank.length, 1)) return;
+    onBlank?.(active, `${current}${digit}`);
+  }
+
+  function deleteBlank() {
+    if (active == null || revealed[active]) return;
+    onBlank?.(active, (blankDrafts[active] ?? "").slice(0, -1));
   }
 
   const nextButton = (
@@ -117,9 +203,11 @@ export function ShowMePanel({
       <p className="show-me-caption" aria-live="polite">
         <HighlightedWords text={caption} activeWord={speech.activeWord} />
       </p>
-      <span className="show-me-count">
-        Step {index + 1} of {total}
-      </span>
+      {partial ? null : (
+        <span className="show-me-count">
+          Step {index + 1} of {total}
+        </span>
+      )}
       {backButton}
       {nextButton}
     </>
@@ -139,8 +227,31 @@ export function ShowMePanel({
         <div className="show-me-bar">{bar}</div>
       )}
       <div className="show-me-stage">
-        {handoff ? null : step.visual ? <WalkVisualView visual={step.visual} /> : null}
-        {!handoff && last ? (
+        {!handoff && partial && lines ? (
+          <ol className="show-me-steps">
+            {lines.map((line) => (
+              <li key={line.index}>
+                {line.lead ? <span>{line.lead}</span> : null}
+                {line.blank ? (
+                  <input
+                    className={active === line.index ? "show-me-slot is-active" : "show-me-slot"}
+                    aria-label={`${line.lead}blank${line.rest}`.trim()}
+                    value={blankDrafts[line.index] ?? ""}
+                    readOnly
+                    inputMode="none"
+                    autoComplete="off"
+                    style={{ width: `calc(${Math.max(line.blank.length, 1)}ch + var(--tap))` }}
+                    onFocus={() => setActive(line.index)}
+                    onClick={() => setActive(line.index)}
+                  />
+                ) : null}
+                {line.rest ? <span>{line.rest}</span> : null}
+              </li>
+            ))}
+          </ol>
+        ) : null}
+        {handoff || partial ? null : step.visual ? <WalkVisualView visual={step.visual} /> : null}
+        {!handoff && !partial && last && askAnswer ? (
           <label className="field show-me-answer">
             Answer
             <input
@@ -153,8 +264,11 @@ export function ShowMePanel({
             />
           </label>
         ) : null}
-        {!handoff && last && miss ? <p className="show-me-miss">Look once more.</p> : null}
-        {!handoff && last && showKeypad ? (
+        {!handoff && (partial || last) && miss ? <p className="show-me-miss">Look once more.</p> : null}
+        {!handoff && partial && lines?.some((line) => line.blank) ? (
+          <NumberKeypad disabled={pending} onDigit={typeBlank} onDelete={deleteBlank} extras={extraKey ? [extraKey] : []} />
+        ) : null}
+        {!handoff && !partial && askAnswer && last && showKeypad ? (
           <NumberKeypad disabled={pending} onDigit={onDigit} onDelete={onDelete} extras={extraKey ? [extraKey] : []} />
         ) : null}
       </div>
@@ -164,9 +278,9 @@ export function ShowMePanel({
 
 function WalkArrow() {
   return (
-    <svg className="walk-arrow" viewBox="0 0 64 36" aria-hidden="true">
-      <path className="walk-arrow-line" d="M52 30 C 44 29, 38 24, 33 18 S 20 6, 12 5" pathLength={100} />
-      <path className="walk-arrow-head" d="M12 5 L 20 6 M 12 5 L 13 13" pathLength={24} />
+    <svg className="walk-arrow" viewBox="0 0 24 28" aria-hidden="true">
+      <path className="walk-arrow-line" d="M12 26 V8" />
+      <path className="walk-arrow-head" d="M5 14 L12 6 L19 14" />
     </svg>
   );
 }
@@ -294,6 +408,19 @@ function handX(angle: number, length: number): number {
 
 function handY(angle: number, length: number): number {
   return 60 + Math.sin((angle * Math.PI) / 180) * length;
+}
+
+export function HintCaption({ text, autoRead = false }: { text: string; autoRead?: boolean }) {
+  const speech = useSpoken(text, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
+  return (
+    <div className="show-me-bar hint-caption">
+      <ListenButton speaking={speech.speaking} onClick={speech.toggle} />
+      <p className="show-me-caption" aria-live="polite">
+        <HighlightedWords text={text} activeWord={speech.activeWord} />
+        <LightbulbIcon />
+      </p>
+    </div>
+  );
 }
 
 export function LightbulbIcon(): ReactNode {

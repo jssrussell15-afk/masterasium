@@ -96,9 +96,10 @@ function speechReady(): boolean {
   return typeof synth?.speak === "function" && typeof window.SpeechSynthesisUtterance === "function";
 }
 
-export function useSpoken(text: string, options?: { auto?: boolean; active?: boolean }): SpeechHandle {
+export function useSpoken(text: string, options?: { auto?: boolean; active?: boolean; rate?: number }): SpeechHandle {
   const auto = options?.auto ?? false;
   const active = options?.active ?? true;
+  const rate = options?.rate;
   const [speaking, setSpeaking] = useState(false);
   const [activeWord, setActiveWord] = useState<number | null>(null);
   const token = useRef(0);
@@ -135,6 +136,7 @@ export function useSpoken(text: string, options?: { auto?: boolean; active?: boo
 
     const utterance = new SpeechSynthesisUtterance(spoken);
     utterance.lang = "en-CA";
+    if (rate != null) utterance.rate = rate;
     let sawBoundary = false;
     const mine = () => mounted.current && token.current === id;
 

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { attemptWritePlan, isAttemptId } from "@/lib/practice/attempt-once";
 import { runClaimedLearning } from "@/lib/practice/learning-claim";
 import { answersMatch } from "@/lib/practice/answers";
+import { resolvedShowLevel, supportAfterCheck } from "@/lib/practice/fade";
 import { feedbackFromMark, markFromState, reduceFeedback, whyLine } from "@/lib/practice/feedback";
 import { classifyMistake, noteMistake } from "@/lib/practice/mistakes";
 import { buildPracticeEvent, type PracticeEvent } from "@/lib/practice/events";
@@ -29,8 +30,8 @@ import { loadPlacement } from "@/lib/practice/placement-store";
 import { skillById } from "@/lib/practice/skills";
 import { accuracyScheduler, describeCatalog, emptyCard, type SkillCard } from "@/lib/practice/scheduler";
 import { readAttemptMark, readStoredPlan, readStoredWalk, unpackStoredAnswer, withAttemptMark } from "@/lib/practice/stored-answer";
-import { walkForSkill } from "@/lib/practice/walk";
-import type { PracticeState } from "@/lib/practice/types";
+import { skillCanWalk, walkForSkill } from "@/lib/practice/walk";
+import type { PracticeState, QuestionKind } from "@/lib/practice/types";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import { friendlyDbError } from "@/lib/db-error";
@@ -214,15 +215,31 @@ async function markPractice(
   const hasWalk = Boolean(
     readStoredWalk(question.answer) ?? walkForSkill(question.skill_id, question.prompt, unpacked.answer),
   );
-  const result = reduceFeedback(
+  const { cards, error: cardError } = await loadCards(supabase, childId);
+  if (cardError) return { error: cardError };
+  const level = resolvedShowLevel(
+    readLearn(cardFor(cards, question.skill_id).fsrs).showLevel,
+    skillCanWalk(question.skill_id),
+  );
+  let result = reduceFeedback(
     feedbackFromMark(existing),
     showed ? { type: mode === "show-me" ? "show-me" : "show-how" } : { type: "check", correct },
   );
-  const openingWalk = hasWalk && (mode === "show-me" || (mode === "check" && result.state.phase === "revealed"));
+  const support = supportAfterCheck({
+    level,
+    intent: mode,
+    phase: result.state.phase,
+  });
+  if (support.promote) result = reduceFeedback(result.state, { type: "show-me" });
+  const openingWalk = hasWalk && support.mode != null;
   const showedExample = String(formData.get("openedExample") ?? "") === "1";
-  const marked = markFromState(result.state, existing, given, showed || openingWalk, showedExample);
+  const marked = markFromState(result.state, existing, given, showed || openingWalk || support.promote, showedExample);
   if (!marked) return previous;
-  const mark = isAttemptId(checkId) ? { ...marked, clientCheckId: checkId } : marked;
+  const mark = {
+    ...marked,
+    ...(isAttemptId(checkId) ? { clientCheckId: checkId } : {}),
+    ...(support.mode ? { walkMode: support.mode } : {}),
+  };
 
   const { error: updateError } = await supabase
     .from("pending_questions")
@@ -238,8 +255,6 @@ async function markPractice(
     });
   }
 
-  const { cards, error: cardError } = await loadCards(supabase, childId);
-  if (cardError) return { error: cardError };
   const issued = await loadOrIssueQuestion(supabase, childId, access.working, cards);
   if (!issued.question) return { error: issued.error ?? "Could not keep this question." };
   return snapshot(supabase, childId, access, cards, {
@@ -292,6 +307,7 @@ async function advancePractice(
 
   const today = torontoDate();
   const current = cardFor(cards, question.skill_id);
+  const skill = skillById(question.skill_id);
   const applied = applyLearning({
     card: current,
     correct,
@@ -299,6 +315,10 @@ async function advancePractice(
     today,
     rollbackCard: storedPlan.rollbackSkillId ? cardFor(cards, storedPlan.rollbackSkillId) : null,
     showedExample: mark.showedExample === true,
+    showedHow: mark.showedHow === true,
+    grade: skill?.grade,
+    hasWalk: skillCanWalk(question.skill_id),
+    attemptId: isAttemptId(attemptId) ? attemptId : undefined,
   });
   let nextCard = applied.card;
   let note: string | undefined;
@@ -440,6 +460,29 @@ async function readClientAttempt(
   return { row: (data as ClientAttemptRow | null) ?? null, error: null };
 }
 
+/** The question still on screen, so a replay keeps Show me and the example flag. */
+async function pendingMark(
+  supabase: SupabaseClient,
+  childId: string,
+  skillId: string,
+): Promise<{ kind: QuestionKind | null; showedHow: boolean; showedExample: boolean }> {
+  const { data } = await supabase
+    .from("pending_questions")
+    .select("answer")
+    .eq("child_id", childId)
+    .eq("skill_id", skillId)
+    .limit(1)
+    .maybeSingle();
+  const stored = typeof data?.answer === "string" ? data.answer : null;
+  if (!stored) return { kind: null, showedHow: false, showedExample: false };
+  const mark = readAttemptMark(stored);
+  return {
+    kind: readStoredPlan(stored).kind,
+    showedHow: mark?.showedHow === true,
+    showedExample: mark?.showedExample === true,
+  };
+}
+
 async function applyStoredAttempt(
   supabase: SupabaseClient,
   childId: string,
@@ -454,12 +497,19 @@ async function applyStoredAttempt(
       if (error) return error;
       const today = torontoDate();
       const card = cardFor(cards, row.skill_id);
-      const reviewing = isReviewDue(readLearn(card.fsrs), today);
+      const pending = await pendingMark(supabase, childId, row.skill_id);
+      const reviewing = pending.kind === "review" || (pending.kind == null && isReviewDue(readLearn(card.fsrs), today));
+      const skill = skillById(row.skill_id);
       const applied = applyLearning({
         card,
         correct: row.correct,
-        kind: reviewing ? "review" : "focus",
+        kind: reviewing ? "review" : pending.kind === "support" || pending.kind === "check" ? pending.kind : "focus",
         today,
+        showedExample: pending.showedExample,
+        showedHow: pending.showedHow,
+        grade: skill?.grade,
+        hasWalk: skillCanWalk(row.skill_id),
+        attemptId,
       });
       return persistCards(supabase, childId, applied.card, applied.extra ?? null);
     },
