@@ -42,6 +42,21 @@ export type LearnState = {
   recallFreshOn?: string;
   /** skill_reviews gap to mark done after a success at 1, 7, or 30 days. */
   recallMark?: "day" | "week" | "month";
+  /**
+   * Show me support for this child and skill.
+   * 1 is the full walk, 4 is tap only. Absent means the skill default.
+   */
+  showLevel?: 1 | 2 | 3 | 4;
+  /** Distinct Toronto days this skill has been practised. */
+  showDays?: number;
+  /** Last Toronto day counted in showDays. */
+  showDay?: string;
+  /** Toronto day a long gap already stepped support up. */
+  showGapOn?: string;
+  /** First-try misses in a row on finished items. Two steps support up one. */
+  showMisses?: number;
+  /** Attempt that last updated support. A replay of this id does not move it again. */
+  showAttempt?: string;
 };
 
 export type SkillMemory = {
@@ -77,6 +92,18 @@ function recallMark(value: unknown): "day" | "week" | "month" | undefined {
   return undefined;
 }
 
+function showLevel(value: unknown): 1 | 2 | 3 | 4 | undefined {
+  if (value === 1 || value === 2 || value === 3 || value === 4) return value;
+  return undefined;
+}
+
+function attemptKey(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 120 || /\s/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
 function dateList(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const dates = value.filter(
@@ -108,6 +135,12 @@ export function readLearnFields(raw: Record<string, unknown>): LearnState {
     recallMisses: positive(raw.recallMisses),
     recallFreshOn: dateString(raw.recallFreshOn),
     recallMark: recallMark(raw.recallMark),
+    showLevel: showLevel(raw.showLevel),
+    showDays: positive(raw.showDays),
+    showDay: dateString(raw.showDay),
+    showGapOn: dateString(raw.showGapOn),
+    showMisses: positive(raw.showMisses),
+    showAttempt: attemptKey(raw.showAttempt),
   };
 }
 
@@ -137,6 +170,12 @@ export function cleanLearn(learn: LearnState): LearnState {
   if (learn.recallMisses) next.recallMisses = learn.recallMisses;
   if (learn.recallFreshOn) next.recallFreshOn = learn.recallFreshOn;
   if (learn.recallMark) next.recallMark = learn.recallMark;
+  if (learn.showLevel) next.showLevel = learn.showLevel;
+  if (learn.showDays) next.showDays = learn.showDays;
+  if (learn.showDay) next.showDay = learn.showDay;
+  if (learn.showGapOn) next.showGapOn = learn.showGapOn;
+  if (learn.showMisses) next.showMisses = learn.showMisses;
+  if (learn.showAttempt) next.showAttempt = learn.showAttempt;
   return next;
 }
 
