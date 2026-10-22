@@ -23,8 +23,12 @@ export function questionsFromSkill(
   const example = skillExample(skillId);
   const items: PracticeItem[] = [];
   const seen = new Set<string>();
+  const wanted = Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0;
+  // The easy pool for some skills is only a handful of prompts. Stop retrying
+  // once those repeats are exhausted, even if the caller asked for more.
+  const guardLimit = Math.min(wanted * 10, 200);
   let guard = 0;
-  while (items.length < count && guard < count * 10) {
+  while (items.length < wanted && guard < guardLimit) {
     guard += 1;
     const question = generateQuestion(skillId, rng, { small: difficulty === "easy" });
     const harder = difficulty === "harder" ? hardenPrompt(question.prompt, "harder", rng) : null;
