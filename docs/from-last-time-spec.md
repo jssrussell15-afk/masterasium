@@ -52,13 +52,19 @@ Same-day success opens the next skill immediately. That gate stays `isConfirmed`
 
 That same-day success is not mastery. It does not set `learn.steadyOn`. The skill stays on the review ladder and is asked again on a later Toronto day, by From last time or a woven slot at 3, 6, or 9. The first step is due no sooner than tomorrow. If `reviewDueAt` is missing, today, or earlier, set `recallStep` to 0 and `reviewDueAt` to `addDays(today, 1)`. If a later date is already stored, keep it. Do not set `needsReview`.
 
-Mastery is `learn.steadyOn`. It is earned only by a clean success on a later Toronto day than the skill was introduced. Clean means first-try correct, and Show me stayed closed. From last time and a woven review both count. A same-day success does not set it. A later miss does not clear it, and does not send the skill back to "not started".
+Mastery is `learn.steadyOn`. For every skill not yet Mastered when this change ships, it is earned only by a clean success on a later Toronto day than the skill was introduced. Clean means first-try correct, and Show me stayed closed. From last time and a woven review both count. A same-day success does not set it. A later miss does not clear it, and does not send the skill back to "not started".
 
-Do not backfill `steadyOn` from `isConfirmed` or from `introSeenAt`. A card that is already confirmed still opens the next skill, and it is re-asked on a later day. Until `steadyOn` is set, parent and dashboard copy does not say mastered. The visible word "Mastered" (`masteryLabel` in `lib/practice/mastery.ts`, and `skillStatusLabel`) waits for `steadyOn`. Same-day confirmation stays "In progress" on the parent desk. The topic list uses that same rule. Internal `isMastered` keeps its name and still opens the path.
+Skills already shown as "Mastered" when this change ships stay "Mastered". No backfill, and no retroactive downgrade to "In progress". Do not invent `steadyOn` from old attempts, from `isConfirmed`, or from `introSeenAt`.
 
-Show me keeps its bars and the Grade 1–2 two-day hold. It cannot step down before `steadyOn`, including when this success sets it. A recall miss steps support up one, like a review miss, unless a gap already stepped it up today. The recall does not change `consecutive_correct`.
+The later-day success rule applies to every skill not yet Mastered at ship time. That covers a newly introduced skill and a skill already in progress. There is one rule set, not two. A card that is confirmed and not yet Mastered still opens the next skill, and it is re-asked on a later day. Until that skill earns `steadyOn`, parent and dashboard copy does not say mastered. The visible word "Mastered" (`masteryLabel` in `lib/practice/mastery.ts`, and `skillStatusLabel`) stays for a skill already Mastered at ship, and otherwise waits for `steadyOn`. Same-day confirmation on a skill that was not yet Mastered stays "In progress" on the parent desk. The topic list uses that same rule. Internal `isMastered` keeps its name and still opens the path.
 
-A miss on that later-day re-ask uses the step below. From last time always uses it. A woven slot uses it until `steadyOn` is set, and does not open a same-day on-ramp. After `steadyOn`, a due miss on a woven slot keeps today's `applyRetest`.
+Sketch only. This PR runs no SQL. At ship time, mark each skill already shown as Mastered as grandfathered. For example, set `steadyOn` to its existing mastered date, or set a `grandfathered` flag in `skill_states`.
+
+A grandfathered skill keeps its current Show me fading state and stays on the normal review ladder. A later miss still uses the `applyRetest` step-back as today.
+
+Show me keeps its bars and the Grade 1–2 two-day hold. On a skill that is not yet Mastered, it cannot step down before `steadyOn`, including when this success sets it. A grandfathered skill keeps the fading state it already has. A recall miss steps support up one, like a review miss, unless a gap already stepped it up today. The recall does not change `consecutive_correct`.
+
+A miss on that later-day re-ask uses the step below. From last time uses it on a skill that is not yet Mastered. A woven slot uses it until `steadyOn` is set, and does not open a same-day on-ramp. After `steadyOn`, a due miss on a woven slot keeps today's `applyRetest`. A grandfathered skill stays on the normal review ladder. A later miss uses the `applyRetest` step-back as today.
 
 After the `learning_applied` claim wins:
 
@@ -121,15 +127,29 @@ The weekday comes from `recall_of` in `en-CA`. The topic uses `topicFromTitle`, 
 
 One eligible item is "Remembered 1 of 1 from Tuesday." or, on a miss, the come-back line. Maths omits the subject. On a day with two subjects, name the other one: "Remembered 2 of 2 from Tuesday in spelling."
 
-The parent desk says "Mastered" only when `steadyOn` is set. Same-day confirmation stays "In progress". The sentences above stay word for word.
+The parent desk says "Mastered" for a skill already shown as Mastered when this change ships, and once `steadyOn` is set. A skill not yet Mastered at ship stays "In progress" until a later-day success. Same-day confirmation does not make it "Mastered". The sentences above stay word for word.
 
 The daily stub may store the sentence. The mailed body still drops the stub's counts and accuracy. `sendSundayDigest` stays a no-op.
+
+### One-time note about mastered
+
+Once only, in the first Sunday digest sent after this change ships. Not in the daily note. The digest is activity-gated, so if no digest sends that week, the note waits for the next digest that does. After it appears once, never again. Sketch only: a per-parent `mastery_note_sent_at` timestamp. This PR runs no SQL. No dashboard banner, no pop-up, and nothing to dismiss.
+
+One sentence, or two short ones. Phone width. Calm. No scores and no streaks. `sendSundayDigest` stays a no-op. No emails are sent.
+
+Suggested wording (primary): "We've tightened what 'mastered' means. New skills now need a win on a later day."
+
+Alternative: "Skills now count as mastered after a success on a later day. Past mastered skills stay mastered."
+
+Alternative: "Some new skills may show 'in progress' a little longer. That's on purpose."
+
+The founder's original example said skills may show as in progress while they re-prove it. Nothing already Mastered is downgraded, so the wording must not suggest that an existing skill will drop back.
 
 ## 6a. Weekly dinner-table question (optional)
 
 One optional maths question each week. It belongs in the Sunday digest only, never in the daily note. It is a suggestion, not a task. Sample: "Try this at dinner: ask Oliver to explain how carrying works."
 
-Draw it from a maths skill the child practised that week. Prefer one with `steadyOn` set, so the child can explain it. If several are steady, use the one practised latest that week. If none are steady, use the skill they answered most. Plain parent words, no jargon, one sentence, phone width. The child's first name replaces Oliver.
+Draw it from a maths skill the child practised that week. Prefer one with `steadyOn` set, or a skill grandfathered at ship, so the child can explain it. If several are steady, use the one practised latest that week. If none are steady, use the skill they answered most. Plain parent words, no jargon, one sentence, phone width. The child's first name replaces Oliver.
 
 The same line adds one calm fallback for a stuck moment. Sample: "If they get stuck, ask them to show you with their fingers."
 
@@ -222,8 +242,8 @@ Docs only until Matthew asks for a build.
 - [ ] A miss steps the ladder as in section 3 and does not set `reviewDueAt` to today. Two misses in a row on that skill set step 0.
 - [ ] Same-day confirmation opens the next skill at once. Practice does not wait.
 - [ ] That skill is re-asked on a later Toronto day, by From last time or a woven slot. The first ladder step is due no sooner than tomorrow. Same-day confirmation does not set `steadyOn`.
-- [ ] `steadyOn` is set only by a clean success on a later Toronto day. Do not backfill it from `isConfirmed`. Parent and dashboard "Mastered" waits for that date.
-- [ ] Show me does not step down before `steadyOn`. A later-day miss steps the ladder back as in section 3. A recall miss steps Show me up once, and not twice on a day a gap already did.
+- [ ] Skills already shown as "Mastered" when this change ships stay "Mastered". No backfill, and no downgrade to "In progress". Every skill not yet Mastered at ship, new or already in progress, earns `steadyOn` only by a clean success on a later Toronto day. Parent and dashboard "Mastered" follows that one rule.
+- [ ] Show me does not step down before `steadyOn` on a skill not yet Mastered. A grandfathered skill keeps its current fading state, and a later miss uses today's `applyRetest` step-back. A later-day miss steps the ladder back as in section 3. A recall miss steps Show me up once, and not twice on a day a gap already did.
 - [ ] The end-of-set line never blocks, shows at most once per Toronto day, and never mid-set. "Keep going" opens the next skill. The nudge does not count an attempt or move the ladder.
 - [ ] "Done for today" and "Keep going" each have a tap target of at least 48px. Listen reads the line aloud.
 - [ ] The same `client_attempt_id` does not step the ladder twice. Cover this in `review.test.ts`, `fade.test.ts`, `learning-claim.test.ts`, and `lib/digest/build.test.ts`.
