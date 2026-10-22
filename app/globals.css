@@ -1613,7 +1613,8 @@ html:has(.question-screen) main {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
+  min-height: var(--tap);
+  min-width: var(--tap);
   border: 1px solid var(--line);
   border-radius: 999px;
   background: white;
@@ -1794,6 +1795,44 @@ html:has(.question-screen) main {
   gap: 0.65rem;
   align-content: center;
   min-height: 8.5rem;
+}
+
+.show-me-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.show-me-steps li {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+  font-size: 1.15rem;
+  font-weight: 650;
+}
+
+.show-me-blank {
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+}
+
+.show-me-blank .answer-input {
+  min-height: var(--tap);
+  background: white;
+}
+
+.hint-caption {
+  margin-top: 0.35rem;
+}
+
+.hint-caption .hint-bulb {
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-left: 0.35rem;
+  vertical-align: text-bottom;
 }
 
 .show-me-answer .answer-input {

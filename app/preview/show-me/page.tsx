@@ -1,7 +1,8 @@
 import { QuestionPractice } from "@/components/question-practice";
 import { Shell } from "@/components/site-header";
+import type { ShowLevel, SupportMode } from "@/lib/practice/fade";
 import { generateQuestion } from "@/lib/practice/generate";
-import { focusEyebrow } from "@/lib/practice/skills";
+import { focusEyebrow, skillById } from "@/lib/practice/skills";
 import type { Question } from "@/lib/practice/types";
 import type { Walkthrough } from "@/lib/practice/walk";
 
@@ -10,7 +11,7 @@ export const metadata = {
   title: "Show me sample",
 };
 
-const SCENES = ["help", "hint", "add-1", "add-2", "add-3", "add-4", "handoff", "sub", "mult", "frac", "time"] as const;
+const SCENES = ["help", "hint", "add-1", "add-2", "add-3", "add-4", "handoff", "sub", "mult", "frac", "time", "fade-1", "fade-2", "fade-3", "fade-4", "grade1"] as const;
 type Scene = (typeof SCENES)[number];
 
 export default async function ShowMeSamplePage({
@@ -34,8 +35,8 @@ export default async function ShowMeSamplePage({
           kind: "single",
           inputMode: frame.question.answer.includes(":") || frame.question.answer.includes("/") ? "text" : "numeric",
         }}
-        hint="Add the ones first."
-        example={scene === "help" ? { prompt: "20 + 15 = ?", steps: ["Add the ones."], answer: "35" } : null}
+        hint={frame.hint}
+        example={frame.example}
         progress={{ index: 1, total: 10 }}
         phase={frame.phase}
         why={null}
@@ -43,6 +44,10 @@ export default async function ShowMeSamplePage({
         expected={frame.phase === "revealed" ? frame.question.answer : null}
         walk={frame.question.walk}
         walkStart={frame.walkStart}
+        showLevel={frame.showLevel}
+        walkMode={frame.walkMode}
+        grade={frame.grade}
+        autoRead={frame.grade <= 2}
       />
       </div>
     </Shell>
@@ -52,34 +57,94 @@ export default async function ShowMeSamplePage({
 function frameFor(scene: Scene): {
   question: Question;
   phase: "answering" | "revealed";
-  walkStart: { step: number; handoff?: boolean; hint?: boolean } | null;
+  walkStart: { step: number; handoff?: boolean; hint?: boolean; faded?: boolean } | null;
+  showLevel: ShowLevel | null;
+  walkMode: SupportMode | null;
+  grade: number;
+  hint: string;
+  example: { prompt: string; steps: string[]; answer: string } | null;
 } {
   const addition = sample("g3-add-sub", (question) => question.prompt.includes("+") && Boolean(question.walk));
-  if (scene === "help") return { question: addition, phase: "answering", walkStart: null };
-  if (scene === "hint") return { question: addition, phase: "answering", walkStart: { step: 0, hint: true } };
-  if (scene === "handoff") return { question: addition, phase: "revealed", walkStart: { step: 0, handoff: true } };
+  const base = {
+    question: addition,
+    showLevel: null as ShowLevel | null,
+    walkMode: null as SupportMode | null,
+    grade: 3,
+    hint: "Add the ones first.",
+    example: null as { prompt: string; steps: string[]; answer: string } | null,
+  };
+  if (scene === "fade-1") {
+    return { ...base, phase: "revealed", walkStart: { step: 0 }, showLevel: 1, walkMode: "guided" };
+  }
+  if (scene === "fade-2") {
+    return { ...base, phase: "revealed", walkStart: { step: 0, faded: true }, showLevel: 2, walkMode: "faded" };
+  }
+  if (scene === "fade-3") {
+    return { ...base, phase: "answering", walkStart: null, showLevel: 3 };
+  }
+  if (scene === "fade-4") {
+    return { ...base, phase: "answering", walkStart: null, showLevel: 4 };
+  }
+  if (scene === "grade1") {
+    const skill = skillById("g1-count");
+    const question = generateQuestion("g1-count", mulberry32(11));
+    return {
+      question,
+      phase: "revealed",
+      walkStart: null,
+      showLevel: 1,
+      walkMode: "guided",
+      grade: 1,
+      hint: "Count one more.",
+      example: skill
+        ? { prompt: skill.examplePrompt, steps: skill.exampleSteps, answer: skill.exampleAnswer }
+        : null,
+    };
+  }
+  if (scene === "help") {
+    return {
+      ...base,
+      phase: "answering",
+      walkStart: null,
+      example: { prompt: "20 + 15 = ?", steps: ["Add the ones."], answer: "35" },
+    };
+  }
+  if (scene === "hint") return { ...base, phase: "answering", walkStart: { step: 0, hint: true } };
+  if (scene === "handoff") return { ...base, phase: "revealed", walkStart: { step: 0, handoff: true } };
   if (scene.startsWith("add-")) {
     const step = Number(scene.slice(4)) - 1;
-    return { question: addition, phase: "revealed", walkStart: { step } };
+    return { ...base, phase: "revealed", walkStart: { step } };
   }
   if (scene === "sub") {
     return {
+      ...base,
       question: sample("g3-add-sub", (question) => question.prompt.includes("−") && Boolean(question.walk)),
       phase: "revealed",
       walkStart: { step: 1 },
     };
   }
   if (scene === "mult") {
-    return { question: sample("g3-mult", (question) => Boolean(question.walk)), phase: "revealed", walkStart: { step: 1 } };
+    return {
+      ...base,
+      question: sample("g3-mult", (question) => Boolean(question.walk)),
+      phase: "revealed",
+      walkStart: { step: 1 },
+    };
   }
   if (scene === "frac") {
     return {
+      ...base,
       question: sample("g3-fractions", (question) => Boolean(question.walk)),
       phase: "revealed",
       walkStart: { step: 1 },
     };
   }
-  return { question: sample("g3-time", (question) => Boolean(question.walk)), phase: "revealed", walkStart: { step: 0 } };
+  return {
+    ...base,
+    question: sample("g3-time", (question) => Boolean(question.walk)),
+    phase: "revealed",
+    walkStart: { step: 0 },
+  };
 }
 
 function sample(skillId: string, accept: (question: Question) => boolean): Question & { walk: Walkthrough } {

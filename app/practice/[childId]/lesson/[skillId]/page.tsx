@@ -9,10 +9,14 @@ import { lessonById } from "@/lib/lesson/catalog";
 import { buildLessonScreen } from "@/lib/lesson/screen";
 import { nextReviewDate, prepareRun } from "@/lib/lesson/store";
 import { gradeAccessFrom } from "@/lib/practice/grade-access";
+import { readsAloudAutomatically } from "@/lib/children/read-aloud";
+import { readHold } from "@/lib/lesson/hold";
+import { resolvedShowLevel } from "@/lib/practice/fade";
 import { readLearn } from "@/lib/practice/memory";
 import { isReviewDue } from "@/lib/practice/review";
-import { cardFor, loadCards } from "@/lib/practice/session";
+import { cardFor, loadCards, refreshShowGap } from "@/lib/practice/session";
 import { skillById } from "@/lib/practice/skills";
+import { skillCanWalk } from "@/lib/practice/walk";
 
 export default function LessonPage({
   params,
@@ -56,10 +60,22 @@ async function LessonLoader({ params }: { params: Promise<{ childId: string; ski
   if (prepared.error) return <p className="feedback bad mt-8">{prepared.error}</p>;
 
   const { cards: freshCards } = await loadCards(supabase, childId);
-  const freshLearn = readLearn(cardFor(freshCards, skillId).fsrs);
+  const today = torontoDate();
+  const gapped = await refreshShowGap(supabase, childId, skillId, freshCards, today);
+  const freshLearn = readLearn(cardFor(gapped, skillId).fsrs);
   const screen = buildLessonScreen(prepared.run, skill, lesson, {
     nextReview: nextReviewDate(freshLearn),
+    showLevel: resolvedShowLevel(freshLearn.showLevel, skillCanWalk(skillId)),
+    walkMode: readHold(prepared.run.feedbackNote, prepared.run.feedbackExpected)?.walkMode ?? null,
   });
 
-  return <LessonSession initial={{ screen }} childId={childId} skillId={skillId} />;
+  return (
+    <LessonSession
+      initial={{ screen }}
+      childId={childId}
+      skillId={skillId}
+      grade={skill.grade}
+      autoRead={readsAloudAutomatically(skill.grade, session.child.read_questions_aloud)}
+    />
+  );
 }

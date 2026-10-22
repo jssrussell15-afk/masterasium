@@ -143,12 +143,12 @@ export function applyShowOnAttempt(learn: LearnState, input: ShowAttemptInput): 
 }
 
 /**
- * A first miss opens the full walk only at level 1.
- * Two misses, or a Show me tap at level 2 or higher, open the partly filled example.
+ * A first miss opens the full example only at level 1.
+ * Two misses open that full example at any level.
+ * Show me at level 2 or higher opens the partly filled example.
  */
 export function supportAfterCheck(input: {
   level: ShowLevel;
-  hasWalk: boolean;
   intent: "check" | "show-me" | "show-how";
   phase: "retry" | "correct" | "revealed" | "answering";
 }): { promote: boolean; mode: SupportMode | null } {
@@ -157,7 +157,7 @@ export function supportAfterCheck(input: {
   const asked = input.intent === "show-me";
   if (!firstMiss && !secondMiss && !asked) return { promote: false, mode: null };
   if (firstMiss || secondMiss || input.level === 1) {
-    return { promote: firstMiss, mode: input.hasWalk ? "guided" : null };
+    return { promote: firstMiss, mode: "guided" };
   }
   return { promote: false, mode: "faded" };
 }

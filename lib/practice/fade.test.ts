@@ -1,4 +1,6 @@
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import ShowMeSamplePage from "@/app/preview/show-me/page";
 import {
   applyShowGap,
   applyShowOnAttempt,
@@ -252,27 +254,57 @@ describe("show me replay", () => {
   });
 });
 
+const BANNED = /\b(level|levels|fade|faded|fading|streak|badge|badges|points|confetti|mascot|demoted|demotion|timer)\b/i;
+
+describe("the child never sees the support level", () => {
+  it("keeps levels 1 to 4 and a Grade 1 example free of fading language", async () => {
+    const scenes = ["fade-1", "fade-2", "fade-3", "fade-4", "grade1"] as const;
+    for (const scene of scenes) {
+      const html = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene }) }));
+      expect(html).not.toMatch(BANNED);
+      expect(html.match(/class="listen"/g)?.length ?? 0).toBe(1);
+    }
+    const full = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "fade-1" }) }));
+    expect(full).toContain("Add the ones first.");
+    expect(full).toContain(">Listen<");
+    const partial = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "fade-2" }) }));
+    expect(partial).toContain("You fill this step.");
+    expect(partial).toContain("Add the ones first.");
+    const hint = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "fade-3" }) }));
+    expect(hint).toContain("Add the ones first.");
+    expect(hint).toContain(">Show me<");
+    expect(hint).not.toContain('class="show-me"');
+    const quiet = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "fade-4" }) }));
+    expect(quiet).toContain(">Show me<");
+    expect(quiet).not.toContain("Add the ones first.");
+    expect(quiet).not.toContain('class="show-me"');
+    const early = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "grade1" }) }));
+    expect(early).toContain("Count one more than 14.");
+    expect(early).toContain(">Listen<");
+  });
+});
+
 describe("show me open and blanks", () => {
   it("opens the full walk on a level 1 miss and the partly filled example later", () => {
-    expect(supportAfterCheck({ level: 1, hasWalk: true, intent: "check", phase: "retry" })).toEqual({
+    expect(supportAfterCheck({ level: 1, intent: "check", phase: "retry" })).toEqual({
       promote: true,
       mode: "guided",
     });
-    expect(supportAfterCheck({ level: 2, hasWalk: true, intent: "check", phase: "retry" })).toEqual({
+    expect(supportAfterCheck({ level: 2, intent: "check", phase: "retry" })).toEqual({
       promote: false,
       mode: null,
     });
-    expect(supportAfterCheck({ level: 4, hasWalk: true, intent: "check", phase: "revealed" })).toEqual({
+    expect(supportAfterCheck({ level: 4, intent: "check", phase: "revealed" })).toEqual({
       promote: false,
       mode: "guided",
     });
-    expect(supportAfterCheck({ level: 4, hasWalk: true, intent: "show-me", phase: "answering" })).toEqual({
+    expect(supportAfterCheck({ level: 4, intent: "show-me", phase: "revealed" })).toEqual({
       promote: false,
       mode: "faded",
     });
-    expect(supportAfterCheck({ level: 3, hasWalk: false, intent: "show-me", phase: "answering" })).toEqual({
+    expect(supportAfterCheck({ level: 1, intent: "show-me", phase: "revealed" })).toEqual({
       promote: false,
-      mode: "faded",
+      mode: "guided",
     });
   });
 

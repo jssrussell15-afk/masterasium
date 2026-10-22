@@ -102,6 +102,7 @@ export function readAttemptMark(stored: string): AttemptMark | null {
       showedHow: mark.showedHow === true,
       ...(mark.showedExample === true ? { showedExample: true } : {}),
       ...(typeof mark.clientCheckId === "string" ? { clientCheckId: mark.clientCheckId } : {}),
+      ...(mark.walkMode === "guided" || mark.walkMode === "faded" ? { walkMode: mark.walkMode } : {}),
     };
   } catch {
     return null;

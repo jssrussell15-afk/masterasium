@@ -11,10 +11,14 @@ export function LessonSession({
   initial,
   childId,
   skillId,
+  grade = null,
+  autoRead,
 }: {
   initial: LessonClientState;
   childId: string;
   skillId: string;
+  grade?: number | null;
+  autoRead?: boolean;
 }) {
   const [state, action, pending] = useActionState(lessonAction, initial);
   return (
@@ -25,6 +29,8 @@ export function LessonSession({
       action={action}
       childId={childId}
       skillId={skillId}
+      grade={grade}
+      autoRead={autoRead}
     />
   );
 }
@@ -37,6 +43,8 @@ export function LessonView({
   childId,
   skillId,
   sampleHref,
+  grade = null,
+  autoRead,
 }: {
   screen: LessonScreen;
   error?: string;
@@ -45,6 +53,8 @@ export function LessonView({
   childId?: string;
   skillId?: string;
   sampleHref?: string;
+  grade?: number | null;
+  autoRead?: boolean;
 }) {
   const questionLayout = screen.kind === "question";
   return (
@@ -122,6 +132,10 @@ export function LessonView({
           pending={pending}
           guideSteps={screen.guideSteps}
           walk={screen.walk}
+          showLevel={screen.showLevel ?? null}
+          walkMode={screen.walkMode ?? null}
+          grade={grade}
+          autoRead={autoRead}
           handoffIntent="next"
           action={action}
           fields={

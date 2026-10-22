@@ -3,6 +3,7 @@
 import { useEffect, type FormEvent, type ReactNode } from "react";
 import { HighlightedWords, ListenButton, useSpoken } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
+import { FILL_LINE, type FillBlank } from "@/lib/practice/fade";
 import type { WalkStep, WalkVisual } from "@/lib/practice/walk";
 import { targetSpan } from "@/lib/practice/walk";
 
@@ -52,6 +53,12 @@ export function ShowMePanel({
   fields,
   handoffIntent,
   onElapsed,
+  autoRead = false,
+  blanks = null,
+  blankDrafts = {},
+  onBlank,
+  steps = null,
+  askAnswer = true,
 }: {
   step: WalkStep;
   index: number;
@@ -72,9 +79,19 @@ export function ShowMePanel({
   fields: { name: string; value: string }[];
   handoffIntent: string;
   onElapsed?: (form: HTMLFormElement) => void;
+  /** Grades 1–2 speak the caption when it appears. Listen stays for a replay. */
+  autoRead?: boolean;
+  /** Partly filled example. Early steps stay written. These indexes are blank. */
+  blanks?: FillBlank[] | null;
+  blankDrafts?: Record<number, string>;
+  onBlank?: (index: number, value: string) => void;
+  steps?: WalkStep[] | null;
+  /** The last guided step asks for the answer. A read example leaves it out. */
+  askAnswer?: boolean;
 }) {
-  const caption = handoff ? "Your turn: try one like it" : step.caption;
-  const speech = useSpoken(caption);
+  const partial = Boolean(blanks && steps);
+  const caption = handoff ? "Your turn: try one like it" : partial ? FILL_LINE : step.caption;
+  const speech = useSpoken(caption, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
   const last = index === total - 1;
 
   useEffect(() => {
@@ -117,9 +134,11 @@ export function ShowMePanel({
       <p className="show-me-caption" aria-live="polite">
         <HighlightedWords text={caption} activeWord={speech.activeWord} />
       </p>
-      <span className="show-me-count">
-        Step {index + 1} of {total}
-      </span>
+      {partial ? null : (
+        <span className="show-me-count">
+          Step {index + 1} of {total}
+        </span>
+      )}
       {backButton}
       {nextButton}
     </>
@@ -139,8 +158,30 @@ export function ShowMePanel({
         <div className="show-me-bar">{bar}</div>
       )}
       <div className="show-me-stage">
-        {handoff ? null : step.visual ? <WalkVisualView visual={step.visual} /> : null}
-        {!handoff && last ? (
+        {!handoff && partial && steps && blanks ? (
+          <ol className="show-me-steps">
+            {steps.map((item, itemIndex) => {
+              const blank = blanks.find((entry) => entry.index === itemIndex);
+              if (!blank) return <li key={`${item.caption}-${itemIndex}`}>{item.caption}</li>;
+              return (
+                <li key={`${item.caption}-${itemIndex}`} className="show-me-blank">
+                  <span>{FILL_LINE}</span>
+                  <input
+                    className="answer-input"
+                    aria-label={FILL_LINE}
+                    value={blankDrafts[itemIndex] ?? ""}
+                    inputMode="text"
+                    autoComplete="off"
+                    aria-invalid={miss || undefined}
+                    onChange={(event) => onBlank?.(itemIndex, event.target.value)}
+                  />
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
+        {handoff || partial ? null : step.visual ? <WalkVisualView visual={step.visual} /> : null}
+        {!handoff && !partial && last && askAnswer ? (
           <label className="field show-me-answer">
             Answer
             <input
@@ -153,8 +194,8 @@ export function ShowMePanel({
             />
           </label>
         ) : null}
-        {!handoff && last && miss ? <p className="show-me-miss">Look once more.</p> : null}
-        {!handoff && last && showKeypad ? (
+        {!handoff && (partial || last) && miss ? <p className="show-me-miss">Look once more.</p> : null}
+        {!handoff && !partial && askAnswer && last && showKeypad ? (
           <NumberKeypad disabled={pending} onDigit={onDigit} onDelete={onDelete} extras={extraKey ? [extraKey] : []} />
         ) : null}
       </div>
@@ -294,6 +335,19 @@ function handX(angle: number, length: number): number {
 
 function handY(angle: number, length: number): number {
   return 60 + Math.sin((angle * Math.PI) / 180) * length;
+}
+
+export function HintCaption({ text, autoRead = false }: { text: string; autoRead?: boolean }) {
+  const speech = useSpoken(text, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
+  return (
+    <div className="show-me-bar hint-caption">
+      <ListenButton speaking={speech.speaking} onClick={speech.toggle} />
+      <p className="show-me-caption" aria-live="polite">
+        <HighlightedWords text={text} activeWord={speech.activeWord} />
+        <LightbulbIcon />
+      </p>
+    </div>
+  );
 }
 
 export function LightbulbIcon(): ReactNode {

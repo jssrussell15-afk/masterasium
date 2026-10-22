@@ -5,8 +5,9 @@ import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
 import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
-import { HighlightedPrompt, LightbulbIcon, ShowMePanel } from "@/components/show-me";
+import { HighlightedPrompt, HintCaption, LightbulbIcon, ShowMePanel } from "@/components/show-me";
 import { answersMatch } from "@/lib/practice/answers";
+import { clipKidLine, exampleBlanks, walkBlanks, type ShowLevel, type SupportMode } from "@/lib/practice/fade";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -41,6 +42,8 @@ export function QuestionPractice({
   walk = null,
   handoffIntent = "your-turn",
   walkStart = null,
+  showLevel = null,
+  walkMode = null,
   grade = null,
   autoRead,
   choices = null,
@@ -74,7 +77,11 @@ export function QuestionPractice({
   /** Practice asks for a same-skill question. A lesson continues its own path. */
   handoffIntent?: string;
   /** Opens a still frame for screenshots and tests. */
-  walkStart?: { step: number; handoff?: boolean; hint?: boolean } | null;
+  walkStart?: { step: number; handoff?: boolean; hint?: boolean; faded?: boolean } | null;
+  /** Stored support. Omitted, Show me stays the full walk. */
+  showLevel?: ShowLevel | null;
+  /** Full example, or the partly filled one, when support is already open. */
+  walkMode?: SupportMode | null;
   /** Working grade. Grades 1–2 hear the question and can listen to each choice. */
   grade?: number | null;
   /** Parent setting. When omitted, Grades 1–2 read the question automatically. */
@@ -88,21 +95,33 @@ export function QuestionPractice({
   const [activeField, setActiveField] = useState("answer");
   const [dismissed, setDismissed] = useState(false);
   const [localOpen, setLocalOpen] = useState(Boolean(walkStart && !walkStart.hint));
+  const [openedFaded, setOpenedFaded] = useState(Boolean(walkStart?.faded));
   const [stepIndex, setStepIndex] = useState(walkStart?.step ?? 0);
   const [handoff, setHandoff] = useState(Boolean(walkStart?.handoff));
   const [walkDraft, setWalkDraft] = useState("");
+  const [blankDrafts, setBlankDrafts] = useState<Record<number, string>>({});
   const [walkMiss, setWalkMiss] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
+  const supportLevel = showLevel ?? null;
+  const fadedOpen = walkMode === "faded" || openedFaded;
   const solution = guided?.answer || expected || "";
   const serverOpen = phase === "revealed" && Boolean(guided);
   const walking = Boolean(guided) && !dismissed && (serverOpen || localOpen || Boolean(walkStart && !walkStart.hint));
-  const showTextReveal = phase === "revealed" && !guided;
+  const partial = walking && fadedOpen;
+  const exampleSteps = (example?.steps ?? []).map((caption) => ({ target: "", caption: clipKidLine(caption) }));
+  const exampleSupport =
+    !walking &&
+    supportLevel != null &&
+    example != null &&
+    exampleSteps.length > 0 &&
+    phase === "revealed" &&
+    (walkMode === "guided" || walkMode === "faded");
+  const showTextReveal = phase === "revealed" && !guided && !exampleSupport;
   const textFinished = phase === "correct" || showTextReveal;
-  const showHint = Boolean(hint) && !walking && (hintOpen || phase === "retry" || showTextReveal);
   const progressText = progress ? progressLabel(progress.index, progress.total) : null;
   const step = guided?.steps[Math.min(stepIndex, guided.steps.length - 1)];
-  const announcement = walking
+  const announcement = walking || exampleSupport
     ? ""
     : phase === "correct"
       ? "That's right."
@@ -112,6 +131,16 @@ export function QuestionPractice({
           ? "Here's how."
           : "";
   const readOnArrival = autoRead ?? (grade != null && grade <= 2);
+  const hintText = hint ? (supportLevel == null ? hint : clipKidLine(hint)) : null;
+  const hintCaption = Boolean(
+    hintText && !walking && !exampleSupport && supportLevel != null && (supportLevel === 3 || hintOpen),
+  );
+  const showLegacyHint =
+    Boolean(hintText) &&
+    !walking &&
+    !hintCaption &&
+    supportLevel == null &&
+    (hintOpen || phase === "retry" || showTextReveal);
   const choiceList = choices ?? [];
   const showChoices = phase === "answering" && !walking && choiceList.length > 0;
   const choiceListen = grade != null && grade <= 2;
@@ -160,6 +189,16 @@ export function QuestionPractice({
   }
 
   function goBack() {
+    if (exampleSupport && !guided) {
+      if (handoff) {
+        setHandoff(false);
+        setWalkMiss(false);
+        return;
+      }
+      if (walkMode === "faded" || stepIndex <= 0) return;
+      setStepIndex((current) => current - 1);
+      return;
+    }
     if (!guided) return;
     if (handoff) {
       setHandoff(false);
@@ -172,6 +211,36 @@ export function QuestionPractice({
   }
 
   function goNext() {
+    if (partial && guided) {
+      const blanks = walkBlanks(prompt, guided.steps.length, solution);
+      const wrong = blanks.some((blank) => !answersMatch(blank.expect, blankDrafts[blank.index] ?? ""));
+      if (wrong) {
+        setWalkMiss(true);
+        return;
+      }
+      setWalkMiss(false);
+      setHandoff(true);
+      return;
+    }
+    if (exampleSupport && example) {
+      if (walkMode === "faded") {
+        const blanks = exampleBlanks(exampleSteps.length, example.answer);
+        const wrong = blanks.some((blank) => !answersMatch(blank.expect, blankDrafts[blank.index] ?? ""));
+        if (wrong) {
+          setWalkMiss(true);
+          return;
+        }
+        setWalkMiss(false);
+        setHandoff(true);
+        return;
+      }
+      if (stepIndex < exampleSteps.length - 1) {
+        setStepIndex((current) => current + 1);
+        return;
+      }
+      setHandoff(true);
+      return;
+    }
     if (!guided || handoff) return;
     if (stepIndex < guided.steps.length - 1) {
       setWalkMiss(false);
@@ -187,10 +256,16 @@ export function QuestionPractice({
   }
 
   function openWalk(event: { preventDefault: () => void }) {
+    if (supportLevel === 4 && !hintOpen && phase !== "revealed") {
+      event.preventDefault();
+      setHintOpen(true);
+      return;
+    }
     if (phase === "revealed" || !action) {
       event.preventDefault();
       setDismissed(false);
       setLocalOpen(true);
+      if (supportLevel != null && supportLevel >= 2 && walkMode !== "guided") setOpenedFaded(true);
     }
   }
 
@@ -200,17 +275,17 @@ export function QuestionPractice({
 
   const extraKey = solution.includes("/") ? "/" : solution.includes(":") ? ":" : null;
   const showWalkPad = Boolean(solution) && (/^\d+$/.test(solution) || extraKey != null);
-  const hideMainForm = walking;
-  const showHelp = phase !== "correct" && !showTextReveal && !walking;
+  const hideMainForm = walking || exampleSupport;
+  const showHelp = phase !== "correct" && !showTextReveal && !walking && !exampleSupport;
   const formIntent = handoff ? handoffIntent : textFinished ? "next" : "check";
   const formLabel = handoff || textFinished ? "Next" : "Check";
 
   return (
     <div className="question-column">
-      {walking ? <div className="walk-dim" /> : null}
+      {walking || exampleSupport ? <div className="walk-dim" /> : null}
       {progressText ? <p className="question-progress">{progressText}</p> : null}
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
-        <section className={walking ? "question-card walk-raised" : "question-card"} aria-label="Question">
+        <section className={walking || exampleSupport ? "question-card walk-raised" : "question-card"} aria-label="Question">
           <p className="topic-label">{eyebrow}</p>
           {onRamp ? (
             <div className="on-ramp">
@@ -219,9 +294,9 @@ export function QuestionPractice({
               <p className="hint">{onRamp.handoff}</p>
             </div>
           ) : null}
-          {walking ? (
+          {walking || hintCaption || exampleSupport ? (
             <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>
-              {step && !handoff ? (
+              {walking && step && !handoff ? (
                 <HighlightedPrompt prompt={prompt} target={step.target} occurrence={step.occurrence ?? 0} />
               ) : (
                 prompt
@@ -240,7 +315,9 @@ export function QuestionPractice({
             />
           )}
           {responseHint ? <p className="hint">{responseHint}</p> : null}
-          {phase === "answering" && !walking ? <AssistedPrompt assist={assist} /> : null}
+          {phase === "answering" && !walking && !exampleSupport && supportLevel !== 4 ? (
+            <AssistedPrompt assist={assist} />
+          ) : null}
           {guideSteps.length > 0 && phase === "answering" && !walking ? (
             <ol className="guide-steps">
               {guideSteps.map((item) => (
@@ -248,10 +325,11 @@ export function QuestionPractice({
               ))}
             </ol>
           ) : null}
-          {showHint && hint ? (
+          {hintCaption && hintText ? <HintCaption text={hintText} autoRead={readOnArrival} /> : null}
+          {showLegacyHint && hintText ? (
             <p className="inline-help">
               <LightbulbIcon />
-              <span>{hint}</span>
+              <span>{hintText}</span>
             </p>
           ) : null}
           {exampleOpen && example && !walking ? <WorkedExampleBlock example={example} /> : null}
@@ -309,6 +387,46 @@ export function QuestionPractice({
               fields={fields}
               handoffIntent={handoffIntent}
               onElapsed={onElapsed}
+              autoRead={readOnArrival}
+              blanks={partial ? walkBlanks(prompt, guided.steps.length, solution) : null}
+              steps={partial ? guided.steps : null}
+              blankDrafts={blankDrafts}
+              onBlank={(index, value) => {
+                setWalkMiss(false);
+                setBlankDrafts((current) => ({ ...current, [index]: value }));
+              }}
+            />
+          ) : null}
+          {exampleSupport && example ? (
+            <ShowMePanel
+              step={exampleSteps[Math.min(stepIndex, exampleSteps.length - 1)] ?? { target: "", caption: example.prompt }}
+              index={handoff ? exampleSteps.length - 1 : Math.min(stepIndex, Math.max(exampleSteps.length - 1, 0))}
+              total={Math.max(exampleSteps.length, 1)}
+              handoff={handoff}
+              draft={walkDraft}
+              miss={walkMiss}
+              pending={pending}
+              showKeypad={false}
+              extraKey={null}
+              onDraft={() => undefined}
+              onDigit={() => undefined}
+              onDelete={() => undefined}
+              onNext={goNext}
+              onBack={goBack}
+              onClose={() => setDismissed(true)}
+              action={action}
+              fields={fields}
+              handoffIntent={handoffIntent}
+              onElapsed={onElapsed}
+              autoRead={readOnArrival}
+              askAnswer={false}
+              blanks={walkMode === "faded" ? exampleBlanks(exampleSteps.length, example.answer) : null}
+              steps={walkMode === "faded" ? exampleSteps : null}
+              blankDrafts={blankDrafts}
+              onBlank={(index, value) => {
+                setWalkMiss(false);
+                setBlankDrafts((current) => ({ ...current, [index]: value }));
+              }}
             />
           ) : null}
 
@@ -323,7 +441,7 @@ export function QuestionPractice({
                     <ChoiceOption
                       key={choice}
                       text={choice}
-                      showListen={choiceListen}
+                      showListen={choiceListen && !hintCaption}
                       pressed={(values.answer ?? "") === choice}
                       disabled={pending}
                       onPick={() => {
@@ -372,7 +490,7 @@ export function QuestionPractice({
                   Show me an example
                 </button>
               ) : null}
-              {guided ? (
+              {guided || supportLevel != null ? (
                 <form action={action} onSubmit={stamp}>
                   <HiddenFields fields={fields} />
                   <input type="hidden" name="intent" value="show-me" />

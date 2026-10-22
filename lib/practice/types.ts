@@ -6,6 +6,7 @@ import type { HintLadder } from "@/lib/practice/hints";
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import type { AnswerShape } from "@/lib/practice/parts";
 import type { StreakMilestone } from "@/lib/practice/streak";
+import type { ShowLevel, SupportMode } from "@/lib/practice/fade";
 import type { Walkthrough } from "@/lib/practice/walk";
 
 /**
@@ -46,6 +47,10 @@ export type QuestionView = {
   example?: WorkedExample | null;
   /** Show me steps. Null keeps the text "Here's how" fallback. */
   walk?: Walkthrough | null;
+  /** How much support this child still gets on this skill. Never shown as a label. */
+  showLevel?: ShowLevel;
+  /** Full example, or the partly filled one, when Show me is already open. */
+  walkMode?: SupportMode | null;
   /** Grade 1–2 answer tiles. Null keeps a typed answer. */
   choices?: string[] | null;
   /** Shown after a missed earlier skill. No review label and no score. */
