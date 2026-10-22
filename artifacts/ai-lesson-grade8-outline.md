@@ -2,11 +2,13 @@
 
 This note is a lesson outline only. It does not add a route, a setting, a migration, or a live model call.
 
-Masterasium today is calm math practice. A parent signs up on their own device. A child signs in with a first name and a PIN. The child home is `/practice`. The parent desk is `/dashboard`. Practice is free while we test. There is no price on the site.
+Masterasium math covers Grades 1–8. A parent signs up on their own device. A child signs in with a first name and a PIN. Math lives at `/practice`. The parent desk is `/dashboard`. Site copy says practice is free while we test. This note has no prices.
 
-This lesson is not a math skill and not a practice question. It is the first lesson in a separate section. The section can grow later. Each lesson carries its own age line. This one is anchored at Grade 8 and tagged **Suggested for age 13 and up**.
+AI is its own section, with its own top-level tab. It is not a step on the math grade ladder. Every AI lesson carries an age line, "Suggested for age X and up," so a family can choose. This first lesson is anchored at Grade 8 and tagged **Suggested for age 13 and up**. A later capstone is tagged **Suggested for age 15 and up**. High school math is a later build. It is not part of this section.
 
-The aim is to teach a careful way to use AI. AI can help a student research, brainstorm, and check. It is not an answer key. Copying a chatbot and handing that in is the habit this lesson pushes back on.
+The aim of this first lesson is to teach a careful way to use AI. AI can help a student research, brainstorm, and check. It is not an answer key. Copying a chatbot and handing that in is the habit this lesson pushes back on.
+
+The AI tab is always in the header. Lesson pages stay locked until a parent turns AI on from the parent desk. The toggle starts off. When it is on, this section is the one place a child talks to a live model. Math practice never calls a live model. That rule stays as it is.
 
 House style for anything a child or parent sees: quiet and focused. No points, streaks, badges, confetti, timers, reward sounds, or mascots. Listen stays available. Tap targets are at least 48px. The main action fits a 1366×768 screen without scrolling. Minutes below are for planning. The child never sees a clock.
 
@@ -76,7 +78,7 @@ No segment shows a minute count.
 - Sees: the activity "Who might have written this?" Four short cards, one at a time, so the choice stays on screen.
 - Does: taps "A person" or "A model" for each card. Full card text is in section 4.
 - Does: reads the close, which does not mark the sort right or wrong. "Smooth words can still be wrong."
-- End of sitting: "You can stop here." Continue saves the place. Leave returns to the child home.
+- End of sitting: "You can stop here." Continue saves the place. Leave returns to the AI lesson list. Math stays on its own tab.
 
 ### Sitting 2 — about 14 minutes
 
@@ -125,11 +127,12 @@ No segment shows a minute count.
 
 - Sees: five project cards. Job ad. Homepage. Superhero. Comic. Poster. Each card is one line. No thumbnails of real people or brands.
 - Does: picks one. The small version is specified in section 5. A full studio session is not required.
-- Sees, if the parent has not turned on live help: the lesson still finishes on fixed suggestions. Live help is a later switch.
+- The project step may ask the live model for three short options. The model does not write the finished piece. Filters in section 6 run before the call and before the reply is shown. Teaching pages that use a planted mistake stay on fixed text.
+- If the spend cap or the key blocks the call, the child sees "This help is not available right now." They can still finish in their own words.
 - Does: fills the process log, writes the final lines themselves, and taps Done.
 - Done screen: "You did the thinking." One line under it: "You can stop here." No share button. No public gallery.
 
-Continue from the lesson home opens the first unfinished segment. Done clears the device draft. A parent can turn the section off at any time. Turning it off hides the tile. It does not delete the parent's account.
+Continue on the lesson home opens the first unfinished segment. Done clears the device draft. A parent can turn the section off from the parent desk at any time. Turning it off locks the AI tab for that child. Math practice is unchanged. The account stays.
 
 ---
 
@@ -281,7 +284,7 @@ Shared rules:
 - Pictures, when a picture exists, are simple illustrated drawings. Not photoreal. No text baked into the picture. The child writes the words on the page, where they can be checked.
 - Until image generation is explicitly chosen, superhero and comic use reviewed sample drawings, the way the Create prototype uses files in `public/create-samples/`. The child still writes the words and the log.
 
-Live help, when it is on, returns three short options. It does not return the finished piece. The request uses a server template. See section 6.
+When the parent toggle is on, the project step may ask the live model for three short options. The model does not return the finished piece. The request uses a server template. See section 6. Pages that teach with a planted mistake stay on fixed text, so the mistake cannot drift.
 
 ### Job ad
 
@@ -334,12 +337,12 @@ Layers, in order:
 1. **Client block list, for a fast calm stop.** A short list in the browser catches obvious sexual words and private-part slang, swear words, slurs, violence and self-harm phrases, and personal-info patterns (email, phone, street address, a PIN-like number). This is a convenience. It is not the boundary. A motivated client can skip it.
 2. **Server check before any xAI call.** The route repeats the block list, normalizes case, spacing, and simple leetspeak, and runs a moderation check. If the check errors or times out, the route sends nothing and shows nothing. Fail closed.
 3. **Output moderation before render.** The reply is checked before the browser is allowed to paint it. A blocked reply never flashes.
-4. **Rate limits.** Proposal to confirm, not a shipped cap: 8 model calls in one lesson, 1 lesson a day per child, 20 calls a day per parent account. These sit under the monthly spend cap. A blocked call still counts, so a child cannot hammer the filter.
+4. **Rate limits.** Proposal to confirm, not a shipped cap: 8 model calls in one sitting, and 20 calls a day per parent account. The same unfinished lesson can resume on a later day. A blocked call still counts. These sit under the monthly spend cap.
 5. **No personal data in the request.** The route does not send the child's first name, grade, id, PIN, school, or the parent's email. The account has a first name. The model does not need it.
 6. **Templates only.** The client sends a task id and the child's sentence, after the length cap. It cannot send a system prompt. A body that includes `system` or `prompt` is rejected. This matches the rule already written for the Create generate route on unmerged PR #23.
 7. **Logging without child PII.** Do not store the prompt, the reply, or the child's words on the server. A block may store a category code and the lesson step. It must not store the text. Token counts, model name, and estimated cost can follow the `xai_usage` shape on unmerged PR #12, which already refuses to store prompts, names, PINs, and emails.
 8. **Calm message.** One line, under 15 words. Input stop: "That question stays off this page. Try a school topic." Output stop: "That result stays hidden. Try a different idea." No alarm, no "policy", no quote of the blocked text.
-9. **Parent visibility.** On the parent desk, one quiet line when there is something to say. "One question was stopped." No quoted text. The parent can turn the section off from Account settings. A student PIN session cannot open settings. That rule already exists on `/settings`.
+9. **Parent visibility.** The opt-in toggle sits on the parent desk, on that child's card, off by default. When there is something to say, one quiet line: "One question was stopped." No quoted text. A student PIN session cannot open the desk. The student cookie already wins over a parent session in the same browser.
 
 ### System prompt and templates
 
@@ -363,23 +366,25 @@ Cap the student sentence at 200 characters. Cap the reply at about 180 tokens. R
 
 ### How this sits next to the practice rule
 
-`tests/policy/no-live-ai.test.ts` fails if `lib/practice`, `app/practice`, or `components` mentions `lib/xai` or `api.x.ai`. Practice must keep using its own question generators. It must not call a model to make or mark a math answer.
+The AI section is the one place a child talks to a live model. Math practice never does. `tests/policy/no-live-ai.test.ts` fails if `lib/practice`, `app/practice`, or `components` mentions `lib/xai` or `api.x.ai`. Practice keeps its own question generators. This section does not change that test.
 
-So this lesson does not live under `app/practice` or `lib/practice`. Shared files in `components/` must not import `lib/xai` and must not name the provider URL. A child-home tile may link to `/ai`. The link is only a link. The model call, if it ever exists, belongs in a route such as `app/api/ai/help` and a server module such as `lib/ai/`, which the policy test does not scan.
+AI routes stay outside `app/practice` and `lib/practice`. Shared files in `components/` must not import `lib/xai` and must not name the provider URL. The header tab is only a link to `/ai`. The model call belongs in a route such as `app/api/ai/help` and a server module such as `lib/ai/`, which the policy test does not scan. The AI section has its own guardrails, listed above.
 
-The section is opt-in. It is off until a parent turns it on from the parent account. Practice never depends on it. A child who never enters `/ai` has the same math product as today.
+The parent toggle starts off. Until a parent flips it on that child's card, `/ai` is locked. Math does not read the toggle. A child who never opens the AI tab has the same math product as today.
 
-Unmerged PR #12 adds `lib/xai/key.ts` and `lib/xai/spend.ts`. `beforeXaiCall` refuses a call when `XAI_API_KEY` or `XAI_MONTHLY_CAP_USD` is missing, or when the month's estimate has reached the cap. Estimates default to $3 per million input tokens and $15 per million output tokens. No product screen calls xAI on that branch. If that PR is the base, this lesson's live route should call `beforeXaiCall` first and `recordXaiUsage` after. If the cap refuses the call, the child sees "This help is not available right now." The lesson's fixed pages still work.
+There is no separate AI plan and no price in this note. The section folds into the plan the family already has. While we test, site copy stays "Practice is free while we test." If a one-off unlock is offered later, it sits on top of that current plan. The monthly xAI cap is a spend guard, not a price.
 
-Unmerged PR #23 is a different feature. Create is a picker for Grades 3–6. The child does not chat. `CREATE_MODE=prototype` returns sample drawings and does not call xAI. This lesson should not be built on `/create`. Sharing a block-list file later is a founder choice, not a requirement. Practice policy still forbids putting that call in `components/`.
+Unmerged PR #12 adds `lib/xai/key.ts` and `lib/xai/spend.ts`. `beforeXaiCall` refuses a call when `XAI_API_KEY` or `XAI_MONTHLY_CAP_USD` is missing, or when the month's estimate has reached the cap. Estimates default to $3 per million input tokens and $15 per million output tokens. No product screen calls xAI on that branch. If that PR is the base, this section's live route should call `beforeXaiCall` first and `recordXaiUsage` after. If the cap refuses the call, the child sees "This help is not available right now." Fixed teaching pages still work.
+
+Unmerged PR #23 is a different feature. Create is a picker for Grades 3–6. The child does not chat. `CREATE_MODE=prototype` returns sample drawings and does not call xAI. This AI tab should not be built on `/create`. Whether the two share a block-list file later is still open. Practice policy still forbids putting that call in `components/`.
 
 ### Age, COPPA, and PIPEDA
 
 The privacy page already says accounts are created by a parent, consent comes from the parent, and AI features for children under thirteen need the parent opt-in. It is marked "Draft: to be reviewed by a lawyer." This outline does not replace that review.
 
-This lesson is for a parent-confirmed age of 13 or older. The child record today has a first name, a grade, and a province. It does not have a birth date. Grade is not age. A Grade 8 enrollment does not turn the lesson on. A parent attestation of "13 or older" is the gate this outline uses. It is not a verified age.
+The product gate is the parent toggle, off by default, one per child, on the parent desk. The child record has a first name, a grade for math, and a province. It has no birth date. Math grade does not unlock or hide an AI lesson. Each lesson shows "Suggested for age X and up" so the family can choose. The product does not treat that line as an enrolled-grade check.
 
-Under 13, this lesson stays off. It does not try to be the under-13 AI product. COPPA verifiable parental consent, and PIPEDA meaningful consent, still need a lawyer before any live call. The parent consent screen should say what is sent (the lesson sentence, not the child's name), that a US provider may process it, and that the parent can turn it off. Withdrawing consent hides `/ai` and stops new calls.
+The toggle screen should say what is sent (the lesson sentence, not the child's name), that a US provider may process it, and that the parent can turn it off. Turning it off locks `/ai` for that child and stops new calls. A lawyer still needs to read that wording before a live call. See the open questions.
 
 Never ask the child for a parent email. Students do not use email. That rule is already on the privacy page and in the dashboard spec.
 
@@ -404,7 +409,7 @@ A hard spend limit in the xAI console remains a second gate. PR #12 already says
 
 ## 7. Parent-facing note for this lesson
 
-Shown on the parent desk, in a narrow column, after the child finishes or stops. No scores. No comparison. The name comes from the child record.
+Shown on the parent desk, in a narrow column, after the child finishes or stops. No scores. No comparison. The name comes from the child record. The longer guide is section 8.
 
 **Using AI**
 
@@ -420,104 +425,276 @@ If a question was stopped: "One question was stopped. The wording was not saved.
 
 The parent's own screen can say the lesson is one sitting or three short ones. That line is for the parent. It is not a timer.
 
+A link under the note: "Read the parent guide." It opens section 8 on a phone-width page.
+
 ---
 
-## 8. Age tag and prerequisites
+## 8. Parent guide for this lesson
+
+This is the longer note for a parent, on their phone. Plain words. Narrow column. No scores. It describes the first lesson, Suggested for age 13 and up. The short desk note in section 7 stays as it is.
+
+**Using AI well**
+
+Suggested for age 13 and up.
+
+**What your child learns**
+
+They learn that this tool predicts likely words, and that a sure tone can still be wrong. They practice asking for options and for things to check. They mark mistakes in a sample answer. They write the final version themselves.
+
+**Why it matters**
+
+A copied reply is easy to forget. When a child puts an idea in their own words, they are more likely to remember it and to notice what they do not understand yet. This lesson pushes back on pasting a long answer and calling the work done. The goal is understanding, not a data dump.
+
+**At home**
+
+1. Close the screen and ask them to explain the idea. "Tell me in your own words."
+2. Ask "How did you check that?" Wait for the source they used. A confident reply from the tool is not the check.
+3. If a paragraph does not sound like them, ask "Which sentences are yours?"
+4. When a reply sounds sure, ask "What could be wrong here?" Then look at one fact together.
+
+You do not need to review every prompt. One of these questions is enough.
+
+---
+
+## 9. Age tag and prerequisites
 
 **Age tag:** Suggested for age 13 and up
 
-The section is not locked to one grade. Later lessons can say "Suggested for age 10 and up" or another age. This lesson does not unlock those. A younger lesson needs its own outline, its own consent check, and a lawyer's read.
+The Grade 8 anchor is the writing level of this lesson. It is not a math enrollment. Math grade does not place the lesson, hide it, or unlock it. A family self-selects from the age line on the card. Later lessons use their own lines, such as Suggested for age 15 and up on the capstone. Opening this lesson does not open those.
 
 **Prerequisites:**
 
-- Reads short paragraphs at about a Grade 8 level. The whale sample and the source cards are the level check. The product does not give a reading test.
+- Comfortable reading a short paragraph. The whale sample is the level of this lesson. There is no reading test and no grade gate.
 - Can type a few sentences on a tablet or laptop. Listen reads the lesson aloud. The first version does not take dictation.
 - A parent account already exists. The parent added the child by first name. The child signs in with that name and a PIN.
-- The parent, on the parent device, has turned Using AI on and has confirmed "13 or older" on a separate consent screen. Both start off.
+- The parent has turned AI on for this child from the parent desk. The toggle starts off. There is no second age switch.
 - The child is not asked to type an email, a surname, a school, or an address.
 
 A child who cannot yet type a sentence can still do sitting 1 with taps. Sittings 2 and 3 need typing. The Continue button lets them stop before those pages.
 
 ---
 
-## 9. Where it lives in site navigation and flow
+## 10. Where it lives in site navigation and flow
 
-No new item in the header. Student navigation is only Home. Parent navigation stays Curriculum, Worksheets, Parent desk, and Account settings.
+AI is a top-level tab. It is not a tile on the math home, and it is not a skill in Grades 1–8.
+
+Today, `navFor` in `lib/auth/roles.ts` gives a student no links, so the header shows Home. A parent sees Curriculum, Worksheets, Parent desk, and Account settings. This outline adds one link for the public header, the parent header, and the student header:
+
+- Label: "AI"
+- Href: `/ai`
+
+Home for a student stays `/practice`, the math home. The wordmark still goes there. The AI tab is the other top-level place.
 
 ### Proposed routes
 
 | Route | Who | What |
 | --- | --- | --- |
-| `/ai` | Student, only when allowed | Lesson list. Each card has an age line. |
-| `/ai/using-ai-well` | Student, only when allowed | This lesson's home. Continue is the primary button. |
-| `/ai/using-ai-well/start` | Student | Sitting 1 start |
-| `/ai/using-ai-well/what-it-is` | Student | What a model is |
-| `/ai/using-ai-well/sort` | Student | AI-or-human cards |
-| `/ai/using-ai-well/mistake` | Student | Planted mistake |
-| `/ai/using-ai-well/prompt` | Student | Improve a prompt |
-| `/ai/using-ai-well/follow-up` | Student | Follow-up ladder |
-| `/ai/using-ai-well/check` | Student | Two source cards |
-| `/ai/using-ai-well/own-words` | Student | Own final version |
-| `/ai/using-ai-well/make` | Student | Pick a project |
-| `/ai/using-ai-well/make/job-ad` | Student | Job ad |
-| `/ai/using-ai-well/make/homepage` | Student | Homepage |
-| `/ai/using-ai-well/make/superhero` | Student | Superhero flip |
-| `/ai/using-ai-well/make/comic` | Student | Three-panel comic |
-| `/ai/using-ai-well/make/poster` | Student | Poster |
+| `/ai` | Anyone | Lesson list when unlocked. Locked screen when the toggle is off. Each card has an age line. |
+| `/ai/for-parents` | Parent | The phone-width guide in section 8. |
+| `/ai/using-ai-well` | Student, toggle on | This lesson's home. Continue is the primary button. |
+| `/ai/using-ai-well/start` | Student, toggle on | Sitting 1 start |
+| `/ai/using-ai-well/what-it-is` | Student, toggle on | What a model is |
+| `/ai/using-ai-well/sort` | Student, toggle on | AI-or-human cards |
+| `/ai/using-ai-well/mistake` | Student, toggle on | Planted mistake |
+| `/ai/using-ai-well/prompt` | Student, toggle on | Improve a prompt |
+| `/ai/using-ai-well/follow-up` | Student, toggle on | Follow-up ladder |
+| `/ai/using-ai-well/check` | Student, toggle on | Two source cards |
+| `/ai/using-ai-well/own-words` | Student, toggle on | Own final version |
+| `/ai/using-ai-well/make` | Student, toggle on | Pick a project |
+| `/ai/using-ai-well/make/job-ad` | Student, toggle on | Job ad |
+| `/ai/using-ai-well/make/homepage` | Student, toggle on | Homepage |
+| `/ai/using-ai-well/make/superhero` | Student, toggle on | Superhero flip |
+| `/ai/using-ai-well/make/comic` | Student, toggle on | Three-panel comic |
+| `/ai/using-ai-well/make/poster` | Student, toggle on | Poster |
+| `/ai/research-then-explain` | Student, toggle on | Capstone home. Suggested for age 15 and up. |
+| `/ai/research-then-explain/topic` | Student, toggle on | Pick a topic |
+| `/ai/research-then-explain/questions` | Student, toggle on | Ask for research questions |
+| `/ai/research-then-explain/sources` | Student, toggle on | Open real sources and cite them |
+| `/ai/research-then-explain/check` | Student, toggle on | Check one claim |
+| `/ai/research-then-explain/report` | Student, toggle on | Write the short report |
+| `/ai/research-then-explain/explain` | Student, toggle on | Explain it back |
 
-`job-ad`, `homepage`, `superhero`, `comic`, and `poster` are the only project ids.
+`job-ad`, `homepage`, `superhero`, `comic`, and `poster` are the only project ids for the first lesson.
 
-These routes stay outside `app/practice`. The child id does not need to be in the path. The student session already comes from the PIN cookie, as it does for `/practice`.
+These routes stay outside `app/practice`. The child id does not need to be in the path. The student session already comes from the PIN cookie, as it does for `/practice`. The model route is `app/api/ai/help`, not a practice route.
 
-### Child home
+### Math home
 
-`/practice` stays the math home: the child's first name, the working grade, Things I can do, then Assigned, Recommended, Recently practiced, and the topic picker.
+`/practice` stays the math home: the child's first name, the working grade, Things I can do, then Assigned, Recommended, Recently practiced, and the topic picker. It does not list AI lessons. Math grade does not filter the AI list.
 
-When the section is allowed, one more tile sits below the math lists. Label: "Using AI". Second line: "Suggested for age 13 and up". Practice stays first. The tile is absent unless the gate passes. It is a link to `/ai`. It does not call a model.
+The kid dashboard in `docs/dashboard-and-email-spec.md` is not built. When it is, Practice remains the math resume action. AI stays the header tab.
 
-The kid dashboard in `docs/dashboard-and-email-spec.md` is not built. When it is, Practice remains the primary resume tile. Using AI stays a separate tile, not a second hero.
+### Parent desk
 
-### Parent desk and settings
+`/dashboard` keeps one card per child, up to two. On each card, below the math block:
 
-`/dashboard` gains one collapsed card per child, below the math block. It shows the note in section 7, or "Using AI is off" if it is off. No new tab.
+- A toggle, "Allow AI". Off by default. This is the only switch. Account settings does not grow a second one.
+- The short note from section 7 when there is progress.
+- "Read the parent guide."
 
-`/settings` gains one Using AI block per child, off by default. A student login cannot open this page.
+The toggle copy, for the parent: "Off until you turn it on. Math practice stays the same."
 
-Suggested parent controls:
+The first time it is turned on, a short consent screen, version `ai-lesson-2026-10-22`, says what is sent, that a US provider may process it, that the child's words stay on the device, and that the parent can turn it off. Create picture consent on unmerged PR #23 is a different screen. Do not merge them.
 
-- Allow Using AI. Off by default.
-- Age confirmation: "Under 13" or "13 or older." No birth date in this outline. "Under 13" keeps this lesson off.
-- A consent screen, version `ai-lesson-2026-10-22`, before the first allow. It states what is sent, that a US provider may process it, that stories stay on the tablet, and that the parent can turn it off.
-- Live help stays off even after Allow, until the founder turns on a separate switch. Fixed samples still run the lesson.
+A student login cannot open the desk.
 
-A separate settings path such as `/settings/ai` is reasonable if the block gets long. PR #23 uses `/settings/create-consent` the same way. Do not merge the two consents. Create's picture consent is not this lesson's consent.
+### Locked and unlocked
 
-### Gate
+The tab is always in the header.
 
-All of these must be true or the tile is missing and `/ai` responds as not found:
+When the toggle is off for that child, `/ai` shows the lesson names and their age lines only. Tapping a lesson shows "A parent can turn this on." There is no prompt box and no model call. Lesson bodies stay locked.
 
-1. The visitor is the student session for that child.
-2. The parent has allowed Using AI.
-3. The parent has confirmed 13 or older on the current consent version.
-4. This lesson's id is in the allowed list. Later lessons are not implied.
+When the toggle is on, the list opens. The family picks a lesson by the age line. Suggested for age 13 and up and Suggested for age 15 and up can both be on the list. The product does not hide one because of the child's math grade.
 
-A sibling who is under 13 does not see the tile, even on a shared tablet. The student cookie wins over a parent session in the same browser, which is already how `roleFromSession` works. The parent turns the lesson on before handing over the device.
+Public visitors can open `/ai` and read the same names and age lines, plus "Practice is free while we test." They do not get a prompt box.
 
-Direct visits while the gate is closed should be not found, not a locked teaser. That is the same choice the Create spec makes.
+Each child has their own toggle. One child can be on while the other is locked.
 
-Public pages, `/signup`, and math practice do not mention the lesson until the founder says it is in scope. The landing line stays "Practice is free while we test."
+The parent turns the toggle on before handing over the device. In a shared browser the student cookie wins, which is already how `roleFromSession` works, so the desk is not open during the child's session.
+
+There is no AI price on the tab. The section is part of the plan the family already has. While we test, the line stays "Practice is free while we test."
 
 ---
 
-## 10. Open questions for the founder
+## 11. High-school capstone
 
-1. **Is this section in scope while the core audience is Grades 1–3?** The core audience today is Grades 1–3. The grade list runs from 1 to 8. This lesson sits outside the math path. This outline keeps it off until you say otherwise.
-2. **What consent is required under 13 and at 13 or older?** The privacy draft already requires parent opt-in for AI under 13. This lesson does not serve under 13. We still need a lawyer on COPPA verifiable consent, PIPEDA meaningful consent, and the US transfer named on the privacy page. The child record has no birth date. Is a parent attestation of "13 or older" enough for a first test?
-3. **Which xAI models, for text and for images, and what is the cost per lesson?** PR #12 prices a call at $3 per million input tokens and $15 per million output tokens unless the Worker env overrides that. It does not name a model. A sample-only pass of this lesson costs nothing. A live pass with a handful of short text replies should be priced before Allow is offered. Image generation is a different price.
-4. **Do we generate images for the superhero and the comic?** This outline uses reviewed sample drawings until you say yes. The Create prototype on PR #23 does the same. Photoreal faces, real people, and logos stay out either way.
-5. **Do we keep logs of what a child typed, and for how long?** This outline says no. Prompts and replies stay on the device for up to 14 days, then clear. The server may store a step id, a project id, and a block category. PR #12's usage rows already exclude prompts and names. Say if you want a shorter device life, or no server row at all.
-6. **Where does this sit with Stripe and the free test?** There is no payment step in the product. Copy says practice is free while we test. The privacy page names Stripe only if a payment is added later. PR #12 drafts a webhook. This outline does not put the lesson behind a price. Any future charge belongs on the parent account, never on a child screen. The monthly xAI cap is the spend control until you decide otherwise.
-7. **Are unmerged PRs #12 and #23 the base?** PR #12 is the spend cap and the xAI key (`cursor/security-hardening-d128`). PR #23 is Create mode, sample images, no chat (`cursor/create-mode-prototype-3f1c`). Neither is on main. This lesson needs the spend gate from #12 before any live call. It should not be built inside #23's `/create` flow. Confirm whether to wait for those branches, and whether the two consents stay separate.
-8. **Who signs the two source cards?** The whale sample needs two real pages and short paraphrases you approve. The lesson should not ship the planted errors until those pages are chosen.
-9. **May a child whose math is below Grade 8 see the tile if you have confirmed they are 13 or older?** This outline says yes, because the section is not a math grade. Say if the tile should also require enrolled Grade 7 or 8.
-10. **Does a lawyer read this before any child uses even the sample version?** The sample path does not call xAI, but the child still types. The privacy page asks for a lawyer before new child data is processed. The device draft is new child data on the device.
+**Title:** Research, then explain
+
+**Age line:** Suggested for age 15 and up
+
+**One line:** Look it up, write it yourself, then say it back.
+
+This is the next AI lesson after Using AI well. It is not a high-school math course. High-school math is not being built now. It is the next build after the AI section proves traction. The capstone uses the same AI tab, the same parent toggle, and the same filters. The age line is how a family self-selects. Math grade does not place it.
+
+The child uses the live model to research a real topic, checks claims against real pages they open, writes a short report in their own words with citations, and ends by explaining what they learned back to the model. The model answers with questions about gaps. It never rewrites the report.
+
+About 55 minutes. Two sittings. No clock on screen. Same device draft as the first lesson (`masterasium-ai`, up to 14 days), under a separate key. Same Listen control. Tap targets at least 48px. The main action fits 1366×768.
+
+### Flow
+
+**Sitting 1 — about 25 minutes**
+
+**Topic** (`/ai/research-then-explain/topic`) — about 5 minutes
+
+- Sees the age line and three starter topics, one screen at a time: "How do the northern lights form?" "How does a vaccine teach the body?" "Why was the CN Tower built?"
+- Sees "My own topic." Their sentence goes through the filters before Continue.
+- Does: picks one. A topic about a real person's private life is stopped with the usual calm line.
+
+**Questions** (`/ai/research-then-explain/questions`) — about 8 minutes
+
+- Sees a weak prompt: "Write my report on the northern lights." Under it: "This asks the tool to do your work."
+- Does: sends a prompt such as "Give me three questions about the northern lights. I will look them up."
+- The model may return only three short questions. It may not return paragraphs.
+- Feedback: "Ask for questions. You will look them up."
+- If they ask for the finished report, the route refuses before the call. On screen: "You write the report. Ask for a check."
+
+**Sources** (`/ai/research-then-explain/sources`) — about 12 minutes
+
+- Sees the citation format below.
+- Does: opens three real pages themselves. For each one they type the organization or author, the page title, the year, and the page address from the address bar.
+- The model may suggest a kind of source. Example on screen: "Try a space-agency page." It may not fill in the address. It does not fetch the page. The child does the reading.
+- A source they did not open does not count. Button: "I opened this page."
+- Need three sources, from at least two organizations.
+
+**Sitting 2 — about 28 minutes**
+
+**Check** (`/ai/research-then-explain/check`) — about 8 minutes
+
+- Does: picks one claim from their notes and asks "What should I check in this claim?"
+- The model may name what to compare. It may not say the claim is true.
+- Does: opens one of their sources again and taps whether it agrees.
+- Feedback: "You checked a real page."
+
+**Report** (`/ai/research-then-explain/report`) — about 12 minutes
+
+- Sees four short boxes: "My question." "What I found." "What I checked." "What is still unsure."
+- Does: writes about 150 to 250 words in those boxes, in their own words, and adds the citation lines.
+- This page does not call the model. "This is mine" stays quiet while the text matches an earlier model reply.
+- The saved report is locked before the next step. Later replies cannot replace it.
+
+**Explain** (`/ai/research-then-explain/explain`) — about 8 minutes
+
+- Sees the report, read-only, and one box: "Explain it in your own words."
+- Does: explains what they learned. The model may reply with up to three short questions about gaps. It must not rewrite, expand, or polish the report.
+- If a reply looks like a replacement essay, it is not shown. The child sees "Here is one question to think about."
+- Does: answers one of those questions in a few sentences. That answer stays separate from the report.
+- Feedback: "You explained it yourself."
+- Done: "You did the thinking."
+
+Continue on the capstone home opens the first unfinished step. Leave returns to the AI lesson list.
+
+### What the model may do
+
+- Offer three research questions.
+- Suggest the kind of source to open.
+- Name what to compare in one claim.
+- After the report is saved, ask up to three questions about what is unclear or missing.
+
+### What the model may not do
+
+- Write or rewrite the report.
+- Paste a paragraph for the child to hand in.
+- Invent a citation, a year, or a page address.
+- Fetch the page, or browse the web on the child's behalf.
+- Declare a claim true.
+- Replace the child's explanation with a polished one.
+- Edit the saved report.
+
+### Citation format
+
+Each source is four lines the child fills from a page they opened:
+
+- Organization or author.
+- Page title.
+- Year.
+- Page address.
+
+After a sentence that uses the source, they add a short pointer: (Organization, Year).
+
+Example shape, with the address left for the child to copy:
+
+> Canadian Space Agency. What are the northern lights? 2023.
+> The address from the page you opened.
+
+A citation the child cannot open does not count. The model does not supply the address. Do not paste a copyrighted page into the report. A few words in the child's own sentence, plus the pointer, is the use.
+
+### Filters
+
+Section 6 applies in full. Client block list, server check before any call, output check before render, rate limits, no personal data, server templates, no prompt text in server logs, and the calm block lines.
+
+Extra rules for this lesson only:
+
+- There is no task that means "write the report" or "rewrite the report." Those requests are refused before the call.
+- The explain task uses its own template, version `ai-capstone-2026-10-22`. The reply must be questions. A reply that restates the report as finished prose is dropped before render.
+- The child's page address stays in the device draft. It is not sent to the model in this version.
+- Own topics pass the same block list: sexual content and private parts, swear words, slurs, violence, self-harm, and personal information.
+
+### Parent line for this lesson
+
+On the desk, phone-width, when they finish:
+
+[Name] researched a topic, checked a claim on a real page, and wrote a short report in their own words. They explained it back in their own words. The tool asked questions. It did not rewrite the report.
+
+Ask them: "How did you check that?"
+
+---
+
+## 12. Settled decisions
+
+- Parent opt-in toggle in the parent dashboard, OFF by default; the AI section is locked until a parent flips it.
+- The AI section is the one place a kid talks to a live model. This is separate from, and does not change, the rule that math practice never calls live AI. The AI section has its own guardrails.
+- Filters block inappropriate prompts (private parts/sexual content, swear words, etc.) before anything is sent or renders.
+- No separate add-on plan: AI folds into the existing subscription tiers, with the parent opt-in as the gate. If a one-off unlock is offered later, it sits on top of the current tier. No prices in this note. Site copy still says "free while we test."
+- High school math is NOT being built now; it is the next build after the AI section proves traction.
+
+---
+
+## 13. Open questions
+
+1. **Which xAI models should text use, which should images use, and what does one lesson cost?** PR #12 estimates $3 per million input tokens and $15 per million output tokens unless the Worker env overrides that. It does not name a model. Image generation is a different price.
+2. **Should the superhero and the comic use generated images, or stay on reviewed sample drawings?** This outline keeps sample drawings until you say otherwise. Photoreal faces, real people, and logos stay out either way.
+3. **Should the product keep what a child typed, and for how long?** This outline keeps prompt and reply text on the device for up to 14 days, and keeps the server to a step id, a project id, and a block category. PR #12 usage rows already exclude prompts and names. Say if you want a shorter device life, no server row, or a different rule.
+4. **Are unmerged PR #12 and PR #23 the base?** PR #12 is the xAI key and the monthly spend cap (`cursor/security-hardening-d128`). A live call in this section needs that gate. PR #23 is the Create picker, sample images, no chat (`cursor/create-mode-prototype-3f1c`). This AI tab should not be built inside `/create`. The two consent screens stay separate unless you say otherwise.
+5. **Who approves the two real pages and the short paraphrases for the whale sample** before a child sees that page?
+6. **Does a lawyer still need to review the parent opt-in wording, cross-border processing, and use by children under 13 before any live call?** The toggle is already the product gate. The privacy page is still marked draft. The legal read is not done.
+7. **Are these rate limits right:** 8 model calls in one sitting, the same lesson resumable on a later day, and 20 calls a day per parent account, all under the monthly spend cap?
