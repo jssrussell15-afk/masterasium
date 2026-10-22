@@ -104,6 +104,27 @@ One eligible item is "Remembered 1 of 1 from Tuesday." or, on a miss, the come-b
 
 The daily stub may store the sentence. The mailed body still drops the stub's counts and accuracy. `sendSundayDigest` stays a no-op.
 
+## 6a. Weekly dinner-table question (optional)
+
+One optional maths question each week. It belongs in the Sunday digest only, never in the daily note. It is a suggestion, not a task. Sample: "Try this at dinner: ask Oliver to explain how carrying works."
+
+Draw it from a maths skill the child practised that week. Prefer one with `steadyOn` set, so the child can explain it. If several are steady, use the one practised latest that week. If none are steady, use the skill they answered most. Plain parent words, no jargon, one sentence, phone width. The child's first name replaces Oliver.
+
+The same line adds one calm fallback for a stuck moment. Sample: "If they get stuck, ask them to show you with their fingers."
+
+These pairs are fixed templates, keyed by skill id. They are not written by a live model. Use a pair only when that skill was practised. If the week's skills have no template, omit the line.
+
+- Addition and subtraction within 100 (`g2-add-sub`) and within 1,000 (`g3-add-sub`): "Try this at dinner: ask Oliver to explain how carrying works." "If they get stuck, ask them to show you with their fingers."
+- Equal sharing (`g1-share`): "Try this at dinner: ask Oliver how to share 8 grapes fairly." "If they get stuck, ask them to give one to each person."
+- Place value (`g1-place`, `g2-place`, `g3-place`): "Try this at dinner: ask Oliver what the 4 in 47 means." "If they get stuck, ask them to show the tens with blocks."
+- Time to the minute (`g3-time`): "Try this at dinner: ask Oliver what half past six looks like." "If they get stuck, ask them to point to it on a clock."
+
+Parents can ignore it. There is no consequence. Nothing tracks whether it was used. No click tracking, no reply prompt, no follow-up. It does not change the child's practice or the ladder. No new column stores a parent's response.
+
+The evidence is weaker than the recall opener. Berkowitz, Schaeffer, Maloney, Peterson, Gregor, Levine, and Beilock (2015), "Math at home adds up to achievement in school", *Science* 350(6257):196–198, [doi 10.1126/science.aac7427](https://doi.org/10.1126/science.aac7427), linked a math app used at home with parents to gains, especially for children of math-anxious parents. That study used an app, not this dinner line, so the evidence is indirect. The line still reaches parents who never open the site.
+
+The weekly activity gate still holds. No practice that week means no email, and so no dinner line. The line is phone-sized and quiet, with no scores. It does not replace "Kept fractions fresh." or the remembered lines in section 6. `sendSundayDigest` stays a no-op.
+
 ## 7. Data
 
 No new table. `steadyOn` is a date on `learn`. Students already update their own `skill_states`.
@@ -165,7 +186,7 @@ Fewer than two eligible skills asks one, or skips. Do not pad from an older day,
 
 ## 9. Out of scope
 
-Points, streaks, badges, confetti, celebrations, timers, reward sounds, and mascots. Live AI. Any interval besides 1, 3, 7, 14, and 30. Sending email, applying the SQL, spelling or French content, and Grades 9–12. COPPA still holds: never collect a parent email from the child. Listen does not record the child.
+Points, streaks, badges, confetti, celebrations, timers, reward sounds, and mascots. Live AI. Any interval besides 1, 3, 7, 14, and 30. Sending email, applying the SQL, spelling or French content, and Grades 9–12. No click tracking, reply prompt, follow-up, or reward for whether a parent used the dinner line. COPPA still holds: never collect a parent email from the child. Listen does not record the child.
 
 ## 10. Acceptance
 
@@ -182,5 +203,7 @@ Docs only until Matthew asks for a build.
 - [ ] Show me does not step down before `steadyOn`. A recall miss steps it up once, and not twice on a day a gap already did.
 - [ ] The same `client_attempt_id` does not step the ladder twice. Cover this in `review.test.ts`, `fade.test.ts`, `learning-claim.test.ts`, and `lib/digest/build.test.ts`.
 - [ ] Parent lines match 2 of 2, 1 of 2, and 0 of 2. The sentence has no accuracy percent. No email is sent.
+- [ ] The dinner line is on the Sunday digest only, never the daily draft or daily email, and only when that week had practice. Nothing records a click, a reply, or a follow-up, and practice and the ladder stay as they were.
+- [ ] These stay word for word: "Remembered 2 of 2 from Tuesday.", "Remembered 1 of 2 from Tuesday. Fractions came back for another look.", "Fractions came back for another look.", and "Kept fractions fresh."
 - [ ] SQL stays the sketch in section 7 until Matthew asks. A later migration adds no UPDATE policy on `children`.
 - [ ] Screenshots of the card, a miss, and a correct answer, at tablet width and at 1366×768. Grades 1–2 show tap tiles and no laptop keypad. Listen is the only read-aloud control.
