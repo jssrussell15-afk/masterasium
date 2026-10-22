@@ -341,7 +341,9 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           walkMode={question.walkMode ?? null}
           grade={grade}
           autoRead={view.autoRead ?? grade <= 2}
+          inputType={question.inputType}
           choices={question.choices ?? null}
+          speak={question.speak ?? null}
           aside={allowsScratchpad(grade) ? <Scratchpad /> : undefined}
           action={formAction}
           fields={fields}

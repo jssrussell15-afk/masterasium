@@ -1,5 +1,7 @@
 import type { SupportedGrade } from "@/lib/grades";
 
+import { fractionChoiceList } from "@/lib/practice/choices";
+import type { InputType } from "@/lib/practice/types";
 import type { Walkthrough } from "@/lib/practice/walk";
 
 export type Worked = {
@@ -8,6 +10,10 @@ export type Worked = {
   steps: string[];
   /** Set by the Grade 3 generators that can point at the prompt. */
   walk?: Walkthrough | null;
+  inputType?: InputType;
+  choices?: string[];
+  /** Read-aloud line when the answer is spelled, not shown. */
+  speak?: string;
 };
 
 export type SkillBlueprint = {
@@ -494,21 +500,28 @@ export const CATALOG: SkillBlueprint[] = [
     "Fractions as equal parts",
     "A fraction names equal parts of one whole. The bottom number tells how many equal parts, and the top tells how many are chosen.",
     "Write a fraction such as 1/4.",
-    worked("A bar is split into 4 equal parts and 1 part is shaded. What fraction is shaded?", "1/4", [
-      "The whole is split into 4 equal parts.",
-      "1 of those parts is shaded, so the fraction is 1/4.",
-    ]),
+    {
+      ...worked("A bar is split into 4 equal parts and 1 part is shaded. What fraction is shaded?", "1/4", [
+        "The whole is split into 4 equal parts.",
+        "1 of those parts is shaded, so the fraction is 1/4.",
+      ]),
+      choices: fractionChoiceList("1/4") ?? ["1/4", "3/4", "1/5"],
+    },
     (rng, small) => {
       const parts = span(rng, 2, 8, 2, 4, small);
       const shaded = intBetween(rng, 1, parts - 1);
-      return worked(
-        `A bar is split into ${parts} equal parts and ${shaded} part${shaded === 1 ? " is" : "s are"} shaded. What fraction is shaded?`,
-        `${shaded}/${parts}`,
-        [
-          `The whole has ${parts} equal parts.`,
-          `${shaded} of them are shaded, so the fraction is ${shaded}/${parts}.`,
-        ],
-      );
+      const answer = `${shaded}/${parts}`;
+      return {
+        ...worked(
+          `A bar is split into ${parts} equal parts and ${shaded} part${shaded === 1 ? " is" : "s are"} shaded. What fraction is shaded?`,
+          answer,
+          [
+            `The whole has ${parts} equal parts.`,
+            `${shaded} of them are shaded, so the fraction is ${answer}.`,
+          ],
+        ),
+        choices: fractionChoiceList(answer) ?? [answer],
+      };
     },
   ),
   skill(
@@ -517,16 +530,22 @@ export const CATALOG: SkillBlueprint[] = [
     "Even and odd numbers",
     "Even numbers can be split into two equal groups. Odd numbers have one left over.",
     "Answer even or odd.",
-    worked("Is 14 even or odd?", "even", ["14 ends in 4.", "Numbers that end in 0, 2, 4, 6, or 8 are even."]),
+    {
+      ...worked("Is 14 even or odd?", "even", ["14 ends in 4.", "Numbers that end in 0, 2, 4, 6, or 8 are even."]),
+      choices: ["even", "odd"],
+    },
     (rng, small) => {
       const number = span(rng, 1, 40, 1, 12, small);
       const even = number % 2 === 0;
-      return worked(`Is ${number} even or odd?`, even ? "even" : "odd", [
-        `${number} ends in ${number % 10}.`,
-        even
-          ? "It ends in 0, 2, 4, 6, or 8, so it is even."
-          : "It ends in 1, 3, 5, 7, or 9, so it is odd.",
-      ]);
+      return {
+        ...worked(`Is ${number} even or odd?`, even ? "even" : "odd", [
+          `${number} ends in ${number % 10}.`,
+          even
+            ? "It ends in 0, 2, 4, 6, or 8, so it is even."
+            : "It ends in 1, 3, 5, 7, or 9, so it is odd.",
+        ]),
+        choices: ["even", "odd"],
+      };
     },
   ),
   skill(

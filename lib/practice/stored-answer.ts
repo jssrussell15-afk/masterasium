@@ -1,5 +1,5 @@
 import type { AttemptMark } from "@/lib/practice/feedback";
-import type { QuestionKind } from "@/lib/practice/types";
+import { isInputType, type InputType, type QuestionKind } from "@/lib/practice/types";
 import type { Walkthrough } from "@/lib/practice/walk";
 
 export type StoredPlan = {
@@ -8,10 +8,24 @@ export type StoredPlan = {
   onRamp: boolean;
 };
 
+export type StoredInput = {
+  inputType: InputType | null;
+  choices: string[] | null;
+  speak: string | null;
+};
+
 export function packStoredAnswer(
   answer: string,
   steps: string[],
-  meta?: { kind?: QuestionKind; rollbackSkillId?: string; walk?: Walkthrough | null; onRamp?: boolean },
+  meta?: {
+    kind?: QuestionKind;
+    rollbackSkillId?: string;
+    walk?: Walkthrough | null;
+    onRamp?: boolean;
+    inputType?: InputType | null;
+    choices?: string[] | null;
+    speak?: string | null;
+  },
 ): string {
   return JSON.stringify({
     v: 1,
@@ -21,7 +35,33 @@ export function packStoredAnswer(
     ...(meta?.rollbackSkillId ? { rollbackSkillId: meta.rollbackSkillId } : {}),
     ...(meta?.walk ? { walk: meta.walk } : {}),
     ...(meta?.onRamp ? { onRamp: true } : {}),
+    ...(meta?.inputType ? { inputType: meta.inputType } : {}),
+    ...(meta?.choices && meta.choices.length > 0 ? { choices: meta.choices } : {}),
+    ...(meta?.speak ? { speak: meta.speak } : {}),
   });
+}
+
+export function readStoredInput(stored: string): StoredInput {
+  const empty: StoredInput = { inputType: null, choices: null, speak: null };
+  try {
+    const parsed = JSON.parse(stored) as {
+      v?: number;
+      inputType?: unknown;
+      choices?: unknown;
+      speak?: unknown;
+    };
+    if (parsed?.v !== 1) return empty;
+    const choices = Array.isArray(parsed.choices)
+      ? parsed.choices.filter((item): item is string => typeof item === "string")
+      : null;
+    return {
+      inputType: isInputType(parsed.inputType) ? parsed.inputType : null,
+      choices,
+      speak: typeof parsed.speak === "string" ? parsed.speak : null,
+    };
+  } catch {
+    return empty;
+  }
 }
 
 export function unpackStoredAnswer(stored: string): { answer: string; steps: string[] } {
@@ -113,6 +153,7 @@ export function withAttemptMark(stored: string, mark: AttemptMark): string {
   const { answer, steps } = unpackStoredAnswer(stored);
   const plan = readStoredPlan(stored);
   const walk = readStoredWalk(stored);
+  const input = readStoredInput(stored);
   return JSON.stringify({
     v: 1,
     answer,
@@ -121,6 +162,9 @@ export function withAttemptMark(stored: string, mark: AttemptMark): string {
     ...(plan.rollbackSkillId ? { rollbackSkillId: plan.rollbackSkillId } : {}),
     ...(walk ? { walk } : {}),
     ...(plan.onRamp ? { onRamp: true } : {}),
+    ...(input.inputType ? { inputType: input.inputType } : {}),
+    ...(input.choices && input.choices.length > 0 ? { choices: input.choices } : {}),
+    ...(input.speak ? { speak: input.speak } : {}),
     mark,
   });
 }

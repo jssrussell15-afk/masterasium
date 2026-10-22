@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { PracticeSession } from "@/components/practice-session";
 import { QuestionPractice } from "@/components/question-practice";
+import { generateQuestion } from "@/lib/practice/generate";
+import { resolveInput } from "@/lib/practice/input-type";
 import { INTRO_PLACEHOLDER, type SkillIntro } from "@/lib/practice/intro-view";
 import type { PracticeView } from "@/lib/practice/types";
 
@@ -23,6 +25,7 @@ function view(grade: 2 | 3 | 4 = 2): PracticeView {
       assist: null,
       hints: { hint: "Start at the first number and count on.", example: "2 + 3 = 5." },
       example: { prompt: "2 + 3 = ?", steps: ["Start at 2 and count on 3.", "2 + 3 = 5."], answer: "5" },
+      inputType: grade <= 2 ? "choice" : "number",
       choices: grade <= 2 ? ["9", "8", "7"] : null,
     },
     attempted: 0,
@@ -121,7 +124,7 @@ describe("practice question screen", () => {
           ...sample,
           grade: 1,
           access: { enrolled: 1, working: 1, nextUnlocked: false, requested: null },
-          question: { ...sample.question, choices },
+          question: { ...sample.question, inputType: "choice", choices },
         },
       }),
     );
@@ -183,7 +186,88 @@ describe("practice question screen", () => {
     expect(html).not.toContain(">Check<");
     expect(html).not.toContain("hint-dock");
   });
+
+  it("shows even and odd choices for g2-even-odd", () => {
+    const question = generateQuestion("g2-even-odd", mulberry32(3));
+    const resolved = resolveInput({
+      grade: 2,
+      prompt: question.prompt,
+      answer: question.answer,
+      declared: question.inputType,
+      choices: question.choices,
+      seed: "even",
+    });
+    const html = renderToStaticMarkup(
+      createElement(QuestionPractice, {
+        questionId: "even",
+        eyebrow: "Even and odd numbers",
+        prompt: question.prompt,
+        responseHint: "Answer even or odd.",
+        shape: { kind: "single", inputMode: "text" },
+        hint: null,
+        example: null,
+        progress: { index: 1, total: 10 },
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        grade: 2,
+        inputType: resolved.inputType,
+        choices: resolved.choices,
+        action: () => undefined,
+      }),
+    );
+    expect(resolved.inputType).toBe("choice");
+    expect(resolved.choices?.slice().sort()).toEqual(["even", "odd"]);
+    expect(html).toContain("answer-choice-tile");
+    expect(html).toContain(">even<");
+    expect(html).toContain(">odd<");
+    expect(html).not.toContain("number-pad");
+    expect(html).not.toContain('class="answer-input"');
+  });
+
+  it("types a spelling word with spellcheck off and no keypad", () => {
+    const html = renderToStaticMarkup(
+      createElement(QuestionPractice, {
+        questionId: "spell",
+        eyebrow: "Spelling",
+        prompt: "Spell the word you hear.",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "text" },
+        hint: null,
+        example: null,
+        progress: { index: 1, total: 10 },
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        grade: 2,
+        inputType: "spelling",
+        speak: "kitten",
+        choices: ["kitten", "kitchen"],
+        action: () => undefined,
+      }),
+    );
+    expect(html).toContain('class="answer-input"');
+    const attributes = html.toLowerCase();
+    expect(attributes).toContain('spellcheck="false"');
+    expect(attributes).toContain('autocorrect="off"');
+    expect(attributes).toContain('autocapitalize="none"');
+    expect(html).not.toContain("number-pad");
+    expect(html).not.toContain("answer-choice-tile");
+    expect(html).not.toContain(">kitten<");
+  });
 });
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let value = Math.imul(state ^ (state >>> 15), 1 | state);
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
 
 function submitButton(html: string): string {
   return html.match(/<button[^>]*question-submit[^>]*>/)?.[0] ?? "";
@@ -232,6 +316,7 @@ describe("question feedback card", () => {
         ...shared,
         phase: "retry",
         grade: 1,
+        inputType: "choice",
         choices: ["8", "7", "9"],
         why: null,
         steps: [],

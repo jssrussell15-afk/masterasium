@@ -29,6 +29,15 @@ const QUESTIONS = [
   },
 ] as const;
 
+const GRADE_ONE_PLACE = {
+  id: "preview-place",
+  prompt: "In 77, what is the value of the tens digit?",
+  answer: "70",
+  hint: "The tens digit tells how many groups of 10.",
+  why: "The tens digit is 7, so its value is 7 × 10 = 70.",
+  steps: ["The tens digit is 7.", "7 × 10 = 70."],
+} as const;
+
 export function PracticePreview({
   view,
   example,
@@ -93,7 +102,7 @@ export function PracticePreview({
 
   const phase: FeedbackPhase =
     view === "retry" ? "retry" : view === "revealed" ? "revealed" : view === "correct" ? "correct" : "answering";
-  const question = QUESTIONS[0];
+  const question = grade === 1 ? GRADE_ONE_PLACE : QUESTIONS[0];
 
   return (
     <Screen
@@ -105,10 +114,12 @@ export function PracticePreview({
       why={phase === "correct" ? question.why : null}
       steps={phase === "revealed" ? [...question.steps] : []}
       expected={phase === "revealed" ? question.answer : null}
-      draft={view === "retry" ? "5" : view === "correct" ? "8" : ""}
+      draft={view === "retry" ? "5" : view === "correct" ? question.answer : ""}
       exampleStartsOpen={view === "example"}
       progress={1}
       grade={grade}
+      answer={question.answer}
+      eyebrow={grade === 1 ? "Focus · Place value (tens and ones)" : "Focus · Addition within 10"}
     />
   );
 }
@@ -148,6 +159,7 @@ function Playground({ example }: { example: WorkedExample | null }) {
       expected={phase === "revealed" ? question.answer : null}
       action={act}
       progress={index + 1}
+      answer={question.answer}
     />
   );
 }
@@ -166,6 +178,8 @@ function Screen({
   progress,
   action,
   grade = 3,
+  eyebrow = "Focus · Addition within 10",
+  answer,
 }: {
   questionId: string;
   prompt: string;
@@ -180,7 +194,10 @@ function Screen({
   progress: number;
   action?: (formData: FormData) => void;
   grade?: 1 | 3;
+  eyebrow?: string;
+  answer: string;
 }) {
+  const choiceList = grade <= 2 ? practiceChoices(grade, prompt, answer, questionId) : null;
   return (
     <div className="question-screen">
       <p className="question-back">
@@ -191,7 +208,7 @@ function Screen({
       <QuestionPractice
         key={questionId}
         questionId={questionId}
-        eyebrow="Focus · Addition within 10"
+        eyebrow={eyebrow}
         prompt={prompt}
         responseHint={null}
         shape={{ kind: "single", inputMode: "numeric" }}
@@ -207,11 +224,8 @@ function Screen({
         action={action ?? (() => undefined)}
         grade={grade}
         autoRead={grade <= 2}
-        choices={
-          grade <= 2
-            ? practiceChoices(grade, prompt, expected ?? (prompt === "6 + 2 = ?" ? "8" : "7"), questionId)
-            : null
-        }
+        inputType={choiceList && choiceList.length >= 2 ? "choice" : "number"}
+        choices={choiceList}
       />
     </div>
   );
