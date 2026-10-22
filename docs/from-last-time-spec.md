@@ -217,7 +217,7 @@ Docs only until Matthew asks for a build.
 - [ ] A prior day: the pair is questions 1 and 2 of the day's first 10, before a new skill, a check, or support. The next set that day has none.
 - [ ] The pair does not change `attempted`, `correct`, or `consecutive_correct`.
 - [ ] Slots 3, 6, and 9 still come from `reviewQuestionsInSet`. A recall skill is absent from them. An empty slot stays on the current skill.
-- [ ] Pick order is new, then near mastery, then newest misses. One skill once. Maths avoids the prior prompt inside 12 tries.
+- [ ] Pick order is new, then near the same-day bar, then newest misses. One skill once. Maths avoids the prior prompt inside 12 tries.
 - [ ] Help and Show me stay hidden until the first answer. A miss uses a section 4 line, under 15 words. Level 1 does not auto-open. "That's right." stays.
 - [ ] A miss steps the ladder as in section 3 and does not set `reviewDueAt` to today. Two misses in a row on that skill set step 0.
 - [ ] Same-day confirmation opens the next skill at once. Practice does not wait.
