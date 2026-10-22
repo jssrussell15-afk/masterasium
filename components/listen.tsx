@@ -213,14 +213,19 @@ export function ListenPassage({
   auto = false,
   active = true,
   className,
+  utterance,
 }: {
   parts: { text: string; as?: "p" | "h1" | "h2" | "span"; className?: string; id?: string }[];
   auto?: boolean;
   active?: boolean;
   className?: string;
+  /** Spoken instead of the visible text. Spelling uses this so the word stays off the prompt. */
+  utterance?: string;
 }) {
   const spokenParts = parts.filter((part) => part.text.trim());
-  const spoken = spokenParts.map((part) => part.text.trim()).join(" ");
+  const displayed = spokenParts.map((part) => part.text.trim()).join(" ");
+  const spoken = utterance?.trim() || displayed;
+  const highlightSpoken = !utterance?.trim() || utterance.trim() === displayed;
   const speech = useSpoken(spoken, { auto, active });
   const ranges = spokenParts.reduce<{ start: number; text: string }[]>((list, part) => {
     const previous = list[list.length - 1];
@@ -236,7 +241,7 @@ export function ListenPassage({
           const Tag = part.as ?? "p";
           const range = ranges[index];
           const localWord =
-            speech.activeWord == null
+            !highlightSpoken || speech.activeWord == null
               ? null
               : localWordIndex(spoken, range?.start ?? 0, range?.text ?? "", speech.activeWord);
           return (

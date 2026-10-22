@@ -17,8 +17,10 @@ import { readLearn, writeLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
 import type { AttemptPoint } from "@/lib/practice/portrait";
 import { getItemSource } from "@/lib/practice/source";
-import { packStoredAnswer, readAttemptMark, readStoredPlan, readStoredWalk, unpackStoredAnswer } from "@/lib/practice/stored-answer";
-import { practiceChoices } from "@/lib/practice/choices";
+import { packStoredAnswer, readAttemptMark, readStoredInput, readStoredPlan, readStoredWalk, unpackStoredAnswer } from "@/lib/practice/stored-answer";
+import { workedExampleQuestion } from "@/lib/practice/generate";
+import { resolveInput } from "@/lib/practice/input-type";
+import { validateQuestion } from "@/lib/practice/validate-question";
 import { skillCanWalk, walkForSkill, type Walkthrough } from "@/lib/practice/walk";
 import {
   accuracyScheduler,
@@ -28,7 +30,7 @@ import {
 import { loadPlacement } from "@/lib/practice/placement-store";
 import { practiceAnchor } from "@/lib/practice/placement";
 import { skillById, type Skill } from "@/lib/practice/skills";
-import type { Question, QuestionKind, QuestionView } from "@/lib/practice/types";
+import type { InputType, Question, QuestionKind, QuestionView } from "@/lib/practice/types";
 
 type SkillStateRow = {
   skill_id: string;
@@ -90,8 +92,20 @@ function presentQuestion(
   mark: AttemptMark | null,
   walk: Walkthrough | null,
   onRamp = false,
+  delivery?: { inputType?: InputType | null; choices?: string[] | null; speak?: string | null },
 ): QuestionView {
   const shape = answerShape(prompt, expected);
+  const resolved = delivery?.inputType
+    ? {
+        inputType: delivery.inputType,
+        choices: delivery.inputType === "choice" ? (delivery.choices ?? null) : null,
+      }
+    : resolveInput({
+        grade: skill.grade,
+        prompt,
+        answer: expected,
+        seed: questionId,
+      });
   const showLevel = resolvedShowLevel(readLearn(cardFor(cards, skill.id).fsrs).showLevel, skillCanWalk(skill.id));
   const assistPlan = assistFor({
     attempted: cardFor(cards, skill.id).attempted,
@@ -127,7 +141,9 @@ function presentQuestion(
     walk: clientWalk(walk, expected, mark),
     showLevel,
     walkMode: mark?.walkMode ?? null,
-    choices: practiceChoices(skill.grade, prompt, expected, questionId),
+    inputType: resolved.inputType,
+    choices: resolved.choices,
+    ...(delivery?.speak ? { speak: delivery.speak } : {}),
     ...(onRamp ? { onRamp: onRampCopy(example?.steps[0] ?? skill.exampleSteps[0]) } : {}),
     ...(mark
       ? {
@@ -205,17 +221,19 @@ async function persistQuestion(
   plan: { kind: QuestionKind; small: boolean; rollbackSkillId?: string; onRamp?: boolean },
   intro: SkillIntro | null,
   built?: Question,
+  avoidPrompt?: string,
 ): Promise<{ question: QuestionView | null; error: string | null }> {
   const today = torontoDate();
   const readyCards = await refreshShowGap(supabase, childId, skill.id, cards, today);
   const removed = await supabase.from("pending_questions").delete().eq("child_id", childId);
   if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
 
-  const generated: Question =
-    built ??
-    (intro
-      ? nearTransfer(skill, Math.random, { small: plan.small })
-      : getItemSource("generated").next(skill, Math.random, { small: plan.small }));
+  const generated = vettedQuestion(skill, {
+    small: plan.small,
+    intro: Boolean(intro) && !built,
+    ...(built ? { first: built } : {}),
+    ...(avoidPrompt ? { avoidPrompt } : {}),
+  });
 
   const { data, error } = await supabase
     .from("pending_questions")
@@ -228,6 +246,9 @@ async function persistQuestion(
         rollbackSkillId: plan.rollbackSkillId,
         walk: generated.walk ?? null,
         onRamp: plan.onRamp === true,
+        inputType: generated.inputType,
+        choices: generated.choices,
+        speak: generated.speak,
       }),
     })
     .select("id, skill_id, prompt, answer")
@@ -254,6 +275,11 @@ async function persistQuestion(
       null,
       generated.walk ?? null,
       plan.onRamp === true,
+      {
+        inputType: generated.inputType ?? null,
+        choices: generated.choices ?? null,
+        speak: generated.speak ?? null,
+      },
     ),
     error: null,
   };
@@ -301,11 +327,7 @@ export async function issueFollowUp(
 ): Promise<{ question: QuestionView | null; error: string | null }> {
   const skill = skillById(skillId);
   if (!skill) return { question: null, error: "That skill is not available." };
-  let generated = getItemSource("generated").next(skill, Math.random, { small: plan.small });
-  for (let attempt = 0; attempt < 12 && generated.prompt === avoidPrompt; attempt += 1) {
-    generated = getItemSource("generated").next(skill, Math.random, { small: plan.small });
-  }
-  return persistQuestion(supabase, childId, skill, cards, plan, null, generated);
+  return persistQuestion(supabase, childId, skill, cards, plan, null, undefined, avoidPrompt);
 }
 
 export async function loadOrIssueQuestion(
@@ -370,6 +392,7 @@ export async function loadOrIssueQuestion(
         readAttemptMark(existing.answer),
         readStoredWalk(existing.answer) ?? walkForSkill(skill.id, existing.prompt, unpacked.answer),
         stored.onRamp,
+        readStoredInput(existing.answer),
       ),
       error: null,
     };
@@ -444,6 +467,57 @@ export async function refreshShowGap(
     .eq("skill_id", skillId);
   if (error) return cards;
   return cards.map((card) => (card.skillId === skillId ? next : card));
+}
+
+const VET_LIMIT = 8;
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let value = Math.imul(state ^ (state >>> 15), 1 | state);
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function withResolvedInput(skill: Skill, question: Question, seed: string): Question {
+  const resolved = resolveInput({
+    grade: skill.grade,
+    prompt: question.prompt,
+    answer: question.answer,
+    declared: question.inputType,
+    choices: question.choices,
+    seed,
+  });
+  return {
+    ...question,
+    inputType: resolved.inputType,
+    choices: resolved.choices,
+    speak: question.speak ?? null,
+  };
+}
+
+function vettedQuestion(
+  skill: Skill,
+  options: { small: boolean; intro: boolean; avoidPrompt?: string; first?: Question },
+): Question {
+  const seed = Math.floor(Math.random() * 0x7fffffff) || 1;
+  for (let attempt = 0; attempt < VET_LIMIT; attempt += 1) {
+    const generated =
+      attempt === 0 && options.first
+        ? options.first
+        : options.intro
+          ? nearTransfer(skill, mulberry32(seed + attempt * 997), { small: options.small })
+          : getItemSource("generated").next(skill, mulberry32(seed + attempt * 997), { small: options.small });
+    if (options.avoidPrompt && generated.prompt === options.avoidPrompt) continue;
+    const ready = withResolvedInput(skill, generated, `${skill.id}:${seed + attempt}:${generated.prompt}`);
+    const verdict = validateQuestion(ready);
+    if (verdict.ok) return verdict.question;
+  }
+  const example = withResolvedInput(skill, workedExampleQuestion(skill.id), `${skill.id}:example`);
+  const verdict = validateQuestion(example);
+  return verdict.ok ? verdict.question : example;
 }
 
 export function cardFor(cards: SkillCard[], skillId: string): SkillCard {

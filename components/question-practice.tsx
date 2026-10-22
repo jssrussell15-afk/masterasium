@@ -11,7 +11,7 @@ import { clipKidLine, exampleLines, stepLines, type ShowLevel, type SupportMode 
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
-import type { AssistView } from "@/lib/practice/types";
+import type { AssistView, InputType } from "@/lib/practice/types";
 import type { Walkthrough } from "@/lib/practice/walk";
 
 export function QuestionPractice({
@@ -47,6 +47,8 @@ export function QuestionPractice({
   grade = null,
   autoRead,
   choices = null,
+  inputType,
+  speak = null,
 }: {
   questionId: string;
   eyebrow: string;
@@ -94,6 +96,10 @@ export function QuestionPractice({
   /** Parent setting. When omitted, Grades 1–2 read the question automatically. */
   autoRead?: boolean;
   choices?: string[] | null;
+  /** Choice tiles, or the kind of typed answer. Omitted, valid tiles stay choices. */
+  inputType?: InputType;
+  /** Spelling word for Listen. The prompt stays on screen. */
+  speak?: string | null;
 }) {
   const guided = walk && walk.steps.length >= 3 ? walk : null;
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
@@ -151,8 +157,17 @@ export function QuestionPractice({
     supportLevel == null &&
     (hintOpen || phase === "retry" || showTextReveal);
   const choiceList = choices ?? [];
+  const answerInput: InputType =
+    inputType ?? (choiceList.length >= 2 ? "choice" : typedInput(shape));
   // One tile is not a real choice set. Fall back to the typed box so Check can be used.
-  const showChoices = phase === "answering" && !walking && choiceList.length >= 2;
+  const showChoices = answerInput === "choice" && phase === "answering" && !walking && choiceList.length >= 2;
+  const showKeypad =
+    !showChoices &&
+    (answerInput === "number" ||
+      answerInput === "decimal" ||
+      answerInput === "fraction" ||
+      answerInput === "remainder" ||
+      (answerInput === "choice" && answerUsesKeypad(shape)));
   const choiceListen = grade != null && grade <= 2;
 
   useEffect(() => {
@@ -339,6 +354,7 @@ export function QuestionPractice({
           ) : (
             <ListenPassage
               auto={readOnArrival && phase === "answering"}
+              utterance={answerInput === "spelling" && speak ? speak : undefined}
               parts={[
                 {
                   text: prompt,
@@ -495,6 +511,7 @@ export function QuestionPractice({
                 <>
                   <AnswerFields
                     shape={shape}
+                    inputType={answerInput}
                     values={values}
                     onChange={(name, value) => {
                       const next = { ...values, [name]: value };
@@ -506,8 +523,13 @@ export function QuestionPractice({
                     inputRef={inputRef}
                     onFocusField={setActiveField}
                   />
-                  {answerUsesKeypad(shape) ? (
-                    <NumberKeypad disabled={textFinished || pending} onDigit={typeDigit} onDelete={deleteDigit} />
+                  {showKeypad ? (
+                    <NumberKeypad
+                      disabled={textFinished || pending}
+                      onDigit={typeDigit}
+                      onDelete={deleteDigit}
+                      extras={answerInput === "fraction" ? ["/"] : []}
+                    />
                   ) : null}
                 </>
               )}
@@ -562,6 +584,13 @@ function discussedPlace(step: {
     if (/hundred/i.test(step.caption)) return "hundreds";
   }
   return null;
+}
+
+function typedInput(shape: AnswerShape): InputType {
+  if (shape.kind === "parts") return "remainder";
+  if (shape.inputMode === "decimal") return "decimal";
+  if (shape.inputMode === "text") return "text";
+  return "number";
 }
 
 function valuesFor(shape: AnswerShape, draft: string): Record<string, string> {

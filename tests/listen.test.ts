@@ -172,6 +172,7 @@ describe("grade listen behaviour", () => {
         expected: null,
         grade: 1,
         autoRead: true,
+        inputType: "choice",
         choices: ["8", "7", "6"],
         action: () => undefined,
       }),
@@ -261,6 +262,38 @@ describe("grade listen behaviour", () => {
     expect(window.document.querySelectorAll("button.listen")).toHaveLength(1);
     await act(async () => root.unmount());
   });
+
+  it("reads the spelling word and leaves it off the prompt", async () => {
+    const { window, root, speech } = await render(
+      createElement(QuestionPractice, {
+        questionId: "spell",
+        eyebrow: "Spelling",
+        prompt: "Spell the word you hear.",
+        responseHint: null,
+        shape: { kind: "single", inputMode: "text" },
+        hint: null,
+        example: null,
+        progress: null,
+        phase: "answering",
+        why: null,
+        steps: [],
+        expected: null,
+        grade: 2,
+        autoRead: false,
+        inputType: "spelling",
+        speak: "kitten",
+        action: () => undefined,
+      }),
+    );
+    expect(window.document.body.textContent).toContain("Spell the word you hear.");
+    expect(window.document.body.textContent).not.toContain("kitten");
+    expect(window.document.querySelector(".number-pad")).toBeNull();
+    await act(async () => {
+      window.document.querySelector("button.listen")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    });
+    expect(speech.heard.map((utterance) => utterance.text)).toContain("kitten");
+    await act(async () => root.unmount());
+  });
 });
 
 describe("read aloud setting", () => {
@@ -278,7 +311,7 @@ describe("read aloud setting", () => {
     const early = practiceChoices(1, "6 + 2 = ?", "8", "q");
     expect(early).toContain("8");
     expect(early?.length).toBe(3);
-    expect(practiceChoices(1, "Which number is greater, 9 or 14?", "14", "q")).toEqual(["9", "14"]);
+    expect(practiceChoices(1, "Which number is greater, 9 or 14?", "14", "q")?.slice().sort()).toEqual(["14", "9"]);
     expect(practiceChoices(3, "47 + 25 = ?", "72", "q")).toBeNull();
   });
 });

@@ -9,6 +9,14 @@ import type { StreakMilestone } from "@/lib/practice/streak";
 import type { ShowLevel, SupportMode } from "@/lib/practice/fade";
 import type { Walkthrough } from "@/lib/practice/walk";
 
+export const INPUT_TYPES = ["choice", "number", "decimal", "fraction", "remainder", "text", "spelling"] as const;
+
+export type InputType = (typeof INPUT_TYPES)[number];
+
+export function isInputType(value: unknown): value is InputType {
+  return typeof value === "string" && (INPUT_TYPES as readonly string[]).includes(value);
+}
+
 /**
  * A question is the same shape whether it was generated or, later,
  * built from a worksheet the parent uploaded.
@@ -21,6 +29,12 @@ export type Question = {
   responseHint: string | null;
   /** Guided steps, when this skill can highlight the prompt. Otherwise null. */
   walk?: Walkthrough | null;
+  /** How the child answers. Resolved before the question is stored. */
+  inputType?: InputType;
+  /** Grade 1–2 tiles, when this question is answered by choosing. */
+  choices?: string[] | null;
+  /** Read-aloud line for a spelling word. The word stays off the prompt. */
+  speak?: string | null;
 };
 
 export type QuestionKind = "focus" | "review" | "check" | "support";
@@ -51,8 +65,12 @@ export type QuestionView = {
   showLevel?: ShowLevel;
   /** Full example, or the partly filled one, when Show me is already open. */
   walkMode?: SupportMode | null;
+  /** How this question is answered. Choice tiles, or a typed box. */
+  inputType: InputType;
   /** Grade 1–2 answer tiles. Null keeps a typed answer. */
   choices?: string[] | null;
+  /** Spelling word for Listen. Not shown on the prompt. */
+  speak?: string | null;
   /** Shown after a missed earlier skill. No review label and no score. */
   onRamp?: {
     line: string;
