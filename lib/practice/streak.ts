@@ -22,9 +22,11 @@ export function sessionStreak(dates: string[], today: string): SessionStreak {
   }
 
   let days = 0;
-  while (unique.has(cursor)) {
+  while (unique.has(cursor) && days < unique.size) {
     days += 1;
-    cursor = addDays(cursor, -1);
+    const next = addDays(cursor, -1);
+    if (next === cursor) break;
+    cursor = next;
   }
 
   const milestone =

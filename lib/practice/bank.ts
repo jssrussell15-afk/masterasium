@@ -20,8 +20,45 @@ export type SkillBlueprint = {
   generate: (rng: () => number, small: boolean) => Worked;
 };
 
+/** An integer from the low end through the high end. A non-finite sample counts as the low end. */
 export function intBetween(rng: () => number, min: number, max: number): number {
-  return min + Math.floor(rng() * (max - min + 1));
+  const low = Math.min(min, max);
+  const high = Math.max(min, max);
+  const width = high - low + 1;
+  if (!Number.isFinite(low) || !Number.isFinite(width) || width <= 0) return 0;
+  const sample = rng();
+  const unit = Number.isFinite(sample) ? Math.min(Math.max(sample, 0), 1 - Number.EPSILON) : 0;
+  return low + Math.floor(unit * width);
+}
+
+/**
+ * Up to `count` different integers. A random source that keeps repeating stops
+ * after a few draws, then the rest are filled from the low end.
+ */
+function distinctInts(rng: () => number, min: number, max: number, count: number): number[] {
+  const low = Math.min(min, max);
+  const high = Math.max(min, max);
+  const wanted = Math.max(0, Math.min(32, Math.floor(count)));
+  const values = new Set<number>();
+  const room = Number.isFinite(high - low) ? high - low + 1 : 0;
+  const drawLimit = Math.min(16, Math.max(wanted, 1) * 4);
+  let draws = 0;
+  while (values.size < wanted && values.size < room && draws < drawLimit) {
+    draws += 1;
+    const next = intBetween(rng, low, high);
+    if (Number.isFinite(next)) values.add(next);
+  }
+  const scanLimit = Math.min(room > 0 ? room : 0, wanted);
+  for (let step = 0; values.size < wanted && step < scanLimit; step += 1) {
+    values.add(low + step);
+  }
+  let extra = Number.isFinite(high) ? high + 1 : values.size;
+  const extraLimit = extra + wanted;
+  while (values.size < wanted && extra < extraLimit) {
+    values.add(extra);
+    extra += 1;
+  }
+  return [...values];
 }
 
 function span(rng: () => number, min: number, max: number, smallMin: number, smallMax: number, small: boolean): number {
@@ -423,9 +460,7 @@ export const CATALOG: SkillBlueprint[] = [
     ]),
     (rng, small) => {
       const cap = small ? 40 : 100;
-      const values = new Set<number>();
-      while (values.size < 3) values.add(intBetween(rng, 0, cap));
-      const list = [...values];
+      const list = distinctInts(rng, 0, cap, 3);
       const greatest = Math.max(...list);
       return worked(`Which number is greatest: ${list.join(", ")}?`, String(greatest), [
         "Compare the tens digits first.",
