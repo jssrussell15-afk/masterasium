@@ -87,18 +87,22 @@ function frameFor(scene: Scene): {
   }
   if (scene === "grade1") {
     const skill = skillById("g1-count");
-    const question = generateQuestion("g1-count", mulberry32(11));
+    if (!skill) throw new Error("Missing Grade 1 counting skill.");
     return {
-      question,
+      question: {
+        skillId: skill.id,
+        prompt: skill.examplePrompt,
+        answer: skill.exampleAnswer,
+        steps: skill.exampleSteps,
+        responseHint: null,
+      },
       phase: "revealed",
       walkStart: null,
       showLevel: 1,
       walkMode: "guided",
       grade: 1,
       hint: "Count one more.",
-      example: skill
-        ? { prompt: skill.examplePrompt, steps: skill.exampleSteps, answer: skill.exampleAnswer }
-        : null,
+      example: { prompt: skill.examplePrompt, steps: skill.exampleSteps, answer: skill.exampleAnswer },
     };
   }
   if (scene === "help") {

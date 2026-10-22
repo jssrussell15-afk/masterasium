@@ -279,6 +279,7 @@ describe("the child never sees the support level", () => {
     expect(quiet).not.toContain("Add the ones first.");
     expect(quiet).not.toContain('class="show-me"');
     const early = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "grade1" }) }));
+    expect(early).toContain("What number comes just after 14?");
     expect(early).toContain("Count one more than 14.");
     expect(early).toContain(">Listen<");
   });
