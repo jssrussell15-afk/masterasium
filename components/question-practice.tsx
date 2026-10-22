@@ -7,7 +7,7 @@ import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
 import { HighlightedPrompt, HintCaption, LightbulbIcon, ShowMePanel } from "@/components/show-me";
 import { answersMatch } from "@/lib/practice/answers";
-import { clipKidLine, exampleBlanks, walkBlanks, type ShowLevel, type SupportMode } from "@/lib/practice/fade";
+import { clipKidLine, exampleLines, stepLines, type ShowLevel, type SupportMode } from "@/lib/practice/fade";
 import type { WorkedExample } from "@/lib/practice/example";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -77,7 +77,14 @@ export function QuestionPractice({
   /** Practice asks for a same-skill question. A lesson continues its own path. */
   handoffIntent?: string;
   /** Opens a still frame for screenshots and tests. */
-  walkStart?: { step: number; handoff?: boolean; hint?: boolean; faded?: boolean } | null;
+  walkStart?: {
+    step: number;
+    handoff?: boolean;
+    hint?: boolean;
+    faded?: boolean;
+    blanks?: Record<number, string>;
+    miss?: boolean;
+  } | null;
   /** Stored support. Omitted, Show me stays the full walk. */
   showLevel?: ShowLevel | null;
   /** Full example, or the partly filled one, when support is already open. */
@@ -99,8 +106,10 @@ export function QuestionPractice({
   const [stepIndex, setStepIndex] = useState(walkStart?.step ?? 0);
   const [handoff, setHandoff] = useState(Boolean(walkStart?.handoff));
   const [walkDraft, setWalkDraft] = useState("");
-  const [blankDrafts, setBlankDrafts] = useState<Record<number, string>>({});
-  const [walkMiss, setWalkMiss] = useState(false);
+  const [blankDrafts, setBlankDrafts] = useState<Record<number, string>>(walkStart?.blanks ?? {});
+  const [blankTries, setBlankTries] = useState(walkStart?.miss ? 1 : 0);
+  const [revealedBlanks, setRevealedBlanks] = useState<Record<number, boolean>>({});
+  const [walkMiss, setWalkMiss] = useState(Boolean(walkStart?.miss));
   const inputRef = useRef<HTMLInputElement>(null);
   const nextRef = useRef<HTMLButtonElement>(null);
   const supportLevel = showLevel ?? null;
@@ -210,28 +219,47 @@ export function QuestionPractice({
     setStepIndex((current) => current - 1);
   }
 
+  function noteBlankMiss(entries: { index: number; expect: string }[]) {
+    const wrong = entries.filter((entry) => !answersMatch(entry.expect, blankDrafts[entry.index] ?? ""));
+    if (wrong.length === 0) {
+      setWalkMiss(false);
+      setBlankTries(0);
+      setHandoff(true);
+      return;
+    }
+    if (blankTries >= 1) {
+      setBlankDrafts((current) => {
+        const next = { ...current };
+        for (const entry of wrong) next[entry.index] = entry.expect;
+        return next;
+      });
+      setRevealedBlanks((current) => {
+        const next = { ...current };
+        for (const entry of wrong) next[entry.index] = true;
+        return next;
+      });
+      setWalkMiss(false);
+      setBlankTries(2);
+      return;
+    }
+    setBlankTries(1);
+    setWalkMiss(true);
+  }
+
   function goNext() {
     if (partial && guided) {
-      const blanks = walkBlanks(prompt, guided.steps.length, solution);
-      const wrong = blanks.some((blank) => !answersMatch(blank.expect, blankDrafts[blank.index] ?? ""));
-      if (wrong) {
-        setWalkMiss(true);
-        return;
-      }
-      setWalkMiss(false);
-      setHandoff(true);
+      const entries = stepLines(prompt, guided.steps, solution)
+        .filter((line) => line.blank)
+        .map((line) => ({ index: line.index, expect: line.blank as string }));
+      noteBlankMiss(entries);
       return;
     }
     if (exampleSupport && example) {
       if (walkMode === "faded") {
-        const blanks = exampleBlanks(exampleSteps.length, example.answer);
-        const wrong = blanks.some((blank) => !answersMatch(blank.expect, blankDrafts[blank.index] ?? ""));
-        if (wrong) {
-          setWalkMiss(true);
-          return;
-        }
-        setWalkMiss(false);
-        setHandoff(true);
+        const entries = exampleLines(example.steps, example.answer)
+          .filter((line) => line.blank)
+          .map((line) => ({ index: line.index, expect: line.blank as string }));
+        noteBlankMiss(entries);
         return;
       }
       if (stepIndex < exampleSteps.length - 1) {
@@ -296,8 +324,13 @@ export function QuestionPractice({
           ) : null}
           {walking || hintCaption || exampleSupport ? (
             <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>
-              {walking && step && !handoff ? (
-                <HighlightedPrompt prompt={prompt} target={step.target} occurrence={step.occurrence ?? 0} />
+              {walking && step && !handoff && !partial ? (
+                <HighlightedPrompt
+                  prompt={prompt}
+                  target={step.target}
+                  occurrence={step.occurrence ?? 0}
+                  place={discussedPlace(step)}
+                />
               ) : (
                 prompt
               )}
@@ -388,10 +421,11 @@ export function QuestionPractice({
               handoffIntent={handoffIntent}
               onElapsed={onElapsed}
               autoRead={readOnArrival}
-              blanks={partial ? walkBlanks(prompt, guided.steps.length, solution) : null}
-              steps={partial ? guided.steps : null}
+              lines={partial ? stepLines(prompt, guided.steps, solution) : null}
               blankDrafts={blankDrafts}
+              revealed={revealedBlanks}
               onBlank={(index, value) => {
+                if (revealedBlanks[index]) return;
                 setWalkMiss(false);
                 setBlankDrafts((current) => ({ ...current, [index]: value }));
               }}
@@ -420,10 +454,11 @@ export function QuestionPractice({
               onElapsed={onElapsed}
               autoRead={readOnArrival}
               askAnswer={false}
-              blanks={walkMode === "faded" ? exampleBlanks(exampleSteps.length, example.answer) : null}
-              steps={walkMode === "faded" ? exampleSteps : null}
+              lines={walkMode === "faded" ? exampleLines(example.steps, example.answer) : null}
               blankDrafts={blankDrafts}
+              revealed={revealedBlanks}
               onBlank={(index, value) => {
+                if (revealedBlanks[index]) return;
                 setWalkMiss(false);
                 setBlankDrafts((current) => ({ ...current, [index]: value }));
               }}
@@ -506,6 +541,20 @@ export function QuestionPractice({
       </div>
     </div>
   );
+}
+
+function discussedPlace(step: {
+  caption: string;
+  visual?: { kind: string; focus?: string };
+}): "ones" | "tens" | "hundreds" | null {
+  const focus = step.visual?.kind === "base-ten" ? step.visual.focus : undefined;
+  if (focus === "ones" || focus === "tens" || focus === "hundreds") return focus;
+  if (focus === "trade") {
+    if (/ones/i.test(step.caption)) return "ones";
+    if (/tens/i.test(step.caption)) return "tens";
+    if (/hundred/i.test(step.caption)) return "hundreds";
+  }
+  return null;
 }
 
 function valuesFor(shape: AnswerShape, draft: string): Record<string, string> {

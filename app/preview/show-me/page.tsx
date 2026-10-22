@@ -11,7 +11,7 @@ export const metadata = {
   title: "Show me sample",
 };
 
-const SCENES = ["help", "hint", "add-1", "add-2", "add-3", "add-4", "handoff", "sub", "mult", "frac", "time", "fade-1", "fade-2", "fade-3", "fade-4", "grade1"] as const;
+const SCENES = ["help", "hint", "add-1", "add-2", "add-3", "add-4", "handoff", "sub", "mult", "frac", "time", "fade-1", "fade-2", "fade-2-one", "fade-2-miss", "fade-3", "fade-4", "grade1"] as const;
 type Scene = (typeof SCENES)[number];
 
 export default async function ShowMeSamplePage({
@@ -57,7 +57,14 @@ export default async function ShowMeSamplePage({
 function frameFor(scene: Scene): {
   question: Question;
   phase: "answering" | "revealed";
-  walkStart: { step: number; handoff?: boolean; hint?: boolean; faded?: boolean } | null;
+  walkStart: {
+    step: number;
+    handoff?: boolean;
+    hint?: boolean;
+    faded?: boolean;
+    blanks?: Record<number, string>;
+    miss?: boolean;
+  } | null;
   showLevel: ShowLevel | null;
   walkMode: SupportMode | null;
   grade: number;
@@ -76,8 +83,16 @@ function frameFor(scene: Scene): {
   if (scene === "fade-1") {
     return { ...base, phase: "revealed", walkStart: { step: 0 }, showLevel: 1, walkMode: "guided" };
   }
-  if (scene === "fade-2") {
-    return { ...base, phase: "revealed", walkStart: { step: 0, faded: true }, showLevel: 2, walkMode: "faded" };
+  if (scene === "fade-2" || scene === "fade-2-one" || scene === "fade-2-miss") {
+    const blanks: Record<number, string> | undefined =
+      scene === "fade-2-one" ? { 0: "6" } : scene === "fade-2-miss" ? { 0: "5", 3: "100" } : undefined;
+    return {
+      ...base,
+      phase: "revealed",
+      walkStart: { step: 0, faded: true, ...(blanks ? { blanks } : {}), ...(scene === "fade-2-miss" ? { miss: true } : {}) },
+      showLevel: 2,
+      walkMode: "faded",
+    };
   }
   if (scene === "fade-3") {
     return { ...base, phase: "answering", walkStart: null, showLevel: 3 };

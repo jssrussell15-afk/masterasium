@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, type FormEvent, type ReactNode } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { HighlightedWords, ListenButton, useSpoken } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
-import { FILL_LINE, type FillBlank } from "@/lib/practice/fade";
+import { FILL_CAPTION, spokenSteps, type StepLine } from "@/lib/practice/fade";
 import type { WalkStep, WalkVisual } from "@/lib/practice/walk";
 import { targetSpan } from "@/lib/practice/walk";
 
@@ -11,26 +11,57 @@ export function HighlightedPrompt({
   prompt,
   target,
   occurrence = 0,
+  place = null,
 }: {
   prompt: string;
   target: string | null;
   occurrence?: number;
+  /** Highlight this digit of the number, so the arrow marks the place in the step. */
+  place?: "ones" | "tens" | "hundreds" | null;
 }) {
   if (!target) return prompt;
   const span = targetSpan(prompt, target, occurrence);
   if (!span) return prompt;
+  const digit = place ? digitIn(span.text, place) : null;
+  if (!digit) {
+    return (
+      <>
+        {prompt.slice(0, span.start)}
+        <Marked text={span.text} />
+        {prompt.slice(span.end)}
+      </>
+    );
+  }
   return (
     <>
       {prompt.slice(0, span.start)}
-      <span className="walk-spot">
-        <span className="walk-ring" data-walk-target={target}>
-          {span.text}
-        </span>
-        <WalkArrow />
+      <span data-walk-target={span.text}>
+        {span.text.slice(0, digit.start)}
+        <Marked text={span.text.slice(digit.start, digit.end)} />
+        {span.text.slice(digit.end)}
       </span>
       {prompt.slice(span.end)}
     </>
   );
+}
+
+function Marked({ text }: { text: string }) {
+  return (
+    <span className="walk-spot">
+      <span className="walk-ring" data-walk-target={text}>
+        {text}
+      </span>
+      <WalkArrow />
+    </span>
+  );
+}
+
+function digitIn(text: string, place: "ones" | "tens" | "hundreds"): { start: number; end: number } | null {
+  if (!/^\d+$/.test(text)) return null;
+  const fromEnd = place === "ones" ? 1 : place === "tens" ? 2 : 3;
+  if (text.length < fromEnd) return null;
+  const start = text.length - fromEnd;
+  return { start, end: start + 1 };
 }
 
 export function ShowMePanel({
@@ -54,10 +85,10 @@ export function ShowMePanel({
   handoffIntent,
   onElapsed,
   autoRead = false,
-  blanks = null,
+  lines = null,
   blankDrafts = {},
   onBlank,
-  steps = null,
+  revealed = {},
   askAnswer = true,
 }: {
   step: WalkStep;
@@ -81,17 +112,21 @@ export function ShowMePanel({
   onElapsed?: (form: HTMLFormElement) => void;
   /** Grades 1–2 speak the caption when it appears. Listen stays for a replay. */
   autoRead?: boolean;
-  /** Partly filled example. Early steps stay written. These indexes are blank. */
-  blanks?: FillBlank[] | null;
+  /** Partly filled example. Each blank is a missing number inside its step. */
+  lines?: StepLine[] | null;
   blankDrafts?: Record<number, string>;
   onBlank?: (index: number, value: string) => void;
-  steps?: WalkStep[] | null;
+  /** A second miss has filled these blanks. The keypad leaves them alone. */
+  revealed?: Record<number, boolean>;
   /** The last guided step asks for the answer. A read example leaves it out. */
   askAnswer?: boolean;
 }) {
-  const partial = Boolean(blanks && steps);
-  const caption = handoff ? "Your turn: try one like it" : partial ? FILL_LINE : step.caption;
-  const speech = useSpoken(caption, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
+  const partial = Boolean(lines && lines.length > 0);
+  const caption = handoff ? "Your turn: try one like it" : partial ? FILL_CAPTION : step.caption;
+  const speechText = partial && lines && !handoff ? spokenSteps(lines) : caption;
+  const speech = useSpoken(speechText, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
+  const firstBlank = lines?.find((line) => line.blank)?.index ?? null;
+  const [active, setActive] = useState<number | null>(firstBlank);
   const last = index === total - 1;
 
   useEffect(() => {
@@ -116,6 +151,20 @@ export function ShowMePanel({
 
   function stamp(event: FormEvent<HTMLFormElement>) {
     onElapsed?.(event.currentTarget);
+  }
+
+  function typeBlank(digit: string) {
+    if (active == null || revealed[active]) return;
+    const line = lines?.find((item) => item.index === active);
+    if (!line?.blank) return;
+    const current = blankDrafts[active] ?? "";
+    if (current.length >= Math.max(line.blank.length, 1)) return;
+    onBlank?.(active, `${current}${digit}`);
+  }
+
+  function deleteBlank() {
+    if (active == null || revealed[active]) return;
+    onBlank?.(active, (blankDrafts[active] ?? "").slice(0, -1));
   }
 
   const nextButton = (
@@ -158,26 +207,27 @@ export function ShowMePanel({
         <div className="show-me-bar">{bar}</div>
       )}
       <div className="show-me-stage">
-        {!handoff && partial && steps && blanks ? (
+        {!handoff && partial && lines ? (
           <ol className="show-me-steps">
-            {steps.map((item, itemIndex) => {
-              const blank = blanks.find((entry) => entry.index === itemIndex);
-              if (!blank) return <li key={`${item.caption}-${itemIndex}`}>{item.caption}</li>;
-              return (
-                <li key={`${item.caption}-${itemIndex}`} className="show-me-blank">
-                  <span>{FILL_LINE}</span>
+            {lines.map((line) => (
+              <li key={line.index}>
+                {line.lead ? <span>{line.lead}</span> : null}
+                {line.blank ? (
                   <input
-                    className="answer-input"
-                    aria-label={FILL_LINE}
-                    value={blankDrafts[itemIndex] ?? ""}
-                    inputMode="text"
+                    className={active === line.index ? "show-me-slot is-active" : "show-me-slot"}
+                    aria-label={`${line.lead}blank${line.rest}`.trim()}
+                    value={blankDrafts[line.index] ?? ""}
+                    readOnly
+                    inputMode="none"
                     autoComplete="off"
-                    aria-invalid={miss || undefined}
-                    onChange={(event) => onBlank?.(itemIndex, event.target.value)}
+                    style={{ width: `calc(${Math.max(line.blank.length, 1)}ch + var(--tap))` }}
+                    onFocus={() => setActive(line.index)}
+                    onClick={() => setActive(line.index)}
                   />
-                </li>
-              );
-            })}
+                ) : null}
+                {line.rest ? <span>{line.rest}</span> : null}
+              </li>
+            ))}
           </ol>
         ) : null}
         {handoff || partial ? null : step.visual ? <WalkVisualView visual={step.visual} /> : null}
@@ -195,6 +245,9 @@ export function ShowMePanel({
           </label>
         ) : null}
         {!handoff && (partial || last) && miss ? <p className="show-me-miss">Look once more.</p> : null}
+        {!handoff && partial && lines?.some((line) => line.blank) ? (
+          <NumberKeypad disabled={pending} onDigit={typeBlank} onDelete={deleteBlank} extras={extraKey ? [extraKey] : []} />
+        ) : null}
         {!handoff && !partial && askAnswer && last && showKeypad ? (
           <NumberKeypad disabled={pending} onDigit={onDigit} onDelete={onDelete} extras={extraKey ? [extraKey] : []} />
         ) : null}
@@ -205,9 +258,9 @@ export function ShowMePanel({
 
 function WalkArrow() {
   return (
-    <svg className="walk-arrow" viewBox="0 0 64 36" aria-hidden="true">
-      <path className="walk-arrow-line" d="M52 30 C 44 29, 38 24, 33 18 S 20 6, 12 5" pathLength={100} />
-      <path className="walk-arrow-head" d="M12 5 L 20 6 M 12 5 L 13 13" pathLength={24} />
+    <svg className="walk-arrow" viewBox="0 0 24 28" aria-hidden="true">
+      <path className="walk-arrow-line" d="M12 26 V8" />
+      <path className="walk-arrow-head" d="M5 14 L12 6 L19 14" />
     </svg>
   );
 }

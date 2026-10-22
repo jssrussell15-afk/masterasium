@@ -8,13 +8,17 @@ import {
   daysAgo,
   defaultShowLevel,
   exampleBlanks,
-  FILL_LINE,
+  exampleLines,
+  FILL_CAPTION,
   kidWordCount,
   resolvedShowLevel,
   showDownBar,
+  spokenSteps,
+  stepLines,
   supportAfterCheck,
   walkBlanks,
 } from "@/lib/practice/fade";
+import { additionWalk } from "@/lib/practice/walk";
 import { applyLearning } from "@/lib/practice/learning";
 import { readLearn, writeLearn } from "@/lib/practice/memory";
 import type { SkillCard } from "@/lib/practice/scheduler";
@@ -268,8 +272,13 @@ describe("the child never sees the support level", () => {
     expect(full).toContain("Add the ones first.");
     expect(full).toContain(">Listen<");
     const partial = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "fade-2" }) }));
-    expect(partial).toContain("You fill this step.");
-    expect(partial).toContain("Add the ones first.");
+    expect(partial).toContain("Fill in the missing numbers.");
+    expect(partial).toContain("Add the ones: 1 + 5 =");
+    expect(partial).toContain("Add the tens: 3 + 8 = 11 tens, so trade 10 tens for a hundred.");
+    expect(partial).toContain("So 531 + 285 =");
+    expect(partial).not.toContain("You fill this step.");
+    expect(partial).not.toContain("walk-arrow");
+    expect(partial).toContain('aria-label="Number keypad"');
     const hint = renderToStaticMarkup(await ShowMeSamplePage({ searchParams: Promise.resolve({ scene: "fade-3" }) }));
     expect(hint).toContain("Add the ones first.");
     expect(hint).toContain(">Show me<");
@@ -311,13 +320,34 @@ describe("show me open and blanks", () => {
 
   it("blanks one or two key steps and keeps kid lines short", () => {
     expect(walkBlanks("46 + 27 = ?", 4, "73")).toEqual([
-      { index: 2, expect: "13" },
+      { index: 0, expect: "13" },
       { index: 3, expect: "73" },
     ]);
     expect(exampleBlanks(2, "15")).toEqual([{ index: 1, expect: "15" }]);
-    expect(kidWordCount(FILL_LINE)).toBeLessThanOrEqual(15);
+    expect(kidWordCount(FILL_CAPTION)).toBeLessThanOrEqual(15);
     expect(clipKidLine("one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen")).toBe(
       "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen",
     );
+  });
+
+  it("puts each blank inside the step text", () => {
+    const walk = additionWalk(531, 285);
+    expect(walk).not.toBeNull();
+    const lines = stepLines("531 + 285 = ?", walk?.steps ?? [], "816");
+    expect(lines.map((line) => `${line.lead}${line.blank ?? ""}${line.rest}`)).toEqual([
+      "Add the ones: 1 + 5 = 6",
+      "Add the tens: 3 + 8 = 11 tens, so trade 10 tens for a hundred.",
+      "So 531 + 285 = 816",
+    ]);
+    expect(lines[0]?.lead.startsWith("Add the ones")).toBe(true);
+    expect(lines[0]?.blank).toBe("6");
+    expect(lines[1]?.blank).toBeNull();
+    expect(lines[1]?.rest).toContain("hundred");
+    expect(lines[2]?.blank).toBe("816");
+    expect(spokenSteps(lines)).toBe(
+      "Add the ones: 1 + 5 = blank. Add the tens: 3 + 8 = 11 tens, so trade 10 tens for a hundred. So 531 + 285 = blank.",
+    );
+    const early = exampleLines(["Count one more than 14.", "14 and one more is 15."], "15");
+    expect(early[1]).toMatchObject({ lead: "14 and one more is ", blank: "15", rest: "." });
   });
 });

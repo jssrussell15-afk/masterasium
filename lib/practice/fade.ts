@@ -7,7 +7,21 @@ export type ShowLevel = 1 | 2 | 3 | 4;
 
 export type SupportMode = "guided" | "faded";
 
-export const FILL_LINE = "You fill this step.";
+/** One instruction in the caption bar. The steps themselves carry the numbers. */
+export const FILL_CAPTION = "Fill in the missing numbers.";
+
+/** @deprecated Use FILL_CAPTION. Kept so older imports still read the one instruction. */
+export const FILL_LINE = FILL_CAPTION;
+
+export type StepLine = {
+  index: number;
+  /** Words before the missing number. Empty when the step is complete. */
+  lead: string;
+  /** The number the child fills. Null when this step is shown finished. */
+  blank: string | null;
+  /** Words after the missing number, or the whole finished step. */
+  rest: string;
+};
 
 const GAP_STEP_DAYS = 14;
 const GAP_RESET_DAYS = 30;
@@ -164,14 +178,44 @@ export function supportAfterCheck(input: {
 
 /** Last one or two steps the child fills. The final blank is always the answer. */
 export function walkBlanks(prompt: string, stepCount: number, answer: string): FillBlank[] {
-  if (stepCount < 1 || !answer) return [];
-  const last = stepCount - 1;
-  const blanks: FillBlank[] = [{ index: last, expect: answer }];
-  if (stepCount >= 4) {
-    const mid = intermediateExpect(prompt, answer);
-    if (mid) blanks.unshift({ index: last - 1, expect: mid });
-  }
-  return blanks;
+  const captions = Array.from({ length: stepCount }, () => ({ caption: "" }));
+  return stepLines(prompt, captions, answer)
+    .filter((line): line is StepLine & { blank: string } => line.blank != null)
+    .map((line) => ({ index: line.index, expect: line.blank }));
+}
+
+/**
+ * One line per shown step. A blank is a missing number inside that step's words.
+ * Finished steps keep their numbers visible.
+ */
+export function stepLines(prompt: string, steps: { caption: string }[], answer: string): StepLine[] {
+  if (!answer) return [];
+  const add = prompt.match(/^(\d+) \+ (\d+) = \?$/);
+  if (add) return additionLines(Number(add[1]), Number(add[2]), steps, answer);
+  const sub = prompt.match(/^(\d+) − (\d+) = \?$/);
+  if (sub) return subtractionLines(Number(sub[1]), Number(sub[2]), steps, answer);
+  return genericLines(steps, answer);
+}
+
+/** Listen reads every step. A missing number is spoken as "blank". */
+export function spokenSteps(lines: StepLine[]): string {
+  return lines
+    .map((line) => {
+      const body = line.blank == null ? `${line.lead}${line.rest}` : `${line.lead}blank${line.rest}`;
+      const clean = body.replace(/\s+/g, " ").trim();
+      if (!clean) return "";
+      return /[.?!]$/.test(clean) ? clean : `${clean}.`;
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** A short example blanks the answer inside its own last line. */
+export function exampleLines(steps: string[], answer: string): StepLine[] {
+  if (!answer) return [];
+  const last = Math.max(steps.length - 1, 0);
+  if (steps.length === 0) return [splitOut("", answer, 0)];
+  return steps.map((caption, index) => (index === last ? splitOut(caption, answer, index) : filled(index, caption)));
 }
 
 /** A short example blanks its last step. Earlier lines stay filled. */
@@ -181,26 +225,79 @@ export function exampleBlanks(stepCount: number, answer: string): FillBlank[] {
   return [{ index: stepCount - 1, expect: answer }];
 }
 
-function intermediateExpect(prompt: string, answer: string): string | null {
-  const add = prompt.match(/^(\d+) \+ (\d+) = \?$/);
-  if (add) return different(String((Number(add[1]) % 10) + (Number(add[2]) % 10)), answer);
-  const sub = prompt.match(/^(\d+) − (\d+) = \?$/);
-  if (sub) {
-    const start = Number(sub[1]);
-    const take = Number(sub[2]);
-    const ones = (start % 10 < take % 10 ? 10 + (start % 10) : start % 10) - (take % 10);
-    return different(String(ones), answer);
+function additionLines(left: number, right: number, steps: { caption: string }[], answer: string): StepLine[] {
+  const ones = (left % 10) + (right % 10);
+  const tens = digit(left, 10) + digit(right, 10);
+  const trade = steps.find((step) => /trade/i.test(step.caption))?.caption ?? "";
+  const tensTrade = /tens/i.test(trade) || (!trade && ones < 10 && tens >= 10);
+  const lines: StepLine[] = [onesLine(0, left % 10, right % 10, ones, answer)];
+
+  if (tensTrade) {
+    lines.push(
+      filled(1, `Add the tens: ${digit(left, 10)} + ${digit(right, 10)} = ${tens} tens, so trade 10 tens for a hundred.`),
+    );
+  } else if (ones >= 10) {
+    lines.push(filled(1, trade || "Trade 10 ones for a ten."));
+    const next = steps.find((step) => /next place/i.test(step.caption));
+    if (next) lines.push(filled(2, next.caption));
+  } else if (trade) {
+    lines.push(filled(1, trade));
   }
-  const later = prompt.match(/(\d+) minutes later/);
-  if (later) return different(later[1] ?? "", answer);
-  const parts = prompt.match(/fraction is (\d+) parts/);
-  if (parts) return different(parts[1] ?? "", answer);
-  return null;
+
+  lines.push({ index: Math.max(steps.length - 1, lines.length), lead: `So ${left} + ${right} = `, blank: answer, rest: "" });
+  return lines;
 }
 
-function different(value: string, answer: string): string | null {
-  if (!value || value === answer) return null;
-  return value;
+function subtractionLines(start: number, take: number, steps: { caption: string }[], answer: string): StepLine[] {
+  const borrowed = start % 10 < take % 10;
+  const onesHave = borrowed ? 10 + (start % 10) : start % 10;
+  const ones = onesHave - (take % 10);
+  const stem = (steps[0]?.caption || "Check the ones place.").replace(/[.?!]$/, "");
+  const lines: StepLine[] = [
+    {
+      index: 0,
+      lead: `${stem}: ${onesHave} − ${take % 10} = `,
+      blank: String(ones) === answer ? null : String(ones),
+      rest: "",
+    },
+  ];
+  if (lines[0].blank == null) {
+    lines[0] = filled(0, `${stem}: ${onesHave} − ${take % 10} = ${ones}.`);
+  }
+  const trade = steps.find((step) => /trade/i.test(step.caption));
+  if (trade) lines.push(filled(1, trade.caption));
+  lines.push({ index: Math.max(steps.length - 1, lines.length), lead: `So ${start} − ${take} = `, blank: answer, rest: "" });
+  return lines;
+}
+
+function genericLines(steps: { caption: string }[], answer: string): StepLine[] {
+  if (steps.length === 0) return [splitOut("", answer, 0)];
+  const last = steps.length - 1;
+  return steps.map((step, index) => (index === last ? splitOut(step.caption, answer, index) : filled(index, step.caption)));
+}
+
+function onesLine(index: number, left: number, right: number, ones: number, answer: string): StepLine {
+  const lead = `Add the ones: ${left} + ${right} = `;
+  if (String(ones) === answer) return filled(index, `${lead}${ones}.`);
+  return { index, lead, blank: String(ones), rest: "" };
+}
+
+function filled(index: number, text: string): StepLine {
+  return { index, lead: "", blank: null, rest: text };
+}
+
+function splitOut(caption: string, expect: string, index: number): StepLine {
+  const clean = caption.replace(/\s+/g, " ").trim();
+  const at = clean.lastIndexOf(expect);
+  if (at >= 0) {
+    return { index, lead: clean.slice(0, at), blank: expect, rest: clean.slice(at + expect.length) };
+  }
+  const stem = clean.replace(/[.?!]$/, "");
+  return { index, lead: stem ? `${stem}: ` : "", blank: expect, rest: "" };
+}
+
+function digit(value: number, place: number): number {
+  return Math.floor(value / place) % 10;
 }
 
 /** Days before today, for tests and gap checks. */
