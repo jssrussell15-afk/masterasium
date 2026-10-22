@@ -9,6 +9,10 @@ export function splitWords(text: string): SpokenWord[] {
   const pattern = /\S+/g;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(text))) {
+    if (match[0].length === 0) {
+      pattern.lastIndex += 1;
+      continue;
+    }
     words.push({ text: match[0], start: match.index, end: match.index + match[0].length });
   }
   return words;
