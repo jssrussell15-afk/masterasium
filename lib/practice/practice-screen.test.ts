@@ -6,7 +6,7 @@ import { QuestionPractice } from "@/components/question-practice";
 import { INTRO_PLACEHOLDER, type SkillIntro } from "@/lib/practice/intro-view";
 import type { PracticeView } from "@/lib/practice/types";
 
-function view(grade: 2 | 4 = 2): PracticeView {
+function view(grade: 2 | 3 | 4 = 2): PracticeView {
   return {
     childId: "child-1",
     childName: "Sam",
@@ -23,6 +23,7 @@ function view(grade: 2 | 4 = 2): PracticeView {
       assist: null,
       hints: { hint: "Start at the first number and count on.", example: "2 + 3 = 5." },
       example: { prompt: "2 + 3 = ?", steps: ["Start at 2 and count on 3.", "2 + 3 = 5."], answer: "5" },
+      choices: grade <= 2 ? ["9", "8", "7"] : null,
     },
     attempted: 0,
     correct: 0,
@@ -47,8 +48,12 @@ describe("practice question screen", () => {
     expect(html).not.toContain("Show me how");
     expect(html).toContain(">Check<");
     expect(html).toContain("All skills");
-    expect(html).toContain("number-pad");
-    expect(html.toLowerCase()).toContain('inputmode="numeric"');
+    expect(html).toContain("answer-choice-tile");
+    expect(html).toContain('type="hidden" name="answer"');
+    expect(html).not.toContain("number-pad");
+    expect(html).not.toContain('class="answer-input"');
+    expect(html.toLowerCase()).not.toContain('inputmode="numeric"');
+    expect(submitButton(html)).toContain("disabled");
     expect(html).not.toContain("hint-dock");
     expect(html).not.toContain("I give up");
     expect(html).not.toContain("The answer is");
@@ -91,6 +96,41 @@ describe("practice question screen", () => {
     expect(html).not.toMatch(/Review today|Review question|>Review<|Review ·/);
     expect(html).not.toMatch(/forgot|demot|Back to grade/i);
     expect(html).not.toContain("Kept fractions");
+  });
+
+  it("keeps a typed answer and the keypad for Grade 3", () => {
+    const html = renderToStaticMarkup(createElement(PracticeSession, { view: view(3) }));
+    expect(html).toContain("What is 4 + 5?");
+    expect(html).toContain(">Check<");
+    expect(html).toContain("number-pad");
+    expect(html).toContain('class="answer-input"');
+    expect(html.toLowerCase()).toContain('inputmode="numeric"');
+    expect(html).not.toContain("answer-choice-tile");
+    expect(submitButton(html)).not.toContain("disabled");
+  });
+
+  it.each([
+    ["missing", null],
+    ["empty", [] as string[]],
+    ["a single choice", ["9"]],
+  ])("keeps the typed answer when Grade 1 choices are %s", (_label, choices) => {
+    const sample = view(2);
+    const html = renderToStaticMarkup(
+      createElement(PracticeSession, {
+        view: {
+          ...sample,
+          grade: 1,
+          access: { enrolled: 1, working: 1, nextUnlocked: false, requested: null },
+          question: { ...sample.question, choices },
+        },
+      }),
+    );
+    expect(html).toContain("number-pad");
+    expect(html).toContain('class="answer-input"');
+    expect(html.toLowerCase()).toContain('inputmode="numeric"');
+    expect(html).not.toContain("answer-choice-tile");
+    expect(html).toContain(">Check<");
+    expect(submitButton(html)).not.toContain("disabled");
   });
 
   it("keeps a notes pad beside the question from grade 4 up", () => {
@@ -145,6 +185,10 @@ describe("practice question screen", () => {
   });
 });
 
+function submitButton(html: string): string {
+  return html.match(/<button[^>]*question-submit[^>]*>/)?.[0] ?? "";
+}
+
 describe("question feedback card", () => {
   const shared = {
     questionId: "q1",
@@ -180,6 +224,27 @@ describe("question feedback card", () => {
     expect(html).not.toContain(">Next<");
     expect(html).not.toContain("The answer is");
     expect(html).not.toContain("Here's how.");
+  });
+
+  it("returns the typed box after a miss even when the question had choices", () => {
+    const html = renderToStaticMarkup(
+      createElement(QuestionPractice, {
+        ...shared,
+        phase: "retry",
+        grade: 1,
+        choices: ["8", "7", "9"],
+        why: null,
+        steps: [],
+        expected: null,
+        draft: "5",
+      }),
+    );
+    expect(html).toContain("Not quite. Try again.");
+    expect(html).toContain('class="answer-input"');
+    expect(html).toContain("number-pad");
+    expect(html).toContain('value="5"');
+    expect(html).not.toContain("answer-choice-tile");
+    expect(submitButton(html)).not.toContain("disabled");
   });
 
   it("shows the worked steps after a second miss and waits for Next", () => {

@@ -151,7 +151,8 @@ export function QuestionPractice({
     supportLevel == null &&
     (hintOpen || phase === "retry" || showTextReveal);
   const choiceList = choices ?? [];
-  const showChoices = phase === "answering" && !walking && choiceList.length > 0;
+  // One tile is not a real choice set. Fall back to the typed box so Check can be used.
+  const showChoices = phase === "answering" && !walking && choiceList.length >= 2;
   const choiceListen = grade != null && grade <= 2;
 
   useEffect(() => {
@@ -471,44 +472,50 @@ export function QuestionPractice({
               <input type="hidden" name="intent" value={formIntent} />
               <input type="hidden" name="openedExample" value={exampleOpen ? "1" : "0"} />
               {showChoices ? (
-                <div className="answer-choices">
-                  {choiceList.map((choice) => (
-                    <ChoiceOption
-                      key={choice}
-                      text={choice}
-                      showListen={choiceListen && !hintCaption}
-                      pressed={(values.answer ?? "") === choice}
-                      disabled={pending}
-                      onPick={() => {
-                        const next = { ...values, answer: choice };
-                        setValues(next);
-                        onDraft?.(choice, values.remainder ?? "");
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              <AnswerFields
-                shape={shape}
-                values={values}
-                onChange={(name, value) => {
-                  const next = { ...values, [name]: value };
-                  setValues(next);
-                  onDraft?.(next.answer ?? "", next.remainder ?? "");
-                }}
-                readOnly={textFinished}
-                disabled={pending}
-                inputRef={inputRef}
-                onFocusField={setActiveField}
-              />
-              {answerUsesKeypad(shape) ? (
-                <NumberKeypad disabled={textFinished || pending} onDigit={typeDigit} onDelete={deleteDigit} />
-              ) : null}
+                <>
+                  <div className="answer-choices">
+                    {choiceList.map((choice) => (
+                      <ChoiceOption
+                        key={choice}
+                        text={choice}
+                        showListen={choiceListen && !hintCaption}
+                        pressed={(values.answer ?? "") === choice}
+                        disabled={pending}
+                        onPick={() => {
+                          const next = { ...values, answer: choice };
+                          setValues(next);
+                          onDraft?.(choice, values.remainder ?? "");
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <input type="hidden" name="answer" value={values.answer ?? ""} />
+                </>
+              ) : (
+                <>
+                  <AnswerFields
+                    shape={shape}
+                    values={values}
+                    onChange={(name, value) => {
+                      const next = { ...values, [name]: value };
+                      setValues(next);
+                      onDraft?.(next.answer ?? "", next.remainder ?? "");
+                    }}
+                    readOnly={textFinished}
+                    disabled={pending}
+                    inputRef={inputRef}
+                    onFocusField={setActiveField}
+                  />
+                  {answerUsesKeypad(shape) ? (
+                    <NumberKeypad disabled={textFinished || pending} onDigit={typeDigit} onDelete={deleteDigit} />
+                  ) : null}
+                </>
+              )}
               <button
                 ref={textFinished ? nextRef : undefined}
                 className="btn btn-primary question-submit"
                 type="submit"
-                disabled={pending || !action}
+                disabled={pending || !action || (showChoices && !values.answer)}
               >
                 {pending ? "One moment…" : formLabel}
               </button>

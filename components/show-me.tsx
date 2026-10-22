@@ -131,10 +131,30 @@ export function ShowMePanel({
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
         return;
+      }
+      // Level 2 blanks are read-only. A fine pointer has no keypad, so digits come from the keyboard.
+      if (partial && !handoff && !pending && lines) {
+        if (event.key === "Backspace") {
+          event.preventDefault();
+          if (active != null && !revealed[active]) onBlank?.(active, (blankDrafts[active] ?? "").slice(0, -1));
+          return;
+        }
+        const digit = /^[0-9]$/.test(event.key) ? event.key : extraKey && event.key === extraKey ? extraKey : "";
+        if (digit) {
+          event.preventDefault();
+          if (active == null || revealed[active]) return;
+          const line = lines.find((item) => item.index === active);
+          if (!line?.blank) return;
+          const current = blankDrafts[active] ?? "";
+          if (current.length >= Math.max(line.blank.length, 1)) return;
+          onBlank?.(active, `${current}${digit}`);
+          return;
+        }
       }
       if (event.key !== "Enter" || event.repeat) return;
       event.preventDefault();
@@ -147,7 +167,7 @@ export function ShowMePanel({
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [handoff, onClose, onNext]);
+  }, [active, blankDrafts, extraKey, handoff, lines, onBlank, onClose, onNext, partial, pending, revealed]);
 
   function stamp(event: FormEvent<HTMLFormElement>) {
     onElapsed?.(event.currentTarget);

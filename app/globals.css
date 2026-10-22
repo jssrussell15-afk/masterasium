@@ -1482,9 +1482,10 @@ html:has(.question-screen) main {
 }
 
 .question-screen .question-card {
+  --question-card-bg: #f3f9fc;
   border: 1px solid var(--line);
   border-radius: 1.1rem;
-  background: #f3f9fc;
+  background: var(--question-card-bg);
   padding: 0.9rem 1rem 1rem;
 }
 
@@ -1650,6 +1651,14 @@ html:has(.question-screen) main {
 
 .number-pad button[data-key="delete"] {
   font-size: 1rem;
+}
+
+/* A mouse can type. Touch devices (pointer: coarse) keep the keypad. */
+@media (hover: hover) and (pointer: fine) {
+  .question-form .number-pad,
+  .show-me .number-pad {
+    display: none;
+  }
 }
 
 .answer-choices {
@@ -1980,6 +1989,42 @@ html:has(.question-screen) main {
 
   .question-screen .prompt-long {
     font-size: 1.75rem;
+  }
+}
+
+@media (max-height: 800px) {
+  html:has(.question-screen) main {
+    padding-top: 0.5rem;
+  }
+
+  .question-screen,
+  .question-column {
+    gap: 0.5rem;
+  }
+
+  .question-screen .question-card {
+    padding: 0.75rem 1rem 0.85rem;
+  }
+
+  .question-form,
+  .answer-choices {
+    gap: 0.5rem;
+  }
+
+  .answer-choice-tile {
+    font-size: 1.35rem;
+    padding-block: 0.35rem;
+  }
+
+  .help-row {
+    margin-top: 0.5rem;
+  }
+
+  .question-submit {
+    position: sticky;
+    bottom: max(0.5rem, env(safe-area-inset-bottom));
+    z-index: 2;
+    box-shadow: 0 0 0 0.5rem var(--question-card-bg, var(--background));
   }
 }
 

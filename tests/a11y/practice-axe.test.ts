@@ -93,7 +93,10 @@ describe("practice accessibility", () => {
     const tokens = readFileSync("app/tokens.css", "utf8");
     expect(tokens).toContain("--tap: 48px");
     expect(css).toMatch(/\.number-pad\s*\{[^}]*display:\s*grid/);
-    expect(css).not.toMatch(/\.number-pad\s*\{[^}]*display:\s*none/);
+    const finePointer = css.match(/@media \(hover: hover\) and \(pointer: fine\)\s*\{([\s\S]*?)\n\}/);
+    expect(finePointer?.[1] ?? "").toMatch(/\.question-form \.number-pad[\s\S]*display:\s*none/);
+    const withoutFinePointer = css.replace(/@media \(hover: hover\) and \(pointer: fine\)\s*\{[\s\S]*?\n\}/, "");
+    expect(withoutFinePointer).not.toMatch(/\.number-pad\s*\{[^}]*display:\s*none/);
     expect(css).toContain("min-height: 48px");
     expect(css).toMatch(/\.listen\s*\{[^}]*min-height:\s*var\(--tap\)/);
     expect(css).toContain("#d3ebf7");
