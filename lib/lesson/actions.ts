@@ -6,9 +6,10 @@ import { friendlyDbError } from "@/lib/db-error";
 import { torontoDate } from "@/lib/digest/build";
 import { isSupportedGrade } from "@/lib/grades";
 import { lessonById } from "@/lib/lesson/catalog";
-import { explainMiss, reduceLesson, settleLessonFeedback } from "@/lib/lesson/flow";
+import { explainMiss, reduceLesson, settleLessonFeedback, type LessonRun } from "@/lib/lesson/flow";
 import { holdToMark, isHoldNote, packHold, readHold } from "@/lib/lesson/hold";
 import { buildLessonScreen, lessonTask, type LessonScreen } from "@/lib/lesson/screen";
+import { applyShowOnAttempt, resolvedShowLevel, supportAfterCheck } from "@/lib/practice/fade";
 import { feedbackFromMark, markFromState, reduceFeedback } from "@/lib/practice/feedback";
 import {
   ensureRun,
@@ -28,6 +29,7 @@ import { cardFor, loadCards } from "@/lib/practice/session";
 import { recordAttempt, type SkillCard } from "@/lib/practice/scheduler";
 import { armFirstRecall } from "@/lib/practice/review";
 import { skillById } from "@/lib/practice/skills";
+import { skillCanWalk } from "@/lib/practice/walk";
 
 export type LessonClientState = {
   error?: string;
@@ -76,6 +78,12 @@ export async function lessonAction(
   }
 
   const { supabase } = session;
+  const withSupport = (run: LessonRun, nextReview: string | null, learn: ReturnType<typeof readLearn> | null) =>
+    buildLessonScreen(run, skill, lesson, {
+      nextReview,
+      showLevel: resolvedShowLevel(learn?.showLevel, skillCanWalk(skillId)),
+      walkMode: readHold(run.feedbackNote, run.feedbackExpected)?.walkMode ?? null,
+    });
   const loaded = await ensureRun(supabase, childId, skillId);
   if (loaded.error) return { ...previous, error: loaded.error };
   let completedAt = loaded.completedAt;
@@ -93,14 +101,26 @@ export async function lessonAction(
       remainder: String(formData.get("remainder") ?? ""),
     });
     const correct = showed ? false : answersMatch(task.answer, given);
-    const result = reduceFeedback(
-      feedbackFromMark(holdToMark(hold)),
-      showed ? { type: "show-me" } : { type: "check", correct },
+    const { cards: supportCards } = await loadCards(supabase, childId);
+    const level = resolvedShowLevel(
+      readLearn(cardFor(supportCards, skillId).fsrs).showLevel,
+      skillCanWalk(skillId),
     );
-    const openingWalk = Boolean(task.walk) && (showed || result.state.phase === "revealed");
-    const mark = markFromState(result.state, holdToMark(hold), given, showed || openingWalk);
+    let result = reduceFeedback(
+      feedbackFromMark(holdToMark(hold)),
+      showed ? { type: intent === "show-me" ? "show-me" : "show-how" } : { type: "check", correct },
+    );
+    const support = supportAfterCheck({
+      level,
+      intent: intent === "show-me" ? "show-me" : intent === "show-how" ? "show-how" : "check",
+      phase: result.state.phase,
+    });
+    if (support.promote) result = reduceFeedback(result.state, { type: "show-me" });
+    const openingWalk = Boolean(task.walk) && support.mode != null;
+    const marked = markFromState(result.state, holdToMark(hold), given, showed || openingWalk || support.promote);
+    const mark = marked ? { ...marked, ...(support.mode ? { walkMode: support.mode } : {}) } : null;
     if (!mark) {
-      return { screen: buildLessonScreen(before, skill, lesson, { nextReview: null }) };
+      return { screen: withSupport(before, null, readLearn(cardFor(supportCards, skillId).fsrs)) };
     }
     if (openingWalk && !hold?.showedHow) {
       await logPracticeEvent(childId, "hint_rung", skillId, { rung: "show-me" });
@@ -111,9 +131,7 @@ export async function lessonAction(
     if (savedHold) return { ...previous, error: savedHold };
     const { cards } = await loadCards(supabase, childId);
     return {
-      screen: buildLessonScreen(held, skill, lesson, {
-        nextReview: nextReviewDate(readLearn(cardFor(cards, skillId).fsrs)),
-      }),
+      screen: withSupport(held, nextReviewDate(readLearn(cardFor(cards, skillId).fsrs)), readLearn(cardFor(cards, skillId).fsrs)),
     };
   }
 
@@ -129,7 +147,7 @@ export async function lessonAction(
       return {
         ...previous,
         error: "Check your answer first.",
-        screen: buildLessonScreen(before, skill, lesson, { nextReview: null }),
+        screen: withSupport(before, null, null),
       };
     }
     prompt = task.prompt;
@@ -146,9 +164,7 @@ export async function lessonAction(
   } else if (isHoldNote(before.feedbackNote)) {
     const { cards } = await loadCards(supabase, childId);
     return {
-      screen: buildLessonScreen(before, skill, lesson, {
-        nextReview: nextReviewDate(readLearn(cardFor(cards, skillId).fsrs)),
-      }),
+      screen: withSupport(before, nextReviewDate(readLearn(cardFor(cards, skillId).fsrs)), readLearn(cardFor(cards, skillId).fsrs)),
     };
   } else {
     event = { type: "continue" };
@@ -162,16 +178,33 @@ export async function lessonAction(
     if (cardError) return { ...previous, error: cardError };
     const current = cardFor(cards, skillId);
     let nextCard: SkillCard;
+    const attemptKey = `lesson:${skillId}:${before.mode}:${before.stage}:${before.stepIndex}:${before.generation}:${before.masteryAsked}`;
     if (stepped.review) {
       nextCard = applyLearning({
         card: current,
         correct,
         kind: "review",
         today,
+        showedHow: hold?.showedHow === true,
+        grade: skill.grade,
+        hasWalk: skillCanWalk(skillId),
+        attemptId: attemptKey,
       }).card;
     } else {
       const recorded = recordAttempt(current, correct);
-      const learn = { ...readLearn(recorded.fsrs) };
+      const learn = applyShowOnAttempt(
+        { ...readLearn(recorded.fsrs) },
+        {
+          grade: skill.grade,
+          hasWalk: skillCanWalk(skillId),
+          correct,
+          showedHow: hold?.showedHow === true,
+          kind: "focus",
+          today,
+          streak: recorded.streak,
+          attemptId: attemptKey,
+        },
+      );
       if (stepped.justCompleted) {
         learn.lessonHold = undefined;
         learn.lessonCheck = "passed";
@@ -220,6 +253,6 @@ export async function lessonAction(
   const { cards } = await loadCards(supabase, childId);
   const learn = readLearn(cardFor(cards, skillId).fsrs);
   return {
-    screen: buildLessonScreen(stepped.run, skill, lesson, { nextReview: nextReviewDate(learn) }),
+    screen: withSupport(stepped.run, nextReviewDate(learn), learn),
   };
 }

@@ -337,6 +337,8 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           saveNote={shownSave}
           assist={question.assist}
           walk={question.walk ?? null}
+          showLevel={question.showLevel ?? null}
+          walkMode={question.walkMode ?? null}
           grade={grade}
           autoRead={view.autoRead ?? grade <= 2}
           choices={question.choices ?? null}

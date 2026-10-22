@@ -5,6 +5,7 @@ import { friendlyDbError } from "@/lib/db-error";
 import { torontoDate } from "@/lib/digest/build";
 import type { SupportedGrade } from "@/lib/grades";
 import { assistFor } from "@/lib/practice/assist";
+import { applyShowGap, resolvedShowLevel } from "@/lib/practice/fade";
 import { buildWorkedExample } from "@/lib/practice/example";
 import { whyLine, type AttemptMark } from "@/lib/practice/feedback";
 import { hintLadder } from "@/lib/practice/hints";
@@ -12,13 +13,13 @@ import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/int
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import { planNextQuestion } from "@/lib/practice/learning";
 import { onRampCopy } from "@/lib/practice/review";
-import { readLearn } from "@/lib/practice/memory";
+import { readLearn, writeLearn } from "@/lib/practice/memory";
 import { answerShape } from "@/lib/practice/parts";
 import type { AttemptPoint } from "@/lib/practice/portrait";
 import { getItemSource } from "@/lib/practice/source";
 import { packStoredAnswer, readAttemptMark, readStoredPlan, readStoredWalk, unpackStoredAnswer } from "@/lib/practice/stored-answer";
 import { practiceChoices } from "@/lib/practice/choices";
-import { walkForSkill, type Walkthrough } from "@/lib/practice/walk";
+import { skillCanWalk, walkForSkill, type Walkthrough } from "@/lib/practice/walk";
 import {
   accuracyScheduler,
   emptyCard,
@@ -91,13 +92,15 @@ function presentQuestion(
   onRamp = false,
 ): QuestionView {
   const shape = answerShape(prompt, expected);
-  const assist = assistFor({
+  const showLevel = resolvedShowLevel(readLearn(cardFor(cards, skill.id).fsrs).showLevel, skillCanWalk(skill.id));
+  const assistPlan = assistFor({
     attempted: cardFor(cards, skill.id).attempted,
     summary: skill.summary,
     firstStep: steps[0] ?? null,
     expected,
     kind,
   });
+  const assist = showLevel === 4 ? null : assistPlan;
   const example = buildWorkedExample({
     skillId: skill.id,
     livePrompt: prompt,
@@ -122,6 +125,8 @@ function presentQuestion(
     }),
     example,
     walk: clientWalk(walk, expected, mark),
+    showLevel,
+    walkMode: mark?.walkMode ?? null,
     choices: practiceChoices(skill.grade, prompt, expected, questionId),
     ...(onRamp ? { onRamp: onRampCopy(example?.steps[0] ?? skill.exampleSteps[0]) } : {}),
     ...(mark
@@ -201,6 +206,8 @@ async function persistQuestion(
   intro: SkillIntro | null,
   built?: Question,
 ): Promise<{ question: QuestionView | null; error: string | null }> {
+  const today = torontoDate();
+  const readyCards = await refreshShowGap(supabase, childId, skill.id, cards, today);
   const removed = await supabase.from("pending_questions").delete().eq("child_id", childId);
   if (removed.error) return { question: null, error: friendlyDbError(removed.error) };
 
@@ -242,7 +249,7 @@ async function persistQuestion(
       generated.answer,
       generated.steps,
       plan.kind,
-      cards,
+      readyCards,
       intro,
       null,
       generated.walk ?? null,
@@ -326,6 +333,7 @@ export async function loadOrIssueQuestion(
     const stored = readStoredPlan(existing.answer);
     const kind = stored.kind ?? kindFor(skill, grade, cards, anchor.startSkillId);
     const today = torontoDate();
+    const readyCards = await refreshShowGap(supabase, childId, skill.id, cards, today);
     const intro = await introForIssued(
       supabase,
       childId,
@@ -357,7 +365,7 @@ export async function loadOrIssueQuestion(
         unpacked.answer,
         unpacked.steps,
         kind,
-        cards,
+        readyCards,
         null,
         readAttemptMark(existing.answer),
         readStoredWalk(existing.answer) ?? walkForSkill(skill.id, existing.prompt, unpacked.answer),
@@ -406,6 +414,36 @@ function clientWalk(walk: Walkthrough | null, expected: string, mark: AttemptMar
     steps: walk.steps,
     answer: mark?.phase === "revealed" ? expected : "",
   };
+}
+
+/**
+ * A long gap steps Show me up once, on the day the skill appears.
+ * A failed save leaves the previous level in place.
+ */
+export async function refreshShowGap(
+  supabase: SupabaseClient,
+  childId: string,
+  skillId: string,
+  cards: SkillCard[],
+  today: string,
+): Promise<SkillCard[]> {
+  const stored = cards.find((card) => card.skillId === skillId);
+  if (!stored) return cards;
+  const before = readLearn(stored.fsrs);
+  const after = applyShowGap(before, {
+    lastDay: await lastAttemptDate(supabase, childId, skillId),
+    today,
+    hasWalk: skillCanWalk(skillId),
+  });
+  if (before.showLevel === after.showLevel && before.showGapOn === after.showGapOn) return cards;
+  const next = { ...stored, fsrs: writeLearn(stored.fsrs, after) };
+  const { error } = await supabase
+    .from("skill_states")
+    .update({ fsrs: next.fsrs, updated_at: new Date().toISOString() })
+    .eq("child_id", childId)
+    .eq("skill_id", skillId);
+  if (error) return cards;
+  return cards.map((card) => (card.skillId === skillId ? next : card));
 }
 
 export function cardFor(cards: SkillCard[], skillId: string): SkillCard {

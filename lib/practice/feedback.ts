@@ -16,6 +16,8 @@ export type AttemptMark = {
   showedExample?: boolean;
   /** Client id for this check. A retry with the same id does not count again. */
   clientCheckId?: string;
+  /** Full walk, or the partly filled example. Absent keeps today's full walk. */
+  walkMode?: "guided" | "faded";
 };
 
 export type FeedbackState = {

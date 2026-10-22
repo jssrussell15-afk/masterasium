@@ -1,3 +1,4 @@
+import { applyShowOnAttempt } from "@/lib/practice/fade";
 import { advanceLessonCheck, lessonCheckOpen } from "@/lib/practice/lesson-check";
 import { readLearn, writeLearn, type LearnState } from "@/lib/practice/memory";
 import { applyRetest, isReviewDue, reviewCandidateIndex } from "@/lib/practice/review";
@@ -100,6 +101,14 @@ export function applyLearning(input: {
   rollbackCard?: SkillCard | null;
   /** Opened Show me an example, so a correct answer is not a clean recall. */
   showedExample?: boolean;
+  /** Opened the Show me walk, so this item is not a clean first try. */
+  showedHow?: boolean;
+  /** Working grade. Omitted, Show me support stays as it was. */
+  grade?: number;
+  /** The skill has a step spec. Used only when grade is set. */
+  hasWalk?: boolean;
+  /** Replay of this id does not move Show me support again. */
+  attemptId?: string;
 }): { card: SkillCard; extra?: SkillCard } {
   const before = readLearn(input.card.fsrs);
   const wasMastered = isMastered(input.card);
@@ -131,6 +140,24 @@ export function applyLearning(input: {
   }
 
   armRollback(learn);
+  if (input.grade != null) {
+    const supported = applyShowOnAttempt(learn, {
+      grade: input.grade,
+      hasWalk: input.hasWalk === true,
+      correct: input.correct,
+      showedHow: input.showedHow === true,
+      kind: input.kind,
+      today: input.today,
+      streak: recorded.streak,
+      attemptId: input.attemptId,
+    });
+    learn.showLevel = supported.showLevel;
+    learn.showDays = supported.showDays;
+    learn.showDay = supported.showDay;
+    learn.showGapOn = supported.showGapOn;
+    learn.showMisses = supported.showMisses;
+    learn.showAttempt = supported.showAttempt;
+  }
 
   return { card: { ...recorded, fsrs: writeLearn(recorded.fsrs, learn) } };
 }

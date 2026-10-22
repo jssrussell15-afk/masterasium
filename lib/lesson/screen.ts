@@ -8,6 +8,7 @@ import { hintLadder } from "@/lib/practice/hints";
 import { answerShape, type AnswerShape } from "@/lib/practice/parts";
 import type { Skill } from "@/lib/practice/skills";
 import type { Question } from "@/lib/practice/types";
+import type { ShowLevel, SupportMode } from "@/lib/practice/fade";
 import { walkForSkill, type Walkthrough } from "@/lib/practice/walk";
 
 export type LessonScreen =
@@ -46,6 +47,8 @@ export type LessonScreen =
       solutionAnswer: string | null;
       draft: string;
       walk: Walkthrough | null;
+      showLevel?: ShowLevel;
+      walkMode?: SupportMode | null;
     }
   | {
       kind: "feedback";
@@ -112,7 +115,7 @@ export function buildLessonScreen(
   run: LessonRun,
   skill: Skill,
   lesson: LessonDef,
-  extra: { nextReview: string | null },
+  extra: { nextReview: string | null; showLevel?: ShowLevel; walkMode?: SupportMode | null },
 ): LessonScreen {
   const hold = readHold(run.feedbackNote, run.feedbackExpected);
   if (run.feedbackNote && !hold) {
@@ -128,7 +131,10 @@ export function buildLessonScreen(
   }
   if (run.mode === "review") {
     const task = lessonTask(run, skill);
-    return questionScreen(skill, run.reviewPhase === "fresh" ? "Same idea, new numbers" : "A review", task, run);
+    return questionScreen(skill, run.reviewPhase === "fresh" ? "Same idea, new numbers" : "A review", task, run, {
+      showLevel: extra.showLevel,
+      walkMode: extra.walkMode ?? null,
+    });
   }
   if (run.stage === "intro") {
     return {
@@ -153,6 +159,7 @@ export function buildLessonScreen(
     };
   }
   const task = lessonTask(run, skill);
+  const support = { showLevel: extra.showLevel, walkMode: extra.walkMode ?? null };
   const eyebrow =
     run.stage === "faded"
       ? "Your turn"
@@ -161,7 +168,7 @@ export function buildLessonScreen(
         : run.stage === "retry-new"
           ? "New numbers"
           : "Practice";
-  return questionScreen(skill, eyebrow, task, run);
+  return questionScreen(skill, eyebrow, task, run, support);
 }
 
 function workedScreen(skill: Skill, lead: string, mistake: string | null): LessonScreen {
@@ -181,6 +188,7 @@ function questionScreen(
   eyebrow: string,
   task: LessonTask | null,
   run: LessonRun,
+  support?: { showLevel?: ShowLevel; walkMode?: SupportMode | null },
 ): LessonScreen {
   const prompt = task?.prompt ?? skill.examplePrompt;
   const answer = task?.answer ?? skill.exampleAnswer;
@@ -214,6 +222,8 @@ function questionScreen(
     solutionAnswer: revealed ? answer : null,
     draft: hold?.given ?? "",
     walk: task?.walk ? { steps: task.walk.steps, answer: revealed ? answer : "" } : null,
+    ...(support?.showLevel ? { showLevel: support.showLevel } : {}),
+    ...(support?.walkMode ? { walkMode: support.walkMode } : hold?.walkMode ? { walkMode: hold.walkMode } : {}),
   };
 }
 
