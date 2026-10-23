@@ -29,13 +29,22 @@ const QUESTIONS = [
   },
 ] as const;
 
-const GRADE_ONE_PLACE = {
-  id: "preview-place",
-  prompt: "In 77, what is the value of the tens digit?",
-  answer: "70",
-  hint: "The tens digit tells how many groups of 10.",
-  why: "The tens digit is 7, so its value is 7 × 10 = 70.",
-  steps: ["The tens digit is 7.", "7 × 10 = 70."],
+const GRADE_ONE_COUNT = {
+  id: "preview-count",
+  prompt: "What number comes just after 1?",
+  answer: "2",
+  hint: "Count one more than 1.",
+  why: "1 and one more is 2.",
+  steps: ["Count one more than 1.", "1 and one more is 2."],
+} as const;
+
+const GRADE_TWO_ADD = {
+  id: "preview-g2",
+  prompt: "23 + 14 = ?",
+  answer: "37",
+  hint: "Add the ones, then the tens.",
+  why: "3 + 4 = 7 ones. 2 tens + 1 ten = 3 tens.",
+  steps: ["Add the ones: 3 + 4 = 7.", "2 tens + 1 ten = 3 tens. The sum is 37."],
 } as const;
 
 export function PracticePreview({
@@ -44,10 +53,10 @@ export function PracticePreview({
   skills,
   grade = 3,
 }: {
-  view: "intro" | "question" | "retry" | "revealed" | "correct" | "example" | "home" | "play";
+  view: "intro" | "question" | "retry" | "revealed" | "correct" | "example" | "help" | "home" | "play";
   example: WorkedExample | null;
   skills: SkillProgress[];
-  grade?: 1 | 3;
+  grade?: 1 | 2 | 3;
 }) {
   if (view === "home") {
     return (
@@ -102,7 +111,7 @@ export function PracticePreview({
 
   const phase: FeedbackPhase =
     view === "retry" ? "retry" : view === "revealed" ? "revealed" : view === "correct" ? "correct" : "answering";
-  const question = grade === 1 ? GRADE_ONE_PLACE : QUESTIONS[0];
+  const question = grade === 1 ? GRADE_ONE_COUNT : grade === 2 ? GRADE_TWO_ADD : QUESTIONS[0];
 
   return (
     <Screen
@@ -116,10 +125,18 @@ export function PracticePreview({
       expected={phase === "revealed" ? question.answer : null}
       draft={view === "retry" ? "5" : view === "correct" ? question.answer : ""}
       exampleStartsOpen={view === "example"}
+      helpStartsOpen={view === "help"}
       progress={1}
       grade={grade}
       answer={question.answer}
-      eyebrow={grade === 1 ? "Focus · Place value (tens and ones)" : "Focus · Addition within 10"}
+      helpSteps={[...question.steps]}
+      eyebrow={
+        grade === 1
+          ? "Practice · Counting and number recognition to 20"
+          : grade === 2
+            ? "Practice · Addition and subtraction within 100"
+            : "Focus · Addition within 10"
+      }
     />
   );
 }
@@ -175,11 +192,13 @@ function Screen({
   expected,
   draft = "",
   exampleStartsOpen = false,
+  helpStartsOpen = false,
   progress,
   action,
   grade = 3,
   eyebrow = "Focus · Addition within 10",
   answer,
+  helpSteps = [],
 }: {
   questionId: string;
   prompt: string;
@@ -191,11 +210,13 @@ function Screen({
   expected: string | null;
   draft?: string;
   exampleStartsOpen?: boolean;
+  helpStartsOpen?: boolean;
   progress: number;
   action?: (formData: FormData) => void;
-  grade?: 1 | 3;
+  grade?: 1 | 2 | 3;
   eyebrow?: string;
   answer: string;
+  helpSteps?: string[];
 }) {
   const choiceList = grade <= 2 ? practiceChoices(grade, prompt, answer, questionId) : null;
   return (
@@ -221,6 +242,8 @@ function Screen({
         expected={expected}
         draft={draft}
         exampleStartsOpen={exampleStartsOpen}
+        helpStartsOpen={helpStartsOpen}
+        helpSteps={helpSteps}
         action={action ?? (() => undefined)}
         grade={grade}
         autoRead={grade <= 2}

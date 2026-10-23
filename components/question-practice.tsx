@@ -3,12 +3,14 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
+import { HelpSheet } from "@/components/help-sheet";
 import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
 import { HighlightedPrompt, HintCaption, LightbulbIcon, ShowMePanel } from "@/components/show-me";
 import { answersMatch } from "@/lib/practice/answers";
 import { clipKidLine, exampleLines, stepLines, type ShowLevel, type SupportMode } from "@/lib/practice/fade";
 import type { WorkedExample } from "@/lib/practice/example";
+import { isDifferentExample, stepsUseQuestionNumbers } from "@/lib/practice/hint-numbers";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
 import type { AssistView, InputType } from "@/lib/practice/types";
@@ -22,6 +24,7 @@ export function QuestionPractice({
   shape,
   hint,
   example,
+  helpSteps = [],
   progress,
   phase,
   why,
@@ -29,6 +32,7 @@ export function QuestionPractice({
   expected,
   draft = "",
   exampleStartsOpen = false,
+  helpStartsOpen = false,
   pending = false,
   saveNote = null,
   guideSteps = [],
@@ -57,6 +61,8 @@ export function QuestionPractice({
   shape: AnswerShape;
   hint: string | null;
   example: WorkedExample | null;
+  /** This question's own steps. Help uses these, not a different example. */
+  helpSteps?: string[];
   progress: { index: number; total: number } | null;
   phase: FeedbackPhase;
   why: string | null;
@@ -65,6 +71,8 @@ export function QuestionPractice({
   /** Restored typed answer when the question is reopened. */
   draft?: string;
   exampleStartsOpen?: boolean;
+  /** Opens the help sheet on this question's steps. */
+  helpStartsOpen?: boolean;
   pending?: boolean;
   saveNote?: "saving" | "saved" | null;
   guideSteps?: string[];
@@ -105,6 +113,10 @@ export function QuestionPractice({
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
   const [hintOpen, setHintOpen] = useState(Boolean(walkStart?.hint));
   const [exampleOpen, setExampleOpen] = useState(exampleStartsOpen);
+  const [sheetMode, setSheetMode] = useState<"help" | "example" | null>(
+    exampleStartsOpen ? "example" : helpStartsOpen ? "help" : null,
+  );
+  const [sheetStep, setSheetStep] = useState(0);
   const [activeField, setActiveField] = useState("answer");
   const [dismissed, setDismissed] = useState(false);
   const [localOpen, setLocalOpen] = useState(Boolean(walkStart && !walkStart.hint));
@@ -124,12 +136,21 @@ export function QuestionPractice({
   const serverOpen = phase === "revealed" && Boolean(guided);
   const walking = Boolean(guided) && !dismissed && (serverOpen || localOpen || Boolean(walkStart && !walkStart.hint));
   const partial = walking && fadedOpen;
-  const exampleSteps = (example?.steps ?? []).map((caption) => ({ target: "", caption: clipKidLine(caption) }));
+  const choiceOnly =
+    inputType != null && grade != null && grade <= 2 && inputType !== "spelling" && inputType !== "text";
+  const supportFromQuestion = steps.length > 0 && stepsUseQuestionNumbers(prompt, steps);
+  const supportCaptions = (supportFromQuestion ? steps : (example?.steps ?? [])).map((caption) => ({
+    target: "",
+    caption: clipKidLine(caption),
+  }));
+  const supportForeign =
+    !supportFromQuestion && example != null && isDifferentExample(prompt, example.prompt, example.steps);
+  const supportAnswer = supportFromQuestion ? (expected ?? "") : (example?.answer ?? "");
   const exampleSupport =
+    !choiceOnly &&
     !walking &&
     supportLevel != null &&
-    example != null &&
-    exampleSteps.length > 0 &&
+    supportCaptions.length > 0 &&
     phase === "revealed" &&
     (walkMode === "guided" || walkMode === "faded");
   const showTextReveal = phase === "revealed" && !guided && !exampleSupport;
@@ -148,9 +169,15 @@ export function QuestionPractice({
   const readOnArrival = autoRead ?? (grade != null && grade <= 2);
   const hintText = hint ? (supportLevel == null ? hint : clipKidLine(hint)) : null;
   const hintCaption = Boolean(
-    hintText && !walking && !exampleSupport && supportLevel != null && (supportLevel === 3 || hintOpen),
+    !choiceOnly &&
+      hintText &&
+      !walking &&
+      !exampleSupport &&
+      supportLevel != null &&
+      (supportLevel === 3 || hintOpen),
   );
   const showLegacyHint =
+    !choiceOnly &&
     Boolean(hintText) &&
     !walking &&
     !hintCaption &&
@@ -159,9 +186,14 @@ export function QuestionPractice({
   const choiceList = choices ?? [];
   const answerInput: InputType =
     inputType ?? (choiceList.length >= 2 ? "choice" : typedInput(shape));
-  // One tile is not a real choice set. Fall back to the typed box so Check can be used.
-  const showChoices = answerInput === "choice" && phase === "answering" && !walking && choiceList.length >= 2;
+  // One tile is not a real choice set. Older grades fall back to the typed box.
+  const showChoices =
+    !walking &&
+    choiceList.length >= 2 &&
+    (phase === "answering" || (choiceOnly && phase === "retry")) &&
+    (answerInput === "choice" || choiceOnly);
   const showKeypad =
+    !choiceOnly &&
     !showChoices &&
     (answerInput === "number" ||
       answerInput === "decimal" ||
@@ -169,6 +201,9 @@ export function QuestionPractice({
       answerInput === "remainder" ||
       (answerInput === "choice" && answerUsesKeypad(shape)));
   const choiceListen = grade != null && grade <= 2;
+  const liveHelpSteps = (helpSteps.length > 0 ? helpSteps : steps).map((step) => step.trim()).filter(Boolean);
+  const helpSheetSteps = liveHelpSteps.length > 0 ? liveHelpSteps : hint ? [hint] : [];
+  const exampleIsForeign = example != null && isDifferentExample(prompt, example.prompt, example.steps);
 
   useEffect(() => {
     if (phase !== "retry" || walking) return;
@@ -270,15 +305,18 @@ export function QuestionPractice({
       noteBlankMiss(entries);
       return;
     }
-    if (exampleSupport && example) {
+    if (exampleSupport) {
       if (walkMode === "faded") {
-        const entries = exampleLines(example.steps, example.answer)
+        const entries = exampleLines(
+          supportCaptions.map((item) => item.caption),
+          supportAnswer,
+        )
           .filter((line) => line.blank)
           .map((line) => ({ index: line.index, expect: line.blank as string }));
         noteBlankMiss(entries);
         return;
       }
-      if (stepIndex < exampleSteps.length - 1) {
+      if (stepIndex < supportCaptions.length - 1) {
         setStepIndex((current) => current + 1);
         return;
       }
@@ -319,7 +357,19 @@ export function QuestionPractice({
 
   const extraKey = solution.includes("/") ? "/" : solution.includes(":") ? ":" : null;
   const showWalkPad = Boolean(solution) && (/^\d+$/.test(solution) || extraKey != null);
-  const hideMainForm = walking || exampleSupport;
+  const hideMainForm = (walking || exampleSupport) && !choiceOnly;
+
+  function openHelpSheet() {
+    setSheetStep(0);
+    setSheetMode("help");
+    setHintOpen(true);
+  }
+
+  function openExampleSheet() {
+    setSheetStep(0);
+    setSheetMode("example");
+    setExampleOpen(true);
+  }
   const showHelp = phase !== "correct" && !showTextReveal && !walking && !exampleSupport;
   const formIntent = handoff ? handoffIntent : textFinished ? "next" : "check";
   const formLabel = handoff || textFinished ? "Next" : "Check";
@@ -330,6 +380,7 @@ export function QuestionPractice({
       {progressText ? <p className="question-progress">{progressText}</p> : null}
       <div className={aside ? "question-layout with-pad" : "question-layout"}>
         <section className={walking || exampleSupport ? "question-card walk-raised" : "question-card"} aria-label="Question">
+          <div className="question-head">
           <p className="topic-label">{eyebrow}</p>
           {onRamp ? (
             <div className="on-ramp">
@@ -365,7 +416,8 @@ export function QuestionPractice({
             />
           )}
           {responseHint ? <p className="hint">{responseHint}</p> : null}
-          {phase === "answering" && !walking && !exampleSupport && supportLevel !== 4 ? (
+          </div>
+          {phase === "answering" && !choiceOnly && !walking && !exampleSupport && supportLevel !== 4 ? (
             <AssistedPrompt assist={assist} />
           ) : null}
           {guideSteps.length > 0 && phase === "answering" && !walking ? (
@@ -382,7 +434,6 @@ export function QuestionPractice({
               <span>{hintText}</span>
             </p>
           ) : null}
-          {exampleOpen && example && !walking ? <WorkedExampleBlock example={example} /> : null}
           <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
             {announcement}
             {saveNote === "saving" ? " Saving." : saveNote === "saved" ? " Saved." : ""}
@@ -448,11 +499,13 @@ export function QuestionPractice({
               }}
             />
           ) : null}
-          {exampleSupport && example ? (
+          {exampleSupport && supportCaptions.length > 0 ? (
             <ShowMePanel
-              step={exampleSteps[Math.min(stepIndex, exampleSteps.length - 1)] ?? { target: "", caption: example.prompt }}
-              index={handoff ? exampleSteps.length - 1 : Math.min(stepIndex, Math.max(exampleSteps.length - 1, 0))}
-              total={Math.max(exampleSteps.length, 1)}
+              step={supportCaptions[Math.min(stepIndex, supportCaptions.length - 1)] ?? { target: "", caption: prompt }}
+              index={handoff ? supportCaptions.length - 1 : Math.min(stepIndex, Math.max(supportCaptions.length - 1, 0))}
+              total={Math.max(supportCaptions.length, 1)}
+              kicker={supportForeign ? "A similar question" : null}
+              relatedPrompt={supportForeign ? example?.prompt ?? null : null}
               handoff={handoff}
               draft={walkDraft}
               miss={walkMiss}
@@ -471,7 +524,14 @@ export function QuestionPractice({
               onElapsed={onElapsed}
               autoRead={readOnArrival}
               askAnswer={false}
-              lines={walkMode === "faded" ? exampleLines(example.steps, example.answer) : null}
+              lines={
+                walkMode === "faded"
+                  ? exampleLines(
+                      supportCaptions.map((item) => item.caption),
+                      supportAnswer,
+                    )
+                  : null
+              }
               blankDrafts={blankDrafts}
               revealed={revealedBlanks}
               onBlank={(index, value) => {
@@ -482,6 +542,13 @@ export function QuestionPractice({
             />
           ) : null}
 
+          {guided || supportLevel != null ? (
+            <form id="show-me-intent" className="show-me-form" action={action} onSubmit={stamp}>
+              <HiddenFields fields={fields} />
+              <input type="hidden" name="intent" value="show-me" />
+            </form>
+          ) : null}
+
           {hideMainForm ? null : (
             <form action={action} className="question-form" onSubmit={stamp}>
               <HiddenFields fields={fields} />
@@ -489,7 +556,7 @@ export function QuestionPractice({
               <input type="hidden" name="openedExample" value={exampleOpen ? "1" : "0"} />
               {showChoices ? (
                 <>
-                  <div className="answer-choices">
+                  <div className={choiceOnly ? "answer-choices is-young" : "answer-choices"}>
                     {choiceList.map((choice) => (
                       <ChoiceOption
                         key={choice}
@@ -507,6 +574,8 @@ export function QuestionPractice({
                   </div>
                   <input type="hidden" name="answer" value={values.answer ?? ""} />
                 </>
+              ) : choiceOnly ? (
+                <input type="hidden" name="answer" value={values.answer ?? ""} />
               ) : (
                 <>
                   <AnswerFields
@@ -533,41 +602,76 @@ export function QuestionPractice({
                   ) : null}
                 </>
               )}
+              {showHelp ? (
+                <div className="help-row">
+                  <button
+                    type="button"
+                    className="help-target"
+                    disabled={pending || (choiceOnly ? helpSheetSteps.length === 0 : !hint)}
+                    onClick={choiceOnly ? openHelpSheet : () => setHintOpen(true)}
+                  >
+                    Help me with this
+                  </button>
+                  {example ? (
+                    <button type="button" className="help-target" disabled={pending} onClick={openExampleSheet}>
+                      Show me an example
+                    </button>
+                  ) : null}
+                  {guided || supportLevel != null ? (
+                    <button
+                      className="help-target"
+                      type={choiceOnly && !guided ? "button" : "submit"}
+                      form={choiceOnly && !guided ? undefined : "show-me-intent"}
+                      disabled={pending}
+                      onClick={choiceOnly && !guided ? openHelpSheet : openWalk}
+                    >
+                      Show me
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
               <button
                 ref={textFinished ? nextRef : undefined}
                 className="btn btn-primary question-submit"
                 type="submit"
-                disabled={pending || !action || (showChoices && !values.answer)}
+                disabled={
+                  pending ||
+                  !action ||
+                  ((showChoices || (choiceOnly && (phase === "answering" || phase === "retry"))) &&
+                    !choiceList.some((choice) => choice === (values.answer ?? "")))
+                }
               >
                 {pending ? "One moment…" : formLabel}
               </button>
             </form>
           )}
-
-          {showHelp ? (
-            <div className="help-row">
-              <button type="button" className="help-target" disabled={pending || !hint} onClick={() => setHintOpen(true)}>
-                Help me with this
-              </button>
-              {example ? (
-                <button type="button" className="help-target" disabled={pending} onClick={() => setExampleOpen(true)}>
-                  Show me an example
-                </button>
-              ) : null}
-              {guided || supportLevel != null ? (
-                <form action={action} onSubmit={stamp}>
-                  <HiddenFields fields={fields} />
-                  <input type="hidden" name="intent" value="show-me" />
-                  <button className="help-target" type="submit" disabled={pending} onClick={openWalk}>
-                    Show me
-                  </button>
-                </form>
-              ) : null}
-            </div>
-          ) : null}
         </section>
         {aside}
       </div>
+      {sheetMode === "help" && helpSheetSteps.length > 0 ? (
+        <HelpSheet
+          steps={helpSheetSteps}
+          stepIndex={sheetStep}
+          linePrompt={prompt}
+          autoRead={readOnArrival}
+          onBack={() => setSheetStep((current) => Math.max(0, current - 1))}
+          onNext={() => setSheetStep((current) => Math.min(helpSheetSteps.length - 1, current + 1))}
+          onClose={() => setSheetMode(null)}
+        />
+      ) : null}
+      {sheetMode === "example" && example ? (
+        <HelpSheet
+          steps={example.steps.length > 0 ? example.steps : [example.prompt]}
+          stepIndex={sheetStep}
+          linePrompt={example.prompt}
+          kicker={exampleIsForeign ? "A similar question" : null}
+          relatedPrompt={exampleIsForeign ? example.prompt : null}
+          autoRead={readOnArrival}
+          onBack={() => setSheetStep((current) => Math.max(0, current - 1))}
+          onNext={() => setSheetStep((current) => Math.min(Math.max(example.steps.length, 1) - 1, current + 1))}
+          onClose={() => setSheetMode(null)}
+        />
+      ) : null}
     </div>
   );
 }
@@ -611,19 +715,3 @@ function HiddenFields({ fields }: { fields: { name: string; value: string }[] })
   );
 }
 
-function WorkedExampleBlock({ example }: { example: WorkedExample }) {
-  return (
-    <aside className="worked-example" aria-label="Worked example">
-      <p className="topic-label">Example</p>
-      <p className="example-prompt">{example.prompt}</p>
-      <ol className="guide-steps">
-        {example.steps.map((step) => (
-          <li key={step}>{step}</li>
-        ))}
-      </ol>
-      <p>
-        Answer: <strong>{example.answer}</strong>
-      </p>
-    </aside>
-  );
-}

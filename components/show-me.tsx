@@ -90,6 +90,8 @@ export function ShowMePanel({
   onBlank,
   revealed = {},
   askAnswer = true,
+  kicker = null,
+  relatedPrompt = null,
 }: {
   step: WalkStep;
   index: number;
@@ -120,6 +122,9 @@ export function ShowMePanel({
   revealed?: Record<number, boolean>;
   /** The last guided step asks for the answer. A read example leaves it out. */
   askAnswer?: boolean;
+  /** Shown when these steps are a different question. */
+  kicker?: string | null;
+  relatedPrompt?: string | null;
 }) {
   const partial = Boolean(lines && lines.length > 0);
   const caption = handoff ? "Your turn: try one like it" : partial ? FILL_CAPTION : step.caption;
@@ -215,6 +220,8 @@ export function ShowMePanel({
 
   return (
     <aside className="show-me" aria-label="Show me">
+      {kicker ? <p className="help-sheet-kicker">{kicker}</p> : null}
+      {relatedPrompt ? <p className="example-prompt">{relatedPrompt}</p> : null}
       {handoff ? (
         <form id="show-me-handoff" className="show-me-bar" action={action} onSubmit={stamp}>
           {fields.map((field) => (

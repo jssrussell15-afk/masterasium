@@ -1430,21 +1430,33 @@ html:has(.question-screen) header .btn {
   font-size: 0.92rem;
 }
 
+html:has(.question-screen) {
+  height: 100%;
+}
+
+html:has(.question-screen) body {
+  min-height: 100dvh;
+}
+
 html:has(.question-screen) main {
   max-width: 40rem;
-  padding: clamp(0.75rem, 6vh, 2.75rem) 1rem 2rem;
+  min-height: 0;
+  padding: 0.5rem 1rem max(0.35rem, env(safe-area-inset-bottom));
 }
 
 .question-screen {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
   width: min(100%, 40rem);
+  min-height: 0;
   margin: 0 auto;
 }
 
 .question-column {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
   width: min(100%, 40rem);
@@ -1466,6 +1478,9 @@ html:has(.question-screen) main {
 }
 
 .question-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
 }
@@ -1483,10 +1498,20 @@ html:has(.question-screen) main {
 
 .question-screen .question-card {
   --question-card-bg: #f3f9fc;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 1.1rem;
   background: var(--question-card-bg);
   padding: 0.9rem 1rem 1rem;
+}
+
+.question-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--question-card-bg, var(--background));
 }
 
 .question-screen .topic-label,
@@ -1582,9 +1607,16 @@ html:has(.question-screen) main {
 }
 
 .question-form {
-  display: grid;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 0.75rem;
-  margin-top: 0.35rem;
+  min-height: 0;
+  padding-top: 0.35rem;
+}
+
+.show-me-form {
+  display: none;
 }
 
 .question-card .answer-input {
@@ -1596,7 +1628,11 @@ html:has(.question-screen) main {
 .question-submit {
   width: 100%;
   min-height: 3.5rem;
+  margin-top: auto;
   font-size: 1.25rem;
+  position: sticky;
+  bottom: max(0.35rem, env(safe-area-inset-bottom));
+  z-index: 6;
 }
 
 .help-row {
@@ -1666,6 +1702,24 @@ html:has(.question-screen) main {
   gap: 0.65rem;
 }
 
+.answer-choices.is-young {
+  grid-template-columns: 1fr 1fr;
+}
+
+.answer-choices.is-young .answer-choice {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.answer-choices.is-young .answer-choice-tile {
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.65rem;
+  text-align: center;
+}
+
+
 .answer-choice {
   display: flex;
   align-items: center;
@@ -1687,6 +1741,8 @@ html:has(.question-screen) main {
 
 .answer-choice-tile[aria-pressed="true"] {
   background: #d3ebf7;
+  border-color: var(--color-blue-deep);
+  box-shadow: inset 0 0 0 3px var(--color-blue-deep);
 }
 
 .walk-dim {
@@ -1745,6 +1801,88 @@ html:has(.question-screen) main {
   background: #e5f2e8;
   color: #143324;
   padding: 0.9rem 1rem 1rem;
+}
+
+.help-sheet {
+  position: fixed;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  width: min(100%, 40rem);
+  max-height: min(52dvh, 22rem);
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid #8fb89a;
+  border-radius: 1rem 1rem 0 0;
+  background: #e5f2e8;
+  color: #143324;
+  padding: 0.85rem 1rem 0.7rem;
+  box-shadow: 0 -8px 28px rgb(20 51 36 / 12%);
+}
+
+.help-sheet-body {
+  display: grid;
+  gap: 0.65rem;
+  min-height: 0;
+  overflow: auto;
+}
+
+.help-sheet-kicker {
+  margin: 0;
+  color: #1d4a32;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.help-sheet-return {
+  justify-self: start;
+  min-height: var(--tap);
+  border: 0;
+  background: transparent;
+  color: #143324;
+  padding: 0.2rem 0.1rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.help-number-line {
+  width: 100%;
+  height: 4.6rem;
+}
+
+.help-number-line .line-axis,
+.help-number-line .line-tick {
+  stroke: #143324;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.help-number-line .line-label {
+  fill: #143324;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.help-number-line .line-label.marked {
+  font-weight: 800;
+}
+
+.help-number-line .line-point {
+  fill: #1f5c38;
+}
+
+.help-number-line .line-hop {
+  fill: none;
+  stroke: #1f5c38;
+  stroke-width: 2.5;
+  stroke-linecap: round;
 }
 
 .show-me-head {
@@ -2022,8 +2160,8 @@ html:has(.question-screen) main {
 
   .question-submit {
     position: sticky;
-    bottom: max(0.5rem, env(safe-area-inset-bottom));
-    z-index: 2;
+    bottom: max(0.35rem, env(safe-area-inset-bottom));
+    z-index: 6;
     box-shadow: 0 0 0 0.5rem var(--question-card-bg, var(--background));
   }
 }

@@ -4,7 +4,7 @@ import { buildWorkedExample } from "@/lib/practice/example";
 import { skillsForGrade } from "@/lib/practice/skills";
 import type { SkillProgress } from "@/lib/practice/types";
 
-const VIEWS = ["intro", "question", "retry", "revealed", "correct", "example", "home", "play"] as const;
+const VIEWS = ["intro", "question", "retry", "revealed", "correct", "example", "help", "home", "play"] as const;
 type PreviewView = (typeof VIEWS)[number];
 
 export const metadata = {
@@ -19,8 +19,17 @@ export default async function PracticeSamplePage({
 }) {
   const params = await searchParams;
   const view: PreviewView = VIEWS.includes(params.view as PreviewView) ? (params.view as PreviewView) : "question";
-  const grade = params.grade === "1" ? 1 : 3;
-  const example = buildWorkedExample({ skillId: "g1-add-10", livePrompt: "6 + 2 = ?" });
+  const grade = params.grade === "2" ? 2 : params.grade === "1" ? 1 : 3;
+  const example =
+    grade === 1
+      ? {
+          prompt: "What number comes just after 4?",
+          steps: ["Count one more than 4.", "4 and one more is 5."],
+          answer: "5",
+        }
+      : grade === 2
+        ? buildWorkedExample({ skillId: "g2-add-sub", livePrompt: "23 + 14 = ?" })
+        : buildWorkedExample({ skillId: "g1-add-10", livePrompt: "6 + 2 = ?" });
   const skills: SkillProgress[] = skillsForGrade(1).slice(0, 4).map((skill, index) => ({
     id: skill.id,
     grade: skill.grade,
