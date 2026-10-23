@@ -121,6 +121,38 @@ describe("grade 1 and 5 worked examples", () => {
     }
   });
 
+  it("names the denominator in every fraction example", () => {
+    const prompts = [
+      ["3/8 + 2/8 = ?", "5/8"],
+      ["5/8 − 2/8 = ?", "3/8"],
+      ["1/6 + 2/6 = ?", "3/6"],
+      ["4/5 − 1/5 = ?", "3/5"],
+    ] as const;
+    for (const [prompt, answer] of prompts) {
+      const pool = workedExamplePool({ skillId: "g5-frac", livePrompt: prompt, liveAnswer: answer });
+      expect(pool.length).toBeGreaterThanOrEqual(2);
+      for (const example of pool) {
+        const denominator = example.prompt.match(/\/(\d+)/)?.[1];
+        expect(denominator, example.prompt).toBeTruthy();
+        expect(example.steps[0], example.prompt).toBe(`Both fractions are cut into ${denominator} equal parts.`);
+        expect(example.steps.some((step) => step.includes(`${denominator}`)), example.steps.join(" ")).toBe(true);
+      }
+    }
+    for (let seed = 1; seed <= 12; seed += 1) {
+      const live = generateQuestion("g5-frac", mulberry32(seed * 17));
+      const pool = workedExamplePool({
+        skillId: "g5-frac",
+        livePrompt: live.prompt,
+        liveAnswer: live.answer,
+      });
+      for (const example of pool) {
+        const denominator = example.prompt.match(/\/(\d+)/)?.[1];
+        expect(example.steps[0]).toContain(`${denominator} equal parts`);
+        expect(example.steps.join(" ")).not.toContain("same parts");
+      }
+    }
+  });
+
   it("leaves other grades without this pool", () => {
     expect(workedExamplePool({ skillId: "g3-mult", livePrompt: "6 × 7 = ?", liveAnswer: "42" })).toEqual([]);
   });

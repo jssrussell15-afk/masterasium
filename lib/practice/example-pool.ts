@@ -165,7 +165,7 @@ function afterExamples(): WorkedExample[] {
     examples.push(
       item("g1-count-after", `What number comes just after ${number}?`, String(next), [
         `Start at ${number} on the number line.`,
-        "Move one hop to the right.",
+        `Hop one space to the right from ${number}.`,
         `The next number is ${next}.`,
       ], [
         { ...line, to: number },
@@ -185,8 +185,8 @@ function beforeExamples(): WorkedExample[] {
     examples.push(
       item("g1-count-before", `What number comes just before ${number}?`, String(previous), [
         `Start at ${number} on the number line.`,
-        "Move one hop to the left.",
-        `The number before it is ${previous}.`,
+        `Hop one space to the left from ${number}.`,
+        `The number before ${number} is ${previous}.`,
       ], [
         { ...line, to: number },
         line,
@@ -206,7 +206,7 @@ function addExamples(): WorkedExample[] {
       examples.push(
         item("g1-add", `${left} + ${right} = ?`, String(sum), [
           `Start with ${left} ${count("dot", left)} in the frame.`,
-          `Add ${right} more ${count("dot", right)}.`,
+          `Add ${right} ${count("dot", right)} to the ${left} ${count("dot", left)}.`,
           `There are ${sum} dots in all.`,
         ], [
           { kind: "ten-frame", filled: left },
@@ -229,7 +229,7 @@ function subExamples(): WorkedExample[] {
       examples.push(
         item("g1-sub", `${start} − ${take} = ?`, String(left), [
           `Start at ${start} on the number line.`,
-          `Hop back ${take} ${count("space", take)}.`,
+          `Hop back ${take} ${count("space", take)} from ${start}.`,
           `You land on ${left}.`,
         ], [
           { ...line, to: start },
@@ -262,8 +262,8 @@ function compareExamples(): WorkedExample[] {
     const lesser = Math.min(left, right);
     const line = { kind: "number-line" as const, min: 0, max: 20, from: lesser, to: greater };
     return item("g1-compare", `Which number is greater, ${left} or ${right}?`, String(greater), [
-      "Find both numbers on the line.",
-      "The farther right number is greater.",
+      `Find ${left} and ${right} on the number line.`,
+      `Number ${greater} is farther right than ${lesser}.`,
       `The greater number is ${greater}.`,
     ], [line, line, line]);
   });
@@ -281,8 +281,8 @@ function shareExamples(): WorkedExample[] {
           `Share ${total} stickers equally among ${groups} children. How many stickers does each child get?`,
           String(each),
           [
-            `Make ${groups} equal groups.`,
-            "Give each group the same number.",
+            `Make ${groups} groups from ${total} stickers.`,
+            `Put ${each} ${count("sticker", each)} in each group.`,
             `Each child gets ${each} ${count("sticker", each)}.`,
           ],
           [picture, picture, picture],
@@ -310,9 +310,9 @@ function placeExamples(grade: 1 | 5, place: string): WorkedExample[] {
         `In ${formatNumber(number)}, what is the value of the ${place} digit?`,
         String(value),
         [
-          `The ${place} digit is ${digit}.`,
-          placeMeaning(place, digit),
-          `The value is ${value}.`,
+          `In ${formatNumber(number)}, the ${place} digit is ${digit}.`,
+          placeMeaning(place, digit, value),
+          `In ${formatNumber(number)}, the ${place} digit is worth ${value}.`,
         ],
         [visual, visual, visual],
       ),
@@ -336,12 +336,28 @@ function fiveDigitNumbers(): number[] {
   return numbers;
 }
 
-function placeMeaning(place: string, digit: number): string {
-  if (place === "ones") return digit === 1 ? "That digit is one block." : `That digit means ${digit} ones.`;
-  if (place === "tens") return `That means ${digit} ${digit === 1 ? "ten" : "tens"}.`;
-  if (place === "hundreds") return `That means ${digit} ${digit === 1 ? "hundred" : "hundreds"}.`;
-  if (place === "thousands") return `That means ${digit} ${digit === 1 ? "thousand" : "thousands"}.`;
-  return `That means ${digit} ${digit === 1 ? "ten-thousand" : "ten-thousands"}.`;
+function placeMeaning(place: string, digit: number, value: number): string {
+  const unit =
+    place === "ones"
+      ? digit === 1
+        ? "one"
+        : "ones"
+      : place === "tens"
+        ? digit === 1
+          ? "ten"
+          : "tens"
+        : place === "hundreds"
+          ? digit === 1
+            ? "hundred"
+            : "hundreds"
+          : place === "thousands"
+            ? digit === 1
+              ? "thousand"
+              : "thousands"
+            : digit === 1
+              ? "ten-thousand"
+              : "ten-thousands";
+  return `That is ${digit} ${unit}, worth ${value}.`;
 }
 
 function placeChart(number: number, place: string): ExampleVisual {
@@ -366,9 +382,9 @@ function patternExamples(): WorkedExample[] {
       const line = { kind: "number-line" as const, min: shown[0], max: next, from: shown[3], to: next };
       examples.push(
         item("g1-pattern", `What comes next: ${shown.join(", ")}, ?`, String(next), [
-          `Each number grows by ${step}.`,
-          `Then add: ${shown[3]} + ${step} = ${next}.`,
-          `The next number is ${next}.`,
+          `The jump from ${shown[0]} to ${shown[1]} is ${step}.`,
+          `Add ${step} to ${shown[3]}: ${shown[3]} + ${step} = ${next}.`,
+          `After ${shown[3]}, the next number is ${next}.`,
         ], [
           { ...line, to: shown[3] },
           line,
@@ -393,9 +409,9 @@ function measureExamples(): WorkedExample[] {
           `A pencil is ${longer} ${count("paperclip", longer)} long. A crayon is ${shorter} ${count("paperclip", shorter)} long. How many paperclips longer is the pencil?`,
           String(diff),
           [
-            "The pencil is the longer one.",
-            "Subtract the shorter length.",
-            `It is ${diff} ${count("paperclip", diff)} longer.`,
+            `The pencil is ${longer} ${count("paperclip", longer)} long.`,
+            `Subtract ${shorter} from ${longer}.`,
+            `The pencil is ${diff} ${count("paperclip", diff)} longer.`,
           ],
           [bars, bars, bars],
         ),
@@ -435,8 +451,8 @@ function multExample(left: number, right: number): WorkedExample {
     const groups = { kind: "array" as const, rows: small, columns: 10 };
     return item("g5-mult", prompt, String(product), [
       `Count ${small} groups of ten.`,
-      "Each group is worth 10.",
-      `The product is ${product}.`,
+      `Each of the ${small} groups is worth 10.`,
+      `The ${small} groups make ${product}.`,
     ], [groups, groups, groups]);
   }
   if (big > 10) {
@@ -447,14 +463,14 @@ function multExample(left: number, right: number): WorkedExample {
       `Split ${big} into ${tens} and ${ones}.`,
       `Multiply ${small} by ${tens} to get ${small * tens}.`,
       `Multiply ${small} by ${ones} to get ${small * ones}.`,
-      `Add the parts to get ${product}.`,
+      `Add ${small * tens} and ${small * ones} to get ${product}.`,
     ], [model, model, model, model]);
   }
   const array = { kind: "array" as const, rows: left, columns: right };
   return item("g5-mult", prompt, String(product), [
-    `Make ${left} rows of ${right}.`,
-    "Each row has the same number.",
-    `The product is ${product}.`,
+    `Make ${left} rows of ${right} dots.`,
+    `Each of the ${left} rows has ${right} dots.`,
+    `The ${left} rows make ${product}.`,
   ], [array, array, array]);
 }
 
@@ -469,9 +485,9 @@ function divisionExamples(): WorkedExample[] {
         examples.push(
           item("g5-div", `${dividend} ÷ ${divisor} = ?`, `${quotient} R ${remainder}`, [
             `Make ${quotient} groups of ${divisor}.`,
-            `Those groups use ${divisor * quotient}.`,
-            `There ${remainder === 1 ? "is" : "are"} ${remainder} left over.`,
-            `The answer is ${quotient} remainder ${remainder}.`,
+            `Those ${quotient} groups use ${divisor * quotient} of the ${dividend}.`,
+            `Take ${divisor * quotient} from ${dividend} to leave ${remainder}.`,
+            `Dividing ${dividend} by ${divisor} gives ${quotient} remainder ${remainder}.`,
           ], [groups, groups, groups, groups]),
         );
       }
@@ -497,9 +513,13 @@ function fractionExamples(op: "+" | "-"): WorkedExample[] {
             `${left}/${denominator} ${sign} ${right}/${denominator} = ?`,
             answer,
             [
-              "Both fractions have the same parts.",
-              op === "+" ? "Add the top numbers only." : "Subtract the top numbers only.",
-              op === "+" ? `The sum is ${answer}.` : `The difference is ${answer}.`,
+              `Both fractions are cut into ${denominator} equal parts.`,
+              op === "+"
+                ? `Add the top numbers, ${left} and ${right}.`
+                : `Subtract the top numbers: ${left} minus ${right}.`,
+              op === "+"
+                ? `The sum is ${numerator} out of ${denominator}.`
+                : `The difference is ${numerator} out of ${denominator}.`,
             ],
             [parts, parts, result],
           ),
@@ -518,8 +538,8 @@ function equationExamples(): WorkedExample[] {
       const line = { kind: "number-line" as const, min: 0, max: sum, from: sum, to: value };
       examples.push(
         item("g5-eq", `n + ${addend} = ${sum}. What is n?`, String(value), [
-          `Subtract ${addend} from both sides.`,
-          "Both sides stay equal.",
+          `Start with n + ${addend} = ${sum}.`,
+          `Subtract ${addend} from ${sum} and from n + ${addend}.`,
           `The value of n is ${value}.`,
         ], [
           { ...line, to: sum },
@@ -546,9 +566,13 @@ function decimalExamples(op: "+" | "-"): WorkedExample[] {
       const answer = money(result);
       examples.push(
         item("g5-dec", `${money(high)} ${sign} ${money(low)} = ?`, answer, [
-          "Line up the decimal points.",
-          op === "+" ? "Add the hundredths in each place." : "Subtract the hundredths in each place.",
-          op === "+" ? `The sum is ${answer}.` : `The difference is ${answer}.`,
+          `Line up ${money(high)} and ${money(low)} at the decimal point.`,
+          op === "+"
+            ? `Add ${high} hundredths and ${low} hundredths.`
+            : `Subtract ${low} hundredths from ${high} hundredths.`,
+          op === "+"
+            ? `The sum is ${result} hundredths, or ${answer}.`
+            : `The difference is ${result} hundredths, or ${answer}.`,
         ], [grid, grid, grid]),
       );
     }
@@ -568,9 +592,9 @@ function triangleExamples(): WorkedExample[] {
           `A triangle has base ${base} cm and height ${height} cm. What is its area in square centimetres?`,
           String(area),
           [
-            "Use half of base times height.",
-            "Multiply the base by the height.",
-            "Then take half of that product.",
+            `The base is ${base} cm and the height is ${height} cm.`,
+            `Multiply ${base} by ${height} to get ${base * height}.`,
+            `Take half of ${base * height} to get ${area}.`,
             `The area is ${area} square centimetres.`,
           ],
           [picture, picture, picture, picture],
@@ -593,8 +617,8 @@ function parallelogramExamples(): WorkedExample[] {
           `A parallelogram has base ${base} cm and height ${height} cm. What is its area in square centimetres?`,
           String(area),
           [
-            "Use the base and the matching height.",
-            "Multiply the base by the height.",
+            `The base is ${base} cm and the height is ${height} cm.`,
+            `Multiply ${base} by ${height} to get ${area}.`,
             `The area is ${area} square centimetres.`,
           ],
           [picture, picture, picture],
@@ -619,10 +643,10 @@ function volumeExamples(): WorkedExample[] {
             `A rectangular prism is ${length} cm by ${width} cm by ${height} cm. What is its volume in cubic centimetres?`,
             String(volume),
             [
-              "Multiply length by width for one layer.",
-              `The base has ${cubes} unit cubes.`,
-              `Stack ${height} layers to fill it.`,
-              `The volume is ${volume} cubic centimetres.`,
+              `Multiply the length ${length} by the width ${width}.`,
+              `One layer is ${length} by ${width}, so ${cubes} cubes.`,
+              `Stack ${height} layers of ${cubes} cubes.`,
+              `Multiply ${cubes} by ${height} to get ${volume} cubic centimetres.`,
             ],
             [box, box, box, box],
           ),
