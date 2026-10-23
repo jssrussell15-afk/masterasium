@@ -263,7 +263,7 @@ function compareExamples(): WorkedExample[] {
     const line = { kind: "number-line" as const, min: 0, max: 20, from: lesser, to: greater };
     return item("g1-compare", `Which number is greater, ${left} or ${right}?`, String(greater), [
       `Find ${left} and ${right} on the number line.`,
-      `Number ${greater} is farther right than ${lesser}.`,
+      `On the line, ${greater} is farther right than ${lesser}.`,
       `The greater number is ${greater}.`,
     ], [line, line, line]);
   });
@@ -312,7 +312,7 @@ function placeExamples(grade: 1 | 5, place: string): WorkedExample[] {
         [
           `In ${formatNumber(number)}, the ${place} digit is ${digit}.`,
           placeMeaning(place, digit, value),
-          `In ${formatNumber(number)}, the ${place} digit is worth ${value}.`,
+          `In ${formatNumber(number)}, the ${place} digit is worth ${formatNumber(value)}.`,
         ],
         [visual, visual, visual],
       ),
@@ -357,7 +357,7 @@ function placeMeaning(place: string, digit: number, value: number): string {
             : digit === 1
               ? "ten-thousand"
               : "ten-thousands";
-  return `That is ${digit} ${unit}, worth ${value}.`;
+  return `That is ${digit} ${unit}, worth ${formatNumber(value)}.`;
 }
 
 function placeChart(number: number, place: string): ExampleVisual {

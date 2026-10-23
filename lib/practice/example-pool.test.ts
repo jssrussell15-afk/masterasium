@@ -153,6 +153,28 @@ describe("grade 1 and 5 worked examples", () => {
     }
   });
 
+  it("groups place values of 1,000 or more and still accepts a comparison", () => {
+    const compare = workedExamplePool({
+      skillId: "g1-compare",
+      livePrompt: "Which number is greater, 9 or 14?",
+      liveAnswer: "14",
+    });
+    expect(compare[0].steps[1]).toBe("On the line, 6 is farther right than 1.");
+    expect(compare[0].steps[1]).toMatch(/^[A-Z]/);
+
+    const place = workedExamplePool({
+      skillId: "g5-place",
+      livePrompt: "In 54,083, what is the value of the ten-thousands digit?",
+      liveAnswer: "50000",
+    });
+    const steps = place[0].steps.join(" ");
+    expect(steps).toContain("worth 10,000");
+    expect(steps).not.toContain("10000");
+    expect(mentionsAnswer(steps, "0")).toBe(false);
+    expect(mentionsAnswer(steps, "10")).toBe(false);
+    expect(mentionsAnswer("That is 1 ten-thousand, worth 10,000.", "10000")).toBe(true);
+  });
+
   it("leaves other grades without this pool", () => {
     expect(workedExamplePool({ skillId: "g3-mult", livePrompt: "6 × 7 = ?", liveAnswer: "42" })).toEqual([]);
   });

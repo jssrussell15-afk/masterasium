@@ -43,7 +43,7 @@ export function mentionsAnswer(text: string, answer: string): boolean {
       compact.includes(`${quotient} remainder ${left}`)
     );
   }
-  const tokens = text.match(/\d+(?:\.\d+)?(?:\s*\/\s*\d+)?/g) ?? [];
+  const tokens = text.match(/\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?(?:\s*\/\s*\d+)?/g) ?? [];
   return tokens.some((token) => answersMatch(expected, token.replace(/\s+/g, "")));
 }
 
