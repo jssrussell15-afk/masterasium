@@ -1,10 +1,29 @@
 import { answersMatch } from "@/lib/practice/answers";
 import { generateQuestion } from "@/lib/practice/generate";
 
+/** A quiet picture for one step of a similar example. Numbers match that example. */
+export type ExampleVisual =
+  | { kind: "ten-frame"; filled: number }
+  | { kind: "number-line"; min: number; max: number; from: number; to: number }
+  | { kind: "base-ten"; tens: number; ones: number; focus?: "tens" | "ones" }
+  | { kind: "groups"; groups: number; each: number }
+  | { kind: "array"; rows: number; columns: number }
+  | { kind: "area-split"; by: number; tens: number; ones: number }
+  | { kind: "fraction-bars"; parts: number; left: number; right: number; op: "+" | "-"; phase: "parts" | "result" }
+  | { kind: "place-chart"; labels: string[]; digits: string[]; highlight: number }
+  | { kind: "area-shape"; shape: "triangle" | "parallelogram"; base: number; height: number }
+  | { kind: "volume"; length: number; width: number; height: number }
+  | { kind: "decimal-grid"; first: number; second: number; op: "+" | "-" }
+  | { kind: "lengths"; longer: number; shorter: number };
+
 export type WorkedExample = {
   prompt: string;
   steps: string[];
   answer: string;
+  /** Stable id for session rotation. Absent on older single examples. */
+  key?: string;
+  /** One picture per step. Null leaves that step as words. */
+  visuals?: (ExampleVisual | null)[];
 };
 
 const TRIES = 40;

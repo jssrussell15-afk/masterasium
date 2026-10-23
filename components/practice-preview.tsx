@@ -38,16 +38,29 @@ const GRADE_ONE_PLACE = {
   steps: ["The tens digit is 7.", "7 × 10 = 70."],
 } as const;
 
+const GRADE_FIVE_FRACTION = {
+  id: "preview-frac",
+  prompt: "3/8 + 2/8 = ?",
+  answer: "5/8",
+  hint: "Add the top numbers. Keep the bottom number.",
+  why: "The parts match, so 3 + 2 = 5. The sum is 5/8.",
+  steps: ["Both fractions have the same parts.", "Add the top numbers only.", "The sum is 5/8."],
+} as const;
+
 export function PracticePreview({
   view,
   example,
+  examples = null,
+  skillId = null,
   skills,
   grade = 3,
 }: {
   view: "intro" | "question" | "retry" | "revealed" | "correct" | "example" | "home" | "play";
   example: WorkedExample | null;
+  examples?: WorkedExample[] | null;
+  skillId?: string | null;
   skills: SkillProgress[];
-  grade?: 1 | 3;
+  grade?: 1 | 3 | 5;
 }) {
   if (view === "home") {
     return (
@@ -102,7 +115,13 @@ export function PracticePreview({
 
   const phase: FeedbackPhase =
     view === "retry" ? "retry" : view === "revealed" ? "revealed" : view === "correct" ? "correct" : "answering";
-  const question = grade === 1 ? GRADE_ONE_PLACE : QUESTIONS[0];
+  const question = grade === 5 ? GRADE_FIVE_FRACTION : grade === 1 ? GRADE_ONE_PLACE : QUESTIONS[0];
+  const eyebrow =
+    grade === 5
+      ? "Focus · Adding and subtracting fractions with like denominators"
+      : grade === 1
+        ? "Focus · Place value (tens and ones)"
+        : "Focus · Addition within 10";
 
   return (
     <Screen
@@ -110,6 +129,8 @@ export function PracticePreview({
       prompt={question.prompt}
       hint={question.hint}
       example={example}
+      examples={examples}
+      skillId={skillId}
       phase={phase}
       why={phase === "correct" ? question.why : null}
       steps={phase === "revealed" ? [...question.steps] : []}
@@ -119,7 +140,8 @@ export function PracticePreview({
       progress={1}
       grade={grade}
       answer={question.answer}
-      eyebrow={grade === 1 ? "Focus · Place value (tens and ones)" : "Focus · Addition within 10"}
+      eyebrow={eyebrow}
+      inputType={grade === 5 ? "fraction" : undefined}
     />
   );
 }
@@ -169,6 +191,8 @@ function Screen({
   prompt,
   hint,
   example,
+  examples = null,
+  skillId = null,
   phase,
   why,
   steps,
@@ -180,11 +204,14 @@ function Screen({
   grade = 3,
   eyebrow = "Focus · Addition within 10",
   answer,
+  inputType,
 }: {
   questionId: string;
   prompt: string;
   hint: string;
   example: WorkedExample | null;
+  examples?: WorkedExample[] | null;
+  skillId?: string | null;
   phase: FeedbackPhase;
   why: string | null;
   steps: string[];
@@ -193,9 +220,10 @@ function Screen({
   exampleStartsOpen?: boolean;
   progress: number;
   action?: (formData: FormData) => void;
-  grade?: 1 | 3;
+  grade?: 1 | 3 | 5;
   eyebrow?: string;
   answer: string;
+  inputType?: "number" | "fraction";
 }) {
   const choiceList = grade <= 2 ? practiceChoices(grade, prompt, answer, questionId) : null;
   return (
@@ -211,9 +239,11 @@ function Screen({
         eyebrow={eyebrow}
         prompt={prompt}
         responseHint={null}
-        shape={{ kind: "single", inputMode: "numeric" }}
+        shape={{ kind: "single", inputMode: inputType === "fraction" ? "text" : "numeric" }}
         hint={hint}
         example={example}
+        examples={examples}
+        skillId={skillId}
         progress={{ index: progress, total: 10 }}
         phase={phase}
         why={why}
@@ -224,7 +254,7 @@ function Screen({
         action={action ?? (() => undefined)}
         grade={grade}
         autoRead={grade <= 2}
-        inputType={choiceList && choiceList.length >= 2 ? "choice" : "number"}
+        inputType={inputType ?? (choiceList && choiceList.length >= 2 ? "choice" : "number")}
         choices={choiceList}
       />
     </div>

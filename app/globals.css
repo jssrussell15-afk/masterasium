@@ -2832,3 +2832,135 @@ html:has(.question-screen) .site-footer {
 .fraction-part.shaded {
   background: var(--blue);
 }
+
+.worked-example-panel {
+  margin-top: 0.35rem;
+}
+
+.example-kicker {
+  margin: 0;
+  color: #1d4a32;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.worked-example-panel .example-prompt {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.worked-example-panel .show-me-next {
+  min-height: var(--tap);
+}
+
+.example-visual {
+  width: 100%;
+  height: 6.5rem;
+}
+
+.example-visual .frame-cell,
+.example-visual .bar-track,
+.example-visual .bar-empty {
+  fill: white;
+  stroke: #1f5c38;
+  stroke-width: 1.5;
+}
+
+.example-visual .line-point.dim {
+  opacity: 0.4;
+}
+
+.example-visual .area-tens,
+.example-visual .bar-shade,
+.example-visual .box-front,
+.example-visual .cell.filled,
+.example-visual .clip {
+  fill: #2f6b45;
+}
+
+.example-visual .area-ones,
+.example-visual .bar-shade.muted,
+.example-visual .box-side,
+.example-visual .cell.added,
+.example-visual .clip.muted {
+  fill: #7aa0b8;
+}
+
+.example-visual .cell.removed {
+  fill: #d9e3df;
+}
+
+.example-visual .cell {
+  fill: white;
+  stroke: #c5d5cc;
+  stroke-width: 0.6;
+}
+
+.example-visual .area-shape {
+  fill: #d7ebdd;
+  stroke: #1f5c38;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.example-visual .height-line {
+  stroke: #1f5c38;
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.example-visual .box-top {
+  fill: #e7f3ea;
+  stroke: #1f5c38;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.example-visual .box-front,
+.example-visual .box-side {
+  stroke: #1f5c38;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.place-chart {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.place-chart li {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  text-align: center;
+}
+
+.place-label {
+  color: #1d4a32;
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.place-digit {
+  display: grid;
+  place-items: center;
+  min-height: 2.75rem;
+  border: 2px solid #1f5c38;
+  border-radius: 0.7rem;
+  background: white;
+  color: #143324;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.place-chart .is-focus .place-digit {
+  background: #d7ebdd;
+}

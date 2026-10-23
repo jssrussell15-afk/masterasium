@@ -6,9 +6,11 @@ import { AssistedPrompt } from "@/components/assisted-prompt";
 import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
 import { HighlightedPrompt, HintCaption, LightbulbIcon, ShowMePanel } from "@/components/show-me";
+import { WorkedExamplePanel } from "@/components/worked-example-panel";
 import { answersMatch } from "@/lib/practice/answers";
 import { clipKidLine, exampleLines, stepLines, type ShowLevel, type SupportMode } from "@/lib/practice/fade";
 import type { WorkedExample } from "@/lib/practice/example";
+import { exampleKey, readExampleSeen, takeNextExample, writeExampleSeen } from "@/lib/practice/example-rotation";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
 import type { AssistView, InputType } from "@/lib/practice/types";
@@ -22,6 +24,9 @@ export function QuestionPractice({
   shape,
   hint,
   example,
+  examples = null,
+  skillId = null,
+  onExampleOpened,
   progress,
   phase,
   why,
@@ -57,6 +62,11 @@ export function QuestionPractice({
   shape: AnswerShape;
   hint: string | null;
   example: WorkedExample | null;
+  /** Similar examples for this skill. Two or more replace the single example block. */
+  examples?: WorkedExample[] | null;
+  skillId?: string | null;
+  /** Quiet note that an example was opened. It does not mark the answer. */
+  onExampleOpened?: () => void;
   progress: { index: number; total: number } | null;
   phase: FeedbackPhase;
   why: string | null;
@@ -104,6 +114,10 @@ export function QuestionPractice({
   const guided = walk && walk.steps.length >= 3 ? walk : null;
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
   const [hintOpen, setHintOpen] = useState(Boolean(walkStart?.hint));
+  const pool = examples && examples.length >= 2 ? examples : null;
+  const stepped = Boolean(pool);
+  const [shownExample, setShownExample] = useState<WorkedExample | null>(pool?.[0] ?? null);
+  const [exampleStep, setExampleStep] = useState(0);
   const [exampleOpen, setExampleOpen] = useState(exampleStartsOpen);
   const [activeField, setActiveField] = useState("answer");
   const [dismissed, setDismissed] = useState(false);
@@ -299,6 +313,24 @@ export function QuestionPractice({
     setHandoff(true);
   }
 
+  function askForExample() {
+    if (!pool) {
+      setExampleOpen(true);
+      return;
+    }
+    const storageKey = skillId || "example";
+    let seen: string[] = [];
+    if (typeof window !== "undefined") seen = readExampleSeen(window.sessionStorage, storageKey);
+    const currentKey = shownExample ? exampleKey(shownExample) : "";
+    const base = exampleOpen && currentKey && !seen.includes(currentKey) ? [...seen, currentKey] : seen;
+    const next = takeNextExample(pool, base);
+    if (typeof window !== "undefined") writeExampleSeen(window.sessionStorage, storageKey, next.seen);
+    setShownExample(next.example);
+    setExampleStep(0);
+    setExampleOpen(true);
+    onExampleOpened?.();
+  }
+
   function openWalk(event: { preventDefault: () => void }) {
     if (supportLevel === 4 && !hintOpen && phase !== "revealed") {
       event.preventDefault();
@@ -319,7 +351,8 @@ export function QuestionPractice({
 
   const extraKey = solution.includes("/") ? "/" : solution.includes(":") ? ":" : null;
   const showWalkPad = Boolean(solution) && (/^\d+$/.test(solution) || extraKey != null);
-  const hideMainForm = walking || exampleSupport;
+  const examplePanel = Boolean(stepped && exampleOpen && shownExample && !walking);
+  const hideMainForm = walking || exampleSupport || examplePanel;
   const showHelp = phase !== "correct" && !showTextReveal && !walking && !exampleSupport;
   const formIntent = handoff ? handoffIntent : textFinished ? "next" : "check";
   const formLabel = handoff || textFinished ? "Next" : "Check";
@@ -338,7 +371,7 @@ export function QuestionPractice({
               <p className="hint">{onRamp.handoff}</p>
             </div>
           ) : null}
-          {walking || hintCaption || exampleSupport ? (
+          {walking || hintCaption || exampleSupport || examplePanel ? (
             <h1 className={prompt.length > 80 ? "prompt prompt-long" : "prompt"}>
               {walking && step && !handoff && !partial ? (
                 <HighlightedPrompt
@@ -382,7 +415,16 @@ export function QuestionPractice({
               <span>{hintText}</span>
             </p>
           ) : null}
-          {exampleOpen && example && !walking ? <WorkedExampleBlock example={example} /> : null}
+          {examplePanel && shownExample ? (
+            <WorkedExamplePanel
+              example={shownExample}
+              stepIndex={exampleStep}
+              autoRead={readOnArrival}
+              onNext={() => setExampleStep((current) => current + 1)}
+              onBackToQuestion={() => setExampleOpen(false)}
+            />
+          ) : null}
+          {exampleOpen && example && !stepped && !walking ? <WorkedExampleBlock example={example} /> : null}
           <p className="visually-hidden" role="status" aria-live="polite" aria-atomic="true">
             {announcement}
             {saveNote === "saving" ? " Saving." : saveNote === "saved" ? " Saved." : ""}
@@ -486,7 +528,7 @@ export function QuestionPractice({
             <form action={action} className="question-form" onSubmit={stamp}>
               <HiddenFields fields={fields} />
               <input type="hidden" name="intent" value={formIntent} />
-              <input type="hidden" name="openedExample" value={exampleOpen ? "1" : "0"} />
+              <input type="hidden" name="openedExample" value={exampleOpen && !stepped ? "1" : "0"} />
               {showChoices ? (
                 <>
                   <div className="answer-choices">
@@ -549,9 +591,9 @@ export function QuestionPractice({
               <button type="button" className="help-target" disabled={pending || !hint} onClick={() => setHintOpen(true)}>
                 Help me with this
               </button>
-              {example ? (
-                <button type="button" className="help-target" disabled={pending} onClick={() => setExampleOpen(true)}>
-                  Show me an example
+              {example || stepped ? (
+                <button type="button" className="help-target" disabled={pending} onClick={askForExample}>
+                  {stepped && exampleOpen ? "Show another example" : "Show me an example"}
                 </button>
               ) : null}
               {guided || supportLevel != null ? (
