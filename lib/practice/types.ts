@@ -59,6 +59,8 @@ export type QuestionView = {
   hints?: HintLadder;
   /** A different worked example of this kind, or null when one cannot be checked. */
   example?: WorkedExample | null;
+  /** Grade 1 and 5 keep a few similar examples and rotate them in the session. */
+  examples?: WorkedExample[] | null;
   /** This question's steps. Help reads these so a different example cannot take their place. */
   helpSteps?: string[];
   /** Show me steps. Null keeps the text "Here's how" fallback. */

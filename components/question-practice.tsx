@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { AnswerFields, answerUsesKeypad } from "@/components/answer-fields";
 import { AssistedPrompt } from "@/components/assisted-prompt";
+import { ExampleVisualView } from "@/components/example-visual";
 import { HelpSheet } from "@/components/help-sheet";
 import { ChoiceOption, ListenPassage } from "@/components/listen";
 import { NumberKeypad } from "@/components/number-keypad";
@@ -10,6 +11,7 @@ import { HighlightedPrompt, HintCaption, LightbulbIcon, ShowMePanel } from "@/co
 import { answersMatch } from "@/lib/practice/answers";
 import { clipKidLine, exampleLines, stepLines, type ShowLevel, type SupportMode } from "@/lib/practice/fade";
 import type { WorkedExample } from "@/lib/practice/example";
+import { exampleKey, readExampleSeen, takeNextExample, writeExampleSeen } from "@/lib/practice/example-rotation";
 import { isDifferentExample, stepsUseQuestionNumbers } from "@/lib/practice/hint-numbers";
 import { progressLabel, type FeedbackPhase } from "@/lib/practice/feedback";
 import type { AnswerShape } from "@/lib/practice/parts";
@@ -24,6 +26,9 @@ export function QuestionPractice({
   shape,
   hint,
   example,
+  examples = null,
+  skillId = "",
+  onExampleOpened,
   helpSteps = [],
   progress,
   phase,
@@ -61,6 +66,11 @@ export function QuestionPractice({
   shape: AnswerShape;
   hint: string | null;
   example: WorkedExample | null;
+  /** Grade 1 and 5 rotate a few similar examples. Other grades leave this empty. */
+  examples?: WorkedExample[] | null;
+  skillId?: string;
+  /** Quiet hint log. A stepped example does not mark the answer as helped. */
+  onExampleOpened?: () => void;
   /** This question's own steps. Help uses these, not a different example. */
   helpSteps?: string[];
   progress: { index: number; total: number } | null;
@@ -110,9 +120,12 @@ export function QuestionPractice({
   speak?: string | null;
 }) {
   const guided = walk && walk.steps.length >= 3 ? walk : null;
+  const pool = examples && examples.length >= 2 ? examples : null;
+  const stepped = pool != null;
   const [values, setValues] = useState<Record<string, string>>(() => valuesFor(shape, draft));
   const [hintOpen, setHintOpen] = useState(Boolean(walkStart?.hint));
-  const [exampleOpen, setExampleOpen] = useState(exampleStartsOpen);
+  const [shownExample, setShownExample] = useState<WorkedExample | null>(pool?.[0] ?? null);
+  const [exampleOpen, setExampleOpen] = useState(exampleStartsOpen && !stepped);
   const [sheetMode, setSheetMode] = useState<"help" | "example" | null>(
     exampleStartsOpen ? "example" : helpStartsOpen ? "help" : null,
   );
@@ -204,6 +217,13 @@ export function QuestionPractice({
   const liveHelpSteps = (helpSteps.length > 0 ? helpSteps : steps).map((step) => step.trim()).filter(Boolean);
   const helpSheetSteps = liveHelpSteps.length > 0 ? liveHelpSteps : hint ? [hint] : [];
   const exampleIsForeign = example != null && isDifferentExample(prompt, example.prompt, example.steps);
+  const activeExample = (stepped ? shownExample : example) ?? null;
+  const examplePicture = (() => {
+    const pictures = stepped ? activeExample?.visuals : null;
+    if (!pictures || pictures.length === 0) return null;
+    const picture = pictures[Math.min(sheetStep, pictures.length - 1)] ?? null;
+    return picture ? <ExampleVisualView visual={picture} /> : null;
+  })();
 
   useEffect(() => {
     if (phase !== "retry" || walking) return;
@@ -366,9 +386,24 @@ export function QuestionPractice({
   }
 
   function openExampleSheet() {
+    if (!pool) {
+      setSheetStep(0);
+      setSheetMode("example");
+      setExampleOpen(true);
+      return;
+    }
+    const storageKey = skillId || "example";
+    let seen: string[] = [];
+    if (typeof window !== "undefined") seen = readExampleSeen(window.sessionStorage, storageKey);
+    const currentKey = shownExample ? exampleKey(shownExample) : "";
+    const already = sheetMode === "example";
+    const base = already && currentKey && !seen.includes(currentKey) ? [...seen, currentKey] : seen;
+    const next = takeNextExample(pool, base);
+    if (typeof window !== "undefined") writeExampleSeen(window.sessionStorage, storageKey, next.seen);
+    setShownExample(next.example);
     setSheetStep(0);
     setSheetMode("example");
-    setExampleOpen(true);
+    onExampleOpened?.();
   }
   const showHelp = phase !== "correct" && !showTextReveal && !walking && !exampleSupport;
   const formIntent = handoff ? handoffIntent : textFinished ? "next" : "check";
@@ -554,7 +589,7 @@ export function QuestionPractice({
             <form action={action} className="question-form" onSubmit={stamp}>
               <HiddenFields fields={fields} />
               <input type="hidden" name="intent" value={formIntent} />
-              <input type="hidden" name="openedExample" value={exampleOpen ? "1" : "0"} />
+              <input type="hidden" name="openedExample" value={exampleOpen && !stepped ? "1" : "0"} />
               {showChoices ? (
                 <>
                   <div className={choiceOnly ? "answer-choices is-young" : "answer-choices"}>
@@ -614,9 +649,9 @@ export function QuestionPractice({
                   >
                     Help me with this
                   </button>
-                  {example ? (
+                  {example || activeExample ? (
                     <button type="button" className="help-target" disabled={pending} onClick={openExampleSheet}>
-                      Show me an example
+                      {stepped && sheetMode === "example" ? "Show another example" : "Show me an example"}
                     </button>
                   ) : null}
                   {guided || supportLevel != null ? (
@@ -661,16 +696,20 @@ export function QuestionPractice({
           onClose={() => setSheetMode(null)}
         />
       ) : null}
-      {sheetMode === "example" && example ? (
+      {sheetMode === "example" && activeExample ? (
         <HelpSheet
-          steps={example.steps.length > 0 ? example.steps : [example.prompt]}
+          steps={activeExample.steps.length > 0 ? activeExample.steps : [activeExample.prompt]}
           stepIndex={sheetStep}
-          linePrompt={example.prompt}
-          kicker={exampleIsForeign ? "A similar question" : null}
-          relatedPrompt={exampleIsForeign ? example.prompt : null}
+          linePrompt={stepped ? "" : activeExample.prompt}
+          kicker={stepped || exampleIsForeign ? "A similar question" : null}
+          relatedPrompt={stepped || exampleIsForeign ? activeExample.prompt : null}
+          visual={examplePicture}
+          verbatim={stepped}
           autoRead={readOnArrival}
           onBack={() => setSheetStep((current) => Math.max(0, current - 1))}
-          onNext={() => setSheetStep((current) => Math.min(Math.max(example.steps.length, 1) - 1, current + 1))}
+          onNext={() =>
+            setSheetStep((current) => Math.min(Math.max(activeExample.steps.length, 1) - 1, current + 1))
+          }
           onClose={() => setSheetMode(null)}
         />
       ) : null}

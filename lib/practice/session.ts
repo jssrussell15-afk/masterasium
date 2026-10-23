@@ -7,6 +7,7 @@ import type { SupportedGrade } from "@/lib/grades";
 import { assistFor } from "@/lib/practice/assist";
 import { applyShowGap, resolvedShowLevel } from "@/lib/practice/fade";
 import { buildWorkedExample } from "@/lib/practice/example";
+import { workedExamplePool } from "@/lib/practice/example-pool";
 import { whyLine, type AttemptMark } from "@/lib/practice/feedback";
 import { firstSafeStep, hintLadder } from "@/lib/practice/hints";
 import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/intro";
@@ -115,11 +116,18 @@ function presentQuestion(
     kind,
   });
   const assist = showLevel === 4 ? null : assistPlan;
-  const example = buildWorkedExample({
+  const examples = workedExamplePool({
     skillId: skill.id,
     livePrompt: prompt,
-    small: kind === "support",
+    liveAnswer: expected,
   });
+  const example =
+    examples[0] ??
+    buildWorkedExample({
+      skillId: skill.id,
+      livePrompt: prompt,
+      small: kind === "support",
+    });
   return {
     questionId,
     prompt,
@@ -138,6 +146,7 @@ function presentQuestion(
       prompt,
     }),
     example,
+    examples: examples.length >= 2 ? examples : null,
     helpSteps: steps,
     walk: clientWalk(walk, expected, mark),
     showLevel,

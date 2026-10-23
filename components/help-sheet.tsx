@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { HighlightedWords, ListenButton, useSpoken } from "@/components/listen";
 import { clipKidLine } from "@/lib/practice/fade";
 
@@ -9,6 +10,8 @@ export function HelpSheet({
   linePrompt = "",
   kicker = null,
   relatedPrompt = null,
+  visual = null,
+  verbatim = false,
   autoRead = false,
   onBack,
   onNext,
@@ -21,6 +24,10 @@ export function HelpSheet({
   /** Set when these steps belong to a different item. */
   kicker?: string | null;
   relatedPrompt?: string | null;
+  /** Picture for this step. When set, it replaces the counting line. */
+  visual?: ReactNode;
+  /** Pool examples keep the full sentence. Help for the child's question stays clipped. */
+  verbatim?: boolean;
   autoRead?: boolean;
   onBack: () => void;
   onNext: () => void;
@@ -28,15 +35,18 @@ export function HelpSheet({
 }) {
   const total = Math.max(steps.length, 1);
   const index = Math.min(Math.max(stepIndex, 0), total - 1);
-  const step = clipKidLine(steps[index] ?? "Read the question once more.");
+  const raw = steps[index] ?? "Read the question once more.";
+  const step = verbatim ? raw : clipKidLine(raw);
   const last = index >= total - 1;
   const speech = useSpoken(step, { auto: autoRead, rate: autoRead ? 0.85 : undefined });
-  const showLine = /just (?:after|before)\s+\d+/i.test(linePrompt);
+  const showLine = visual == null && /just (?:after|before)\s+\d+/i.test(linePrompt);
+  const picture = visual ?? (showLine ? <CountingLine prompt={linePrompt} reveal={last} /> : null);
 
   return (
     <aside className="help-sheet" role="dialog" aria-label={kicker ?? "Help with this question"}>
       {kicker ? <p className="help-sheet-kicker">{kicker}</p> : null}
       {relatedPrompt ? <p className="example-prompt">{relatedPrompt}</p> : null}
+      {picture ? <div className="help-sheet-scroll">{picture}</div> : null}
       <div className="help-sheet-top">
         <ListenButton iconOnly speaking={speech.speaking} onClick={speech.toggle} />
         <p className="show-me-caption" aria-live="polite">
@@ -46,7 +56,6 @@ export function HelpSheet({
           Step {index + 1} of {total}
         </span>
       </div>
-      {showLine ? <CountingLine prompt={linePrompt} reveal={last} /> : null}
       <div className="help-sheet-actions">
         <button type="button" className="show-me-back" onClick={onBack} disabled={index === 0}>
           Back

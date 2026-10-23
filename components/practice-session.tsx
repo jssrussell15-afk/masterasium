@@ -327,7 +327,14 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           shape={question.shape}
           hint={question.hints?.hint ?? null}
           example={question.example ?? null}
+          examples={question.examples ?? null}
+          skillId={question.skillId}
           helpSteps={question.helpSteps ?? question.resume?.steps ?? []}
+          onExampleOpened={() => {
+            void logPracticeEvent(view.childId, "hint_rung", question.skillId, { rung: "example" }).catch(
+              () => undefined,
+            );
+          }}
           progress={{ index: (progress.completed % PRACTICE_SET_SIZE) + 1, total: PRACTICE_SET_SIZE }}
           phase={phase}
           why={why}
