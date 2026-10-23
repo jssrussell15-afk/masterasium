@@ -7,6 +7,7 @@ import type { SupportedGrade } from "@/lib/grades";
 import { assistFor } from "@/lib/practice/assist";
 import { applyShowGap, resolvedShowLevel } from "@/lib/practice/fade";
 import { buildWorkedExample } from "@/lib/practice/example";
+import { alignExamplesWithChoices } from "@/lib/practice/example-choices";
 import { workedExamplePool } from "@/lib/practice/example-pool";
 import { whyLine, type AttemptMark } from "@/lib/practice/feedback";
 import { firstSafeStep, hintLadder } from "@/lib/practice/hints";
@@ -121,8 +122,16 @@ function presentQuestion(
     livePrompt: prompt,
     liveAnswer: expected,
   });
+  const aligned = alignExamplesWithChoices({
+    pool: examples,
+    choices: resolved.choices,
+    grade: skill.grade,
+    prompt,
+    answer: expected,
+    seed: questionId,
+  });
   const example =
-    examples[0] ??
+    aligned.examples[0] ??
     buildWorkedExample({
       skillId: skill.id,
       livePrompt: prompt,
@@ -146,13 +155,13 @@ function presentQuestion(
       prompt,
     }),
     example,
-    examples: examples.length >= 2 ? examples : null,
+    examples: aligned.examples.length >= 2 ? aligned.examples : null,
     helpSteps: steps,
     walk: clientWalk(walk, expected, mark),
     showLevel,
     walkMode: mark?.walkMode ?? null,
     inputType: resolved.inputType,
-    choices: resolved.choices,
+    choices: aligned.choices,
     ...(delivery?.speak ? { speak: delivery.speak } : {}),
     ...(onRamp ? { onRamp: onRampCopy(firstSafeStep(steps, expected)) } : {}),
     ...(mark

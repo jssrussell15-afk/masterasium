@@ -92,7 +92,7 @@ function compareChoices(prompt: string): string[] | null {
   return [pair[2] ?? "", pair[3] ?? ""].filter(Boolean);
 }
 
-function placeChoices(prompt: string, answer: string): string[] | null {
+function placeChoices(prompt: string, answer: string, avoid: readonly string[]): string[] | null {
   const match = prompt.match(/in\s+([\d,]+),\s+what is the value of the ([a-z-]+) digit/i);
   if (!match) return null;
   const whole = Number((match[1] ?? "").replaceAll(",", ""));
@@ -118,16 +118,32 @@ function placeChoices(prompt: string, answer: string): string[] | null {
     if (picked.length === 3) break;
     if (!Number.isInteger(candidate) || candidate <= 0) continue;
     const text = String(candidate);
+    if (isAvoided(text, avoid)) continue;
     if (picked.some((item) => normalizeAnswer(item) === normalizeAnswer(text) || answersMatch(item, text))) continue;
     picked.push(text);
+  }
+  if (picked.length < 3) {
+    for (const extra of [value + 10, value - 10, value + 20, value - 20, value + multiplier, value - multiplier]) {
+      if (picked.length === 3) break;
+      if (!Number.isInteger(extra) || extra <= 0) continue;
+      const text = String(extra);
+      if (isAvoided(text, avoid)) continue;
+      if (picked.some((item) => answersMatch(item, text))) continue;
+      picked.push(text);
+    }
   }
   return picked.length >= 2 ? picked : null;
 }
 
-function mistakeNumbers(value: number): number[] {
+function isAvoided(text: string, avoid: readonly string[]): boolean {
+  return avoid.some((item) => answersMatch(item, text));
+}
+
+function mistakeNumbers(value: number, avoid: readonly string[]): number[] {
   const found: number[] = [];
   const add = (next: number) => {
     if (!Number.isInteger(next) || next < 0 || next === value || found.includes(next)) return;
+    if (isAvoided(String(next), avoid)) return;
     found.push(next);
   };
   for (const delta of [1, -1, 2, -2, 10, -10]) add(value + delta);
@@ -145,8 +161,7 @@ function take(values: number[], seed: string, count: number): number[] {
     .map(Number);
 }
 
-function numericChoices(value: number, seed: string): string[] | null {
-  const pool = mistakeNumbers(value);
+function numericChoicesFrom(pool: number[], value: number, seed: string): string[] | null {
   const low = pool.filter((item) => item < value);
   const high = pool.filter((item) => item > value);
   // Both distractors on one side keep the answer from always being the middle value.
@@ -162,7 +177,46 @@ function numericChoices(value: number, seed: string): string[] | null {
   return finish([String(value), ...picked.map(String)], String(value), seed);
 }
 
-export function practiceChoices(grade: number, prompt: string, answer: string, seed: string): string[] | null {
+function numericChoices(value: number, seed: string, avoid: readonly string[]): string[] | null {
+  return numericChoicesFrom(mistakeNumbers(value, avoid), value, seed);
+}
+
+/** Grade 1 stays on nearby numbers. Counting stays inside 0–20, so 12 is not a choice for 2. */
+function gradeOneChoices(
+  value: number,
+  seed: string,
+  limit: number,
+  avoid: readonly string[],
+  hardMax: number,
+): string[] | null {
+  const within = (maxDistance: number) => {
+    const found: number[] = [];
+    for (let distance = 1; distance <= maxDistance; distance += 1) {
+      for (const candidate of [value - distance, value + distance]) {
+        if (!Number.isInteger(candidate) || candidate < 0 || candidate > limit || candidate === value) continue;
+        if (isAvoided(String(candidate), avoid) || found.includes(candidate)) continue;
+        found.push(candidate);
+      }
+    }
+    return found;
+  };
+  let distance = 2;
+  let pool = within(distance);
+  while (pool.length < 2 && distance < hardMax) {
+    distance += 1;
+    pool = within(distance);
+  }
+  if (pool.length < 2) return null;
+  return numericChoicesFrom(pool, value, seed);
+}
+
+export function practiceChoices(
+  grade: number,
+  prompt: string,
+  answer: string,
+  seed: string,
+  avoid: readonly string[] = [],
+): string[] | null {
   if (grade > 2) return null;
   const expected = answer.trim();
 
@@ -171,7 +225,10 @@ export function practiceChoices(grade: number, prompt: string, answer: string, s
   }
 
   const fractions = fractionChoiceList(expected);
-  if (fractions) return finish(fractions, fractions[0] ?? expected, seed);
+  if (fractions) {
+    const usable = fractions.filter((choice, index) => index === 0 || !isAvoided(choice, avoid));
+    return finish(usable, usable[0] ?? expected, seed);
+  }
 
   const listed = compareChoices(prompt);
   if (listed) {
@@ -180,7 +237,7 @@ export function practiceChoices(grade: number, prompt: string, answer: string, s
   }
 
   if (/value of the/i.test(prompt)) {
-    const places = placeChoices(prompt, expected);
+    const places = placeChoices(prompt, expected, avoid);
     if (places) {
       const built = finish(places, expected, seed);
       if (built) return built;
@@ -188,5 +245,11 @@ export function practiceChoices(grade: number, prompt: string, answer: string, s
   }
 
   if (!/^\d+$/.test(expected)) return null;
-  return numericChoices(Number(expected), seed);
+  const value = Number(expected);
+  const counting = /just (?:after|before)\s+\d+/i.test(prompt);
+  if (grade <= 1 && value <= (counting ? 20 : 30)) {
+    const nearby = gradeOneChoices(value, seed, counting ? 20 : 30, avoid, counting ? 3 : 4);
+    if (nearby) return nearby;
+  }
+  return numericChoices(value, seed, avoid);
 }
