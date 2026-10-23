@@ -133,6 +133,14 @@ const counting = {
   action: () => undefined,
 };
 
+function numberLineLabels(): string[] {
+  return [...document.querySelectorAll(".help-number-line text")].map((node) => node.textContent ?? "");
+}
+
+function markedLabels(): string[] {
+  return [...document.querySelectorAll(".help-number-line .line-label.marked")].map((node) => node.textContent ?? "");
+}
+
 function buttonNamed(label: string): HTMLButtonElement {
   const found = [...document.querySelectorAll("button")].find((node) => node.textContent?.trim() === label);
   if (!(found instanceof HTMLButtonElement)) throw new Error(`Missing button ${label}`);
@@ -183,12 +191,17 @@ describe("help sheet", () => {
     expect(document.querySelector(".help-sheet")?.textContent).toContain("Step 1 of 2");
     expect(document.body.textContent).not.toContain("Count one more than 4.");
     expect(buttonNamed("3").getAttribute("aria-pressed")).toBe("true");
+    expect(numberLineLabels()).toEqual(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+    expect(markedLabels()).toEqual(["1"]);
+    expect(document.querySelector(".help-number-line .line-hop")).toBeNull();
 
     await act(async () => {
       buttonNamed("Next").click();
     });
     expect(document.querySelector(".help-sheet")?.textContent).toContain("1 and one more is 2.");
-    expect(document.querySelector(".help-number-line")).not.toBeNull();
+    expect(numberLineLabels()).toEqual(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+    expect(document.querySelector(".help-number-line .line-hop")).not.toBeNull();
+    expect(markedLabels()).toEqual(["1", "2"]);
 
     await act(async () => {
       buttonNamed("Back to my question").click();
@@ -205,6 +218,8 @@ describe("help sheet", () => {
     expect(sheet?.textContent).toContain("A similar question");
     expect(sheet?.textContent).toContain("What number comes just after 4?");
     expect(sheet?.textContent).toContain("Count one more than 4.");
+    expect(numberLineLabels()).toEqual(["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
+    expect(document.querySelector(".help-number-line .line-hop")).toBeNull();
     expect(document.querySelector(".answer-choice-tile")).not.toBeNull();
     expect(buttonNamed("2").getAttribute("aria-pressed")).toBe("false");
   });

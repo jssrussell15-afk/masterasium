@@ -404,6 +404,7 @@ export function QuestionPractice({
             </h1>
           ) : (
             <ListenPassage
+              stacked={choiceOnly}
               auto={readOnArrival && phase === "answering"}
               utterance={answerInput === "spelling" && speak ? speak : undefined}
               parts={[
@@ -561,6 +562,7 @@ export function QuestionPractice({
                       <ChoiceOption
                         key={choice}
                         text={choice}
+                        listenInside={choiceOnly}
                         showListen={choiceListen && !hintCaption}
                         pressed={(values.answer ?? "") === choice}
                         disabled={pending}
