@@ -116,7 +116,7 @@ describe("practice question screen", () => {
     ["missing", null],
     ["empty", [] as string[]],
     ["a single choice", ["9"]],
-  ])("keeps the typed answer when Grade 1 choices are %s", (_label, choices) => {
+  ])("does not open a typed answer when Grade 1 choices are %s", (_label, choices) => {
     const sample = view(2);
     const html = renderToStaticMarkup(
       createElement(PracticeSession, {
@@ -128,12 +128,12 @@ describe("practice question screen", () => {
         },
       }),
     );
-    expect(html).toContain("number-pad");
-    expect(html).toContain('class="answer-input"');
-    expect(html.toLowerCase()).toContain('inputmode="numeric"');
+    expect(html).not.toContain("number-pad");
+    expect(html).not.toContain('class="answer-input"');
+    expect(html.toLowerCase()).not.toContain("inputmode=");
     expect(html).not.toContain("answer-choice-tile");
     expect(html).toContain(">Check<");
-    expect(submitButton(html)).not.toContain("disabled");
+    expect(submitButton(html)).toContain("disabled");
   });
 
   it("keeps a notes pad beside the question from grade 4 up", () => {
@@ -310,7 +310,7 @@ describe("question feedback card", () => {
     expect(html).not.toContain("Here's how.");
   });
 
-  it("returns the typed box after a miss even when the question had choices", () => {
+  it("keeps Grade 1 choices after a miss and leaves Check off until one is picked", () => {
     const html = renderToStaticMarkup(
       createElement(QuestionPractice, {
         ...shared,
@@ -325,11 +325,12 @@ describe("question feedback card", () => {
       }),
     );
     expect(html).toContain("Not quite. Try again.");
-    expect(html).toContain('class="answer-input"');
-    expect(html).toContain("number-pad");
-    expect(html).toContain('value="5"');
-    expect(html).not.toContain("answer-choice-tile");
-    expect(submitButton(html)).not.toContain("disabled");
+    expect(html).toContain("answer-choice-tile");
+    expect(html).not.toContain('class="answer-input"');
+    expect(html).not.toContain("number-pad");
+    expect(html.toLowerCase()).not.toContain("inputmode=");
+    expect(html).toContain(">Check<");
+    expect(submitButton(html)).toContain("disabled");
   });
 
   it("shows the worked steps after a second miss and waits for Next", () => {

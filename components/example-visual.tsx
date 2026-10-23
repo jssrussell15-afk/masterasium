@@ -40,28 +40,35 @@ function NumberLine({ visual }: { visual: Extract<ExampleVisual, { kind: "number
   const max = Math.max(visual.max, min + 1);
   const from = clamp(visual.from, min, max);
   const to = clamp(visual.to, min, max);
-  const left = 18;
-  const right = 262;
+  const left = 14;
+  const right = 306;
   const width = right - left;
-  const y = 58;
+  const y = 14;
+  const labels = Math.round(max - min) + 1;
   const xAt = (value: number) => left + ((value - min) / (max - min)) * width;
-  const tickCount = Math.min(21, Math.round(max - min) + 1);
+  const hop =
+    from !== to
+      ? `M ${xAt(from)} ${y} Q ${(xAt(from) + xAt(to)) / 2} ${y - 10} ${xAt(to)} ${y}`
+      : null;
+
   return (
-    <svg className="example-visual walk-visual" viewBox="0 0 280 96" role="img" aria-label="Number line">
+    <svg className="example-visual walk-visual" viewBox="0 0 320 42" role="img" aria-label="Number line">
       <line className="line-axis" x1={left} y1={y} x2={right} y2={y} />
-      {Array.from({ length: tickCount }, (_, index) => {
-        const x = left + (width * index) / Math.max(tickCount - 1, 1);
-        return <line key={index} className="line-tick" x1={x} y1={y - 8} x2={x} y2={y + 8} />;
+      {Array.from({ length: labels }, (_, index) => {
+        const value = min + index;
+        const x = xAt(value);
+        return (
+          <g key={value}>
+            <line className="line-tick" x1={x} y1={y - 4} x2={x} y2={y + 4} />
+            <text className="line-label" x={x} y={y + 15} textAnchor="middle" fontSize={labels > 16 ? 7 : 8}>
+              {value}
+            </text>
+          </g>
+        );
       })}
-      {from !== to ? (
-        <path
-          className="line-hop"
-          pathLength={100}
-          d={`M ${xAt(from)} ${y} Q ${(xAt(from) + xAt(to)) / 2} ${y - 26} ${xAt(to)} ${y}`}
-        />
-      ) : null}
-      <circle className="line-point dim" cx={xAt(from)} cy={y} r="4" />
-      <circle className="line-point" cx={xAt(to)} cy={y} r="5" />
+      <circle className="line-point" cx={xAt(from)} cy={y} r="3.5" />
+      {hop ? <path className="line-hop" d={hop} pathLength={100} /> : null}
+      {from !== to ? <circle className="line-point line-point-end" cx={xAt(to)} cy={y} r="3.5" /> : null}
     </svg>
   );
 }

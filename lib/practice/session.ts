@@ -9,7 +9,7 @@ import { applyShowGap, resolvedShowLevel } from "@/lib/practice/fade";
 import { buildWorkedExample } from "@/lib/practice/example";
 import { workedExamplePool } from "@/lib/practice/example-pool";
 import { whyLine, type AttemptMark } from "@/lib/practice/feedback";
-import { hintLadder } from "@/lib/practice/hints";
+import { firstSafeStep, hintLadder } from "@/lib/practice/hints";
 import { buildSkillIntro, introCycleDue, nearTransfer } from "@/lib/practice/intro";
 import type { SkillIntro } from "@/lib/practice/intro-view";
 import { planNextQuestion } from "@/lib/practice/learning";
@@ -147,13 +147,14 @@ function presentQuestion(
     }),
     example,
     examples: examples.length >= 2 ? examples : null,
+    helpSteps: steps,
     walk: clientWalk(walk, expected, mark),
     showLevel,
     walkMode: mark?.walkMode ?? null,
     inputType: resolved.inputType,
     choices: resolved.choices,
     ...(delivery?.speak ? { speak: delivery.speak } : {}),
-    ...(onRamp ? { onRamp: onRampCopy(example?.steps[0] ?? skill.exampleSteps[0]) } : {}),
+    ...(onRamp ? { onRamp: onRampCopy(firstSafeStep(steps, expected)) } : {}),
     ...(mark
       ? {
           resume: {

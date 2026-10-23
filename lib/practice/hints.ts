@@ -10,10 +10,19 @@ function compact(value: string): string {
   return value.toLowerCase().replace(/\s+/g, "");
 }
 
-function reveals(text: string, expected: string): boolean {
+export function reveals(text: string, expected: string): boolean {
   const answer = compact(expected);
   if (!answer) return false;
   return compact(text).includes(answer);
+}
+
+/** The first step that does not already show the answer. */
+export function firstSafeStep(steps: string[], expected: string): string | null {
+  for (const step of steps) {
+    const clean = step.trim();
+    if (clean && !reveals(clean, expected)) return clean;
+  }
+  return null;
 }
 
 function clip(text: string): string {

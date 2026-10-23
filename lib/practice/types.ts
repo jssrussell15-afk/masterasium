@@ -61,6 +61,8 @@ export type QuestionView = {
   example?: WorkedExample | null;
   /** Grade 1 and 5 keep a few similar examples and rotate them in the session. */
   examples?: WorkedExample[] | null;
+  /** This question's steps. Help reads these so a different example cannot take their place. */
+  helpSteps?: string[];
   /** Show me steps. Null keeps the text "Here's how" fallback. */
   walk?: Walkthrough | null;
   /** How much support this child still gets on this skill. Never shown as a label. */

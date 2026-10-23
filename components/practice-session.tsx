@@ -329,6 +329,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           example={question.example ?? null}
           examples={question.examples ?? null}
           skillId={question.skillId}
+          helpSteps={question.helpSteps ?? question.resume?.steps ?? []}
           onExampleOpened={() => {
             void logPracticeEvent(view.childId, "hint_rung", question.skillId, { rung: "example" }).catch(
               () => undefined,
