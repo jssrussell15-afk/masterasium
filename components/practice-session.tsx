@@ -327,6 +327,7 @@ export function PracticeSession({ view }: { view: PracticeView }) {
           shape={question.shape}
           hint={question.hints?.hint ?? null}
           example={question.example ?? null}
+          helpSteps={question.helpSteps ?? question.resume?.steps ?? []}
           progress={{ index: (progress.completed % PRACTICE_SET_SIZE) + 1, total: PRACTICE_SET_SIZE }}
           phase={phase}
           why={why}

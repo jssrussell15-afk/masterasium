@@ -1430,21 +1430,33 @@ html:has(.question-screen) header .btn {
   font-size: 0.92rem;
 }
 
+html:has(.question-screen) {
+  height: 100%;
+}
+
+html:has(.question-screen) body {
+  min-height: 100dvh;
+}
+
 html:has(.question-screen) main {
   max-width: 40rem;
-  padding: clamp(0.75rem, 6vh, 2.75rem) 1rem 2rem;
+  min-height: 0;
+  padding: 0.5rem 1rem max(0.35rem, env(safe-area-inset-bottom));
 }
 
 .question-screen {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
   width: min(100%, 40rem);
+  min-height: 0;
   margin: 0 auto;
 }
 
 .question-column {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 0.75rem;
   width: min(100%, 40rem);
@@ -1466,6 +1478,9 @@ html:has(.question-screen) main {
 }
 
 .question-layout {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   min-height: 0;
   min-width: 0;
 }
@@ -1483,10 +1498,20 @@ html:has(.question-screen) main {
 
 .question-screen .question-card {
   --question-card-bg: #f3f9fc;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   border: 1px solid var(--line);
   border-radius: 1.1rem;
   background: var(--question-card-bg);
   padding: 0.9rem 1rem 1rem;
+}
+
+.question-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  background: var(--question-card-bg, var(--background));
 }
 
 .question-screen .topic-label,
@@ -1582,9 +1607,16 @@ html:has(.question-screen) main {
 }
 
 .question-form {
-  display: grid;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   gap: 0.75rem;
-  margin-top: 0.35rem;
+  min-height: 0;
+  padding-top: 0.35rem;
+}
+
+.show-me-form {
+  display: none;
 }
 
 .question-card .answer-input {
@@ -1596,7 +1628,20 @@ html:has(.question-screen) main {
 .question-submit {
   width: 100%;
   min-height: 3.5rem;
+  margin-top: auto;
   font-size: 1.25rem;
+  position: sticky;
+  bottom: max(0.35rem, env(safe-area-inset-bottom));
+  z-index: 6;
+}
+
+.question-submit:disabled,
+.question-submit:disabled:hover {
+  background: #e4ebf0;
+  color: #6a7884;
+  border-color: #c5d0d8;
+  opacity: 1;
+  box-shadow: none;
 }
 
 .help-row {
@@ -1666,10 +1711,46 @@ html:has(.question-screen) main {
   gap: 0.65rem;
 }
 
+.answer-choices.is-young {
+  grid-template-columns: 1fr 1fr;
+}
+
+.answer-choices.is-young .answer-choice-tile {
+  width: 100%;
+  min-height: 56px;
+  font-size: 1.65rem;
+  text-align: center;
+  padding-inline: 3rem;
+}
+
+
 .answer-choice {
   display: flex;
   align-items: center;
   gap: 0.65rem;
+}
+
+.answer-choice.has-corner-listen {
+  position: relative;
+  display: block;
+}
+
+.answer-choice.has-corner-listen .listen-choice {
+  position: absolute;
+  top: 50%;
+  right: 0.2rem;
+  z-index: 1;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--blue);
+  padding: 0;
 }
 
 .answer-choice-tile {
@@ -1687,6 +1768,8 @@ html:has(.question-screen) main {
 
 .answer-choice-tile[aria-pressed="true"] {
   background: #d3ebf7;
+  border-color: var(--color-blue-deep);
+  box-shadow: inset 0 0 0 3px var(--color-blue-deep);
 }
 
 .walk-dim {
@@ -1745,6 +1828,117 @@ html:has(.question-screen) main {
   background: #e5f2e8;
   color: #143324;
   padding: 0.9rem 1rem 1rem;
+}
+
+.help-sheet {
+  position: fixed;
+  z-index: 5;
+  left: 0;
+  right: 0;
+  bottom: calc(5.1rem + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: min(100%, 40rem);
+  margin: 0 auto;
+  border: 1px solid #8fb89a;
+  border-radius: 1rem 1rem 0 0;
+  background: #e5f2e8;
+  color: #143324;
+  padding: 0.45rem 0.75rem 0.4rem;
+  box-shadow: 0 -8px 28px rgb(20 51 36 / 12%);
+}
+
+.help-sheet-top,
+.help-sheet-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+}
+
+.help-sheet-top .show-me-caption {
+  flex: 1 1 auto;
+  min-height: 0;
+  font-size: 1.05rem;
+}
+
+.help-sheet-top .show-me-count {
+  flex: none;
+  margin-left: 0;
+  font-size: 0.95rem;
+}
+
+.help-sheet-top .listen-icon-only {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  padding: 0;
+}
+
+.help-sheet-actions .show-me-back,
+.help-sheet-actions .show-me-next {
+  min-height: 44px;
+  padding-inline: 0.75rem;
+}
+
+.help-sheet-actions .help-sheet-return {
+  margin-left: auto;
+}
+
+.help-sheet-kicker {
+  margin: 0;
+  color: #1d4a32;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.help-sheet-return {
+  justify-self: start;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: #143324;
+  padding: 0.15rem 0.1rem;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+  white-space: nowrap;
+}
+
+.help-number-line {
+  width: 100%;
+  height: 2.5rem;
+}
+
+.help-number-line .line-axis,
+.help-number-line .line-tick {
+  stroke: #143324;
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.help-number-line .line-label {
+  fill: #143324;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.help-number-line .line-label.marked {
+  font-weight: 800;
+}
+
+.help-number-line .line-point {
+  fill: #1f5c38;
+}
+
+.help-number-line .line-hop {
+  fill: none;
+  stroke: #1f5c38;
+  stroke-width: 2.5;
+  stroke-linecap: round;
 }
 
 .show-me-head {
@@ -2022,8 +2216,8 @@ html:has(.question-screen) main {
 
   .question-submit {
     position: sticky;
-    bottom: max(0.5rem, env(safe-area-inset-bottom));
-    z-index: 2;
+    bottom: max(0.35rem, env(safe-area-inset-bottom));
+    z-index: 6;
     box-shadow: 0 0 0 0.5rem var(--question-card-bg, var(--background));
   }
 }
@@ -2700,6 +2894,17 @@ html:has(.question-screen) .site-footer {
   gap: 0.75rem;
 }
 
+.listen-line.is-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+}
+
+.listen-line.is-stacked .listen-copy,
+.listen-line.is-stacked .prompt {
+  width: 100%;
+}
+
 .listen-copy,
 .prompt-row .prompt {
   flex: 1;
@@ -2729,12 +2934,21 @@ html:has(.question-screen) .site-footer {
   line-height: 1;
 }
 
-.listen-choice {
+.listen-choice,
+.listen-icon-only {
   width: var(--tap);
   min-width: var(--tap);
   max-width: var(--tap);
   height: var(--tap);
   padding: 0;
+}
+
+.listen-icon-only {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
 }
 
 .listen-icon {

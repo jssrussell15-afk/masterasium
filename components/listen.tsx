@@ -49,22 +49,26 @@ function StopIcon() {
 export function ListenButton({
   speaking,
   compact = false,
+  iconOnly = false,
   onClick,
 }: {
   speaking: boolean;
   compact?: boolean;
+  /** Speaker icon with a hidden name. Does not use the choice-pill class. */
+  iconOnly?: boolean;
   onClick: () => void;
 }) {
   const label = speaking ? "Stop" : "Listen";
+  const icon = compact || iconOnly;
   return (
     <button
       type="button"
-      className={compact ? "listen listen-choice" : "listen"}
+      className={["listen", compact ? "listen-choice" : "", iconOnly ? "listen-icon-only" : ""].filter(Boolean).join(" ")}
       aria-pressed={speaking}
       onClick={onClick}
     >
       {speaking ? <StopIcon /> : <SpeakerIcon />}
-      <span className={compact ? "visually-hidden" : undefined}>{label}</span>
+      <span className={icon ? "visually-hidden" : undefined}>{label}</span>
     </button>
   );
 }
@@ -218,6 +222,7 @@ export function ListenPassage({
   active = true,
   className,
   utterance,
+  stacked = false,
 }: {
   parts: { text: string; as?: "p" | "h1" | "h2" | "span"; className?: string; id?: string }[];
   auto?: boolean;
@@ -225,6 +230,8 @@ export function ListenPassage({
   className?: string;
   /** Spoken instead of the visible text. Spelling uses this so the word stays off the prompt. */
   utterance?: string;
+  /** Icon on its own row so the passage can use the full width. */
+  stacked?: boolean;
 }) {
   const spokenParts = parts.filter((part) => part.text.trim());
   const displayed = spokenParts.map((part) => part.text.trim()).join(" ");
@@ -238,8 +245,8 @@ export function ListenPassage({
   }, []);
 
   return (
-    <div className={className ? `listen-line ${className}` : "listen-line"}>
-      <ListenButton speaking={speech.speaking} onClick={speech.toggle} />
+    <div className={["listen-line", stacked ? "is-stacked" : "", className].filter(Boolean).join(" ")}>
+      <ListenButton iconOnly={stacked} speaking={speech.speaking} onClick={speech.toggle} />
       <div className="listen-copy">
         {spokenParts.map((part, index) => {
           const Tag = part.as ?? "p";
@@ -271,6 +278,7 @@ function localWordIndex(spoken: string, start: number, part: string, activeWord:
 export function ChoiceOption({
   text,
   showListen,
+  listenInside = false,
   pressed = false,
   disabled = false,
   onPick,
@@ -278,6 +286,8 @@ export function ChoiceOption({
 }: {
   text: string;
   showListen: boolean;
+  /** Draw the speaker in the tile's corner. It stays a separate button, so it does not select the choice. */
+  listenInside?: boolean;
   pressed?: boolean;
   disabled?: boolean;
   onPick: () => void;
@@ -285,8 +295,7 @@ export function ChoiceOption({
 }) {
   const speech = useSpoken(text);
   return (
-    <div className="answer-choice">
-      {showListen ? <ListenButton compact speaking={speech.speaking} onClick={speech.toggle} /> : null}
+    <div className={listenInside && showListen ? "answer-choice has-corner-listen" : "answer-choice"}>
       <button
         type="button"
         className="answer-choice-tile"
@@ -298,6 +307,7 @@ export function ChoiceOption({
           <HighlightedWords text={text} activeWord={showListen ? speech.activeWord : null} />
         )}
       </button>
+      {showListen ? <ListenButton compact speaking={speech.speaking} onClick={speech.toggle} /> : null}
     </div>
   );
 }
