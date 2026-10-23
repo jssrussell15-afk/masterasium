@@ -84,6 +84,7 @@ export function PracticePreview({
   view,
   example,
   examples = null,
+  choices = null,
   skillId,
   sample = "default",
   skills,
@@ -92,6 +93,7 @@ export function PracticePreview({
   view: "intro" | "question" | "retry" | "revealed" | "correct" | "example" | "help" | "home" | "play";
   example: WorkedExample | null;
   examples?: WorkedExample[] | null;
+  choices?: string[] | null;
   skillId?: string;
   sample?: PreviewSample;
   skills: SkillProgress[];
@@ -159,6 +161,7 @@ export function PracticePreview({
       hint={question.hint}
       example={example}
       examples={examples}
+      choices={choices}
       skillId={skillId}
       phase={phase}
       why={phase === "correct" ? question.why : null}
@@ -241,6 +244,7 @@ function Screen({
   hint,
   example,
   examples = null,
+  choices = null,
   skillId,
   phase,
   why,
@@ -262,6 +266,7 @@ function Screen({
   hint: string;
   example: WorkedExample | null;
   examples?: WorkedExample[] | null;
+  choices?: string[] | null;
   skillId?: string;
   phase: FeedbackPhase;
   why: string | null;
@@ -278,7 +283,8 @@ function Screen({
   helpSteps?: string[];
   inputKind?: "number" | "fraction";
 }) {
-  const choiceList = grade <= 2 ? practiceChoices(grade, prompt, answer, questionId) : null;
+  const generated = grade <= 2 && !(choices && choices.length >= 2) ? practiceChoices(grade, prompt, answer, questionId) : null;
+  const choiceList = choices && choices.length >= 2 ? choices : generated;
   return (
     <div className="question-screen">
       <p className="question-back">

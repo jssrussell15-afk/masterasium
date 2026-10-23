@@ -1,6 +1,8 @@
 import { PracticePreview } from "@/components/practice-preview";
 import { Shell } from "@/components/site-header";
-import { buildWorkedExample, type WorkedExample } from "@/lib/practice/example";
+import { practiceChoices } from "@/lib/practice/choices";
+import { buildWorkedExample } from "@/lib/practice/example";
+import { alignExamplesWithChoices } from "@/lib/practice/example-choices";
 import { workedExamplePool } from "@/lib/practice/example-pool";
 import { skillsForGrade } from "@/lib/practice/skills";
 import type { SkillProgress } from "@/lib/practice/types";
@@ -13,12 +15,6 @@ export const metadata = {
   title: "Practice sample",
 };
 
-const COUNTING_EXAMPLE: WorkedExample = {
-  prompt: "What number comes just after 4?",
-  steps: ["Count one more than 4.", "4 and one more is 5."],
-  answer: "5",
-};
-
 export default async function PracticeSamplePage({
   searchParams,
 }: {
@@ -29,10 +25,24 @@ export default async function PracticeSamplePage({
   const grade = params.grade === "5" ? 5 : params.grade === "2" ? 2 : params.grade === "1" ? 1 : 3;
   const sample = params.sample === "place" ? "place" : params.sample === "fraction" ? "fraction" : "default";
   const picked = pickSample(grade, sample);
-  const examples = picked.pool
+  const pool = picked.pool
     ? workedExamplePool({ skillId: picked.skillId, livePrompt: picked.livePrompt, liveAnswer: picked.liveAnswer })
-    : null;
-  const example = picked.example ?? examples?.[0] ?? buildWorkedExample({ skillId: "g1-add-10", livePrompt: "6 + 2 = ?" });
+    : [];
+  const draftChoices =
+    grade <= 2 && picked.livePrompt
+      ? practiceChoices(grade, picked.livePrompt, picked.liveAnswer, `preview-${picked.skillId}`)
+      : null;
+  const aligned = alignExamplesWithChoices({
+    pool,
+    choices: draftChoices,
+    grade,
+    prompt: picked.livePrompt,
+    answer: picked.liveAnswer,
+    seed: `preview-${picked.skillId}`,
+  });
+  const examples = aligned.examples.length >= 2 ? aligned.examples : null;
+  const example =
+    picked.example ?? aligned.examples[0] ?? buildWorkedExample({ skillId: "g1-add-10", livePrompt: "6 + 2 = ?" });
   const skills: SkillProgress[] = skillsForGrade(1).slice(0, 4).map((skill, index) => ({
     id: skill.id,
     grade: skill.grade,
@@ -52,6 +62,7 @@ export default async function PracticeSamplePage({
         view={view}
         example={example}
         examples={examples}
+        choices={aligned.choices}
         skillId={picked.skillId}
         sample={sample}
         skills={skills}
@@ -90,7 +101,13 @@ function pickSample(grade: 1 | 2 | 3 | 5, sample: "default" | "place" | "fractio
     };
   }
   if (grade === 1) {
-    return { skillId: "g1-count", pool: false, livePrompt: "", liveAnswer: "", example: COUNTING_EXAMPLE };
+    return {
+      skillId: "g1-count",
+      pool: true,
+      livePrompt: "What number comes just after 1?",
+      liveAnswer: "2",
+      example: null,
+    };
   }
   if (grade === 2) {
     return {
