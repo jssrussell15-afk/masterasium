@@ -1,7 +1,7 @@
 # Masterasium resource component plan
 
-**Status:** This is a starting ranked list to react to. It is not final.
-**Date:** October 23, 2026
+**Status:** This is a starting ranked list to react to. It is not final. Section 6 records decisions from Matthew's review.
+**Date:** October 23, 2026 (decisions added the same day)
 **Audience:** Matthew and the build team (internal planning doc)
 
 ---
@@ -69,3 +69,46 @@ Keep it quiet: no confetti, badges or points.
 - How many printable sheets go in the free starter set (for example, one per skill, or one per grade)?
 - Do we want a streak or the neutral weekly count?
 - Who records the videos, and do we start with Grade 1 only?
+
+---
+
+## 6. Decisions from Matthew's review (October 23, 2026)
+
+These decisions override anything earlier in this doc that conflicts with them.
+
+### 6.1 French is in scope
+- French is in scope for the French immersion markets in **Ontario, New Brunswick and Nova Scotia**.
+- Masterasium does **not offer the Quebec curriculum**. French content follows the French immersion programs in Ontario, New Brunswick and Nova Scotia.
+- The worksheet generator must support French accents (é, è, ç). It currently strips them. The fix is to embed a font that includes accented characters and stop the text cleanup from removing non-ASCII characters.
+- French sheets use French labels: **Nom**, **Date**, **Consignes** and **Corrigé**.
+- This replaces the line in `docs/dashboard-and-email-spec.md` that says French is out of scope. That spec should be updated to say French is in scope and the Quebec curriculum is not offered.
+
+### 6.2 No score box, and no scores for kids
+- Remove the Score box from the worksheet generator.
+- Kids never see a numeric score. Mastery is the key measure.
+- Kids may see how they are doing on the way to mastery, for example "In progress" or "Mastered."
+- The parent dashboard shows progress data that explains how the child is moving toward mastery, not a particular score.
+- This also settles section 4: no score appears anywhere on the dashboard or on sheets.
+
+### 6.3 Generator bugs to fix before the sheets library ships
+1. A wording bug: "Tuesday has 1 stars" (plural used with 1).
+2. French accents (é, è, ç) are stripped, and × is turned into "x" (and ÷ into "/").
+3. Worked examples, multiple-choice options and pictures (such as fraction bars) are dropped from printed sheets.
+4. The answer key is not laid out to match the worksheet. It should use the same grid and numbering.
+
+### 6.4 Paper size: US Letter first, A4 as an option
+- **US Letter is the primary format for both Canada and the US.** Our research found that Canadian schools mostly print on US Letter, since Canada's own paper standards were withdrawn in 2012 ([summary](https://papersizes.guide/regional/canada/p4-canada/)).
+- **A4 stays available as a secondary option** for families and schools that print on A4.
+- Keep every layout inside the shared 8.27 × 10.75 in safe area so a sheet prints cleanly on either size.
+- Paper size still follows the user's region and choice, not their curriculum.
+
+### 6.5 One domain with region detection
+- One domain (masterasium.com) and one codebase.
+- The backend detects the user's region and serves the right curriculum, language and default paper size (US Letter unless the user picks A4).
+- A manual **Canada / US** toggle in the footer overrides detection when it gets it wrong.
+- **Region decides the format, and curriculum decides the content.** For example, a Canadian user on the US curriculum still gets Canadian defaults for format.
+
+### 6.6 Order of work
+1. Sheets library (including the bug fixes in 6.3, the score box removal, and A4 as a secondary option).
+2. Upload flow (a teacher uploads a worksheet and gets similar questions).
+3. French.
